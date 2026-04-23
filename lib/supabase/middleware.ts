@@ -12,7 +12,7 @@ export async function updateSession(req: NextRequest) {
     {
       cookies: {
         getAll() { return req.cookies.getAll(); },
-        setAll(list) {
+        setAll(list: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
           list.forEach(({ name, value }) => req.cookies.set(name, value));
           res = NextResponse.next({ request: req });
           list.forEach(({ name, value, options }) => res.cookies.set(name, value, options));
