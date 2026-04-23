@@ -1,11 +1,11 @@
 // Server-side Supabase client for Server Components, Route Handlers, Server Actions.
+// See client.ts for why we don't pass a Database generic here either.
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import type { Database } from '@/lib/types';
 
 export function createClient() {
   const cookieStore = cookies();
-  return createServerClient<Database>(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
