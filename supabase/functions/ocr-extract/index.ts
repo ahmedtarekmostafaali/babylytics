@@ -59,14 +59,23 @@ type StructuredData = {
 };
 
 // ---- JSON helpers ----------------------------------------------------------
+// CORS allow-list MUST include every header supabase-js sends from the browser
+// or the preflight validator will silently drop the POST even after OPTIONS 200.
+// supabase-js adds: apikey, authorization, content-type, x-client-info,
+// x-supabase-api-version. We also allow a trailing '*' for forward-compat.
+const CORS_HEADERS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-supabase-api-version, accept',
+  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-max-age': '86400',
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'content-type': 'application/json',
-      'access-control-allow-origin': '*',
-      'access-control-allow-headers': 'authorization,content-type',
-      'access-control-allow-methods': 'POST,OPTIONS',
+      ...CORS_HEADERS,
     },
   });
 }
