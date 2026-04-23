@@ -8,7 +8,7 @@ import { FeedingChart } from '@/components/FeedingChart';
 import { WeightChart } from '@/components/WeightChart';
 import { StoolChart } from '@/components/StoolChart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { fmtDateTime, fmtRelative, todayWindow } from '@/lib/dates';
+import { fmtDateTime, fmtRelative, last24hWindow } from '@/lib/dates';
 import { fmtMl, fmtPct, fmtKg } from '@/lib/units';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,8 @@ export const dynamic = 'force-dynamic';
 export default async function BabyPage({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
   const babyId = params.babyId;
-  const { start, end } = todayWindow();
+  // Rolling 24h avoids UTC-vs-local "today" drift on the Vercel server.
+  const { start, end } = last24hWindow();
 
   const { data: baby } = await supabase
     .from('babies')
@@ -26,7 +27,7 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
     .single();
   if (!baby) notFound();
 
-  // Parallel: KPIs + series + weight + recent logs + low-confidence OCR banner
+  // Parallel: KPIs + series + weight + recent logs + low-confidence OCR banner + active meds
   const [
     feedingKpi,
     stoolKpi,
@@ -39,6 +40,7 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
     recentStools,
     lowConf,
     recentFiles,
+    activeMeds,
   ] = await Promise.all([
     supabase.rpc('feeding_kpis',         { p_baby: babyId, p_start: start, p_end: end }).single(),
     supabase.rpc('stool_kpis',           { p_baby: babyId, p_start: start, p_end: end }).single(),
@@ -65,12 +67,19 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
       .select('id,kind,storage_path,ocr_status,uploaded_at')
       .eq('baby_id', babyId).is('deleted_at', null)
       .order('uploaded_at', { ascending: false }).limit(5),
+    // Active medications: not ended, or ends in the future
+    supabase.from('medications')
+      .select('id,name,dosage,route,frequency_hours,total_doses,starts_at,ends_at,prescribed_by')
+      .eq('baby_id', babyId).is('deleted_at', null)
+      .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString()}`)
+      .order('starts_at', { ascending: false }),
   ]);
 
   const f = (feedingKpi.data    ?? {}) as { total_feed_ml: number; avg_feed_ml: number; feed_count: number; recommended_feed_ml: number; remaining_feed_ml: number; feeding_percentage: number };
   const s = (stoolKpi.data      ?? {}) as { stool_count: number; total_ml: number; small_count: number; medium_count: number; large_count: number; last_stool_at: string | null };
   const m = (medicationKpi.data ?? {}) as { total_doses: number; taken: number; missed: number; remaining: number; adherence_pct: number };
   const w = currentWeight.data as number | null;
+  const factor = Number(baby.feeding_factor_ml_per_kg_per_day ?? 150);
 
   return (
     <div>
@@ -88,31 +97,76 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
               {lowConf.data.map(x => (
                 <Link key={x.id} href={`/babies/${babyId}/ocr/${x.id}`}
                   className="rounded-md bg-amber-600 px-3 py-1 text-xs text-white hover:bg-amber-700">
-                  Review extraction · {Math.round((x.confidence_score ?? 0) * 100)}%
+                  Review extraction · {Math.round((Number(x.confidence_score) ?? 0) * 100)}%
                 </Link>
               ))}
             </div>
           </div>
         )}
 
-        {/* KPI row */}
-        <section className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <KpiCard label="Total feed today"       value={fmtMl(f.total_feed_ml)}       sub={`${f.feed_count ?? 0} feeds · avg ${fmtMl(f.avg_feed_ml)}`} />
-          <KpiCard label="Recommended today"      value={fmtMl(f.recommended_feed_ml)} sub={`at ${baby.feeding_factor_ml_per_kg_per_day} ml/kg/day · ${fmtKg(w)}`} />
-          <KpiCard label="Remaining to target"    value={fmtMl(f.remaining_feed_ml)}
-                   tone={(f.feeding_percentage ?? 0) < 70 ? 'warning' : 'positive'} />
-          <KpiCard label="Feeding %"              value={fmtPct(f.feeding_percentage)}
-                   tone={(f.feeding_percentage ?? 0) >= 90 ? 'positive' : (f.feeding_percentage ?? 0) >= 70 ? 'neutral' : 'warning'} />
+        {/* KPI row — rolling 24h */}
+        <section>
+          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Last 24 hours</h2>
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+            <KpiCard label="Total feed"             value={fmtMl(f.total_feed_ml)}       sub={`${f.feed_count ?? 0} feeds · avg ${fmtMl(f.avg_feed_ml)}`} />
+            <KpiCard label="Recommended (24h)"      value={fmtMl(f.recommended_feed_ml)} sub={w ? `${fmtKg(w)} × ${factor} ml/kg/day` : 'add a measurement first'} />
+            <KpiCard label="Remaining to target"    value={fmtMl(f.remaining_feed_ml)}
+                     tone={(Number(f.feeding_percentage) ?? 0) < 70 ? 'warning' : 'positive'} />
+            <KpiCard label="Feeding %"              value={fmtPct(f.feeding_percentage)}
+                     tone={(Number(f.feeding_percentage) ?? 0) >= 90 ? 'positive' : (Number(f.feeding_percentage) ?? 0) >= 70 ? 'neutral' : 'warning'} />
 
-          <KpiCard label="Stool count today"      value={s.stool_count ?? 0}
-                   sub={`S:${s.small_count ?? 0} · M:${s.medium_count ?? 0} · L:${s.large_count ?? 0}`} />
-          <KpiCard label="Stool quantity today"   value={fmtMl(s.total_ml)}
-                   sub={s.last_stool_at ? `last ${fmtRelative(s.last_stool_at)}` : 'no stool today'} />
-          <KpiCard label="Medication adherence"   value={fmtPct(m.adherence_pct)}
-                   sub={`${m.taken ?? 0}/${m.total_doses ?? 0} taken · ${m.missed ?? 0} missed`}
-                   tone={(m.adherence_pct ?? 100) < 80 ? 'warning' : 'positive'} />
-          <KpiCard label="Current weight"         value={fmtKg(w)}
-                   sub={baby.birth_weight_kg ? `birth ${fmtKg(Number(baby.birth_weight_kg))}` : undefined} />
+            <KpiCard label="Stool count"            value={s.stool_count ?? 0}
+                     sub={`S:${s.small_count ?? 0} · M:${s.medium_count ?? 0} · L:${s.large_count ?? 0}`} />
+            <KpiCard label="Stool quantity"         value={fmtMl(s.total_ml)}
+                     sub={s.last_stool_at ? `last ${fmtRelative(s.last_stool_at)}` : 'no stool in 24h'} />
+            <KpiCard label="Medication adherence"   value={fmtPct(m.adherence_pct)}
+                     sub={`${m.taken ?? 0}/${m.total_doses ?? 0} taken · ${m.missed ?? 0} missed`}
+                     tone={(Number(m.adherence_pct) ?? 100) < 80 ? 'warning' : 'positive'} />
+            <KpiCard label="Current weight"         value={fmtKg(w)}
+                     sub={baby.birth_weight_kg ? `birth ${fmtKg(Number(baby.birth_weight_kg))}` : 'log a measurement'} />
+          </div>
+        </section>
+
+        {/* Active medications */}
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Active medications</h2>
+            <Link href={`/babies/${babyId}/medications`} className="text-xs text-brand-600 hover:underline">manage →</Link>
+          </div>
+          <Card>
+            <CardContent className="py-3 divide-y divide-slate-100 text-sm">
+              {(activeMeds.data ?? []).length === 0 && (
+                <div className="py-4 text-center">
+                  <p className="text-slate-500">No active medications.</p>
+                  <Link href={`/babies/${babyId}/medications/new`} className="text-xs text-brand-600 hover:underline mt-1 inline-block">+ Add a prescription</Link>
+                </div>
+              )}
+              {activeMeds.data?.map(med => {
+                const freq = med.frequency_hours ? `every ${med.frequency_hours}h` : 'as needed';
+                const ended = med.ends_at ? `until ${fmtDateTime(med.ends_at)}` : 'ongoing';
+                return (
+                  <div key={med.id} className="flex items-center justify-between py-2 gap-3">
+                    <div className="min-w-0">
+                      <div className="font-medium">
+                        {med.name}
+                        {med.dosage ? <span className="text-slate-500"> · {med.dosage}</span> : null}
+                        {med.route && med.route !== 'oral' ? <span className="text-slate-500"> · {med.route}</span> : null}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {freq} · {ended}{med.prescribed_by ? ` · ${med.prescribed_by}` : ''}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Link href={`/babies/${babyId}/medications/log?m=${med.id}`}
+                        className="rounded-md bg-brand-500 px-3 py-1 text-xs text-white hover:bg-brand-600">Log dose</Link>
+                      <Link href={`/babies/${babyId}/medications/${med.id}`}
+                        className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs hover:bg-slate-50">Edit</Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
         </section>
 
         {/* Charts */}

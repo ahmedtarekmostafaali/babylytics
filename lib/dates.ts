@@ -16,6 +16,22 @@ export function todayWindow() {
   const now = new Date();
   return { start: startOfDay(now).toISOString(), end: endOfDay(now).toISOString() };
 }
+
+/** Rolling 24-hour window ending now. Use this on Server Components where we
+ *  can't know the user's local timezone reliably — sidesteps day-boundary
+ *  problems by just looking at "the last day" rather than "today". */
+export function last24hWindow() {
+  const end = new Date();
+  const start = new Date(end.getTime() - 24 * 3600 * 1000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+/** Rolling N-day window ending now. */
+export function lastNDaysWindow(n: number) {
+  const end = new Date();
+  const start = new Date(end.getTime() - n * 24 * 3600 * 1000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
 export function ageInDays(dob: string) {
   const ms = Date.now() - new Date(dob).getTime();
   return Math.floor(ms / 86400000);

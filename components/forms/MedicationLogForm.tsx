@@ -20,11 +20,11 @@ export type MedLogFormValue = {
   notes?: string | null;
 };
 
-export function MedicationLogForm({ babyId, initial }: { babyId: string; initial?: MedLogFormValue }) {
+export function MedicationLogForm({ babyId, initial, defaultMedId }: { babyId: string; initial?: MedLogFormValue; defaultMedId?: string }) {
   const router = useRouter();
   const supabase = createClient();
   const [meds, setMeds] = useState<Med[]>([]);
-  const [medId, setMedId]   = useState(initial?.medication_id ?? '');
+  const [medId, setMedId]   = useState(initial?.medication_id ?? defaultMedId ?? '');
   const [time, setTime]     = useState(initial?.medication_time ? isoToLocalInput(initial.medication_time) : nowLocalInput());
   const [status, setStatus] = useState<Status>(initial?.status ?? 'taken');
   const [dose, setDose]     = useState(initial?.actual_dosage ?? '');
