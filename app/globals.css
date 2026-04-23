@@ -50,6 +50,6 @@ h1, h2, h3, h4, h5 { color: var(--ink-strong); }
    .is-sidebar-collapsed class on <body>. */
 @media (min-width: 1024px) {
   main.with-sidebar         { padding-left: 16rem; transition: padding-left 200ms ease; }
-  body.is-sidebar-collapsed main.with-sidebar { padding-left: 68px; }
+  body.is-sidebar-collapsed main.with-sidebar { padding-left: 72px; }
 }
 

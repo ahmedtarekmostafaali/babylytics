@@ -67,33 +67,41 @@ export function Sidebar() {
   }
 
   const SidebarInner = (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col relative">
       {/* Header with logo */}
-      <div className={cn('flex items-center gap-2 h-16 px-4 border-b border-slate-200', collapsed && 'justify-center px-2')}>
-        <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+      <div className={cn('flex items-center h-16 border-b border-slate-200', collapsed ? 'justify-center px-2' : 'px-4 gap-3')}>
+        <Link href="/dashboard" className={cn('flex items-center min-w-0', collapsed ? 'justify-center' : 'gap-2')} title="Babylytics">
           {!logoError
             ? // eslint-disable-next-line @next/next/no-img-element
-              <img src="/logo.png" alt="" className="h-8 w-8 shrink-0 rounded-md object-cover" onError={() => setLogoError(true)} />
-            : <div className="h-8 w-8 shrink-0 rounded-md bg-brand-500 text-white grid place-items-center text-sm font-bold">B</div>}
-          {!collapsed && <span className="font-semibold truncate text-ink">Babylytics</span>}
+              <img
+                src="/Logo.png"
+                alt="Babylytics"
+                className="h-9 w-9 shrink-0 rounded-md object-cover"
+                onError={() => setLogoError(true)}
+              />
+            : <div className="h-9 w-9 shrink-0 rounded-md bg-brand-500 text-white grid place-items-center text-sm font-bold">B</div>}
+          {!collapsed && <span className="font-semibold truncate text-ink-strong">Babylytics</span>}
         </Link>
-        <button
-          className="ml-auto hidden lg:grid h-8 w-8 place-items-center rounded-md hover:bg-slate-100"
-          onClick={() => setCollapsed(c => !c)}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand' : 'Collapse'}
-        >
-          <ChevronLeft className={cn('h-4 w-4 text-slate-500 transition-transform', collapsed && 'rotate-180')} />
-        </button>
-        {/* Mobile close button */}
+        {/* Mobile close button (visible only when drawer is open on mobile) */}
         <button
           className="ml-auto lg:hidden h-8 w-8 grid place-items-center rounded-md hover:bg-slate-100"
           onClick={() => setMobileOpen(false)}
           aria-label="Close menu"
         >
-          <X className="h-4 w-4 text-slate-500" />
+          <X className="h-4 w-4 text-ink-muted" />
         </button>
       </div>
+
+      {/* Floating collapse toggle — hangs off the right edge, desktop only.
+          Sits exactly on the sidebar border so it never collides with content. */}
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={collapsed ? 'Expand' : 'Collapse'}
+        className="hidden lg:grid absolute top-5 -right-3 z-40 h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white text-ink-muted hover:text-brand-600 hover:border-brand-300 shadow-sm"
+      >
+        <ChevronLeft className={cn('h-3.5 w-3.5 transition-transform', collapsed && 'rotate-180')} />
+      </button>
 
       {/* Nav sections */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
@@ -142,19 +150,28 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className={cn('border-t border-slate-200 p-3', collapsed && 'px-2')}>
+      <div className={cn('border-t border-slate-200', collapsed ? 'p-2' : 'p-3')}>
         {!collapsed && email && <div className="text-xs text-ink-muted truncate mb-2 px-1">{email}</div>}
-        <button
-          onClick={logout}
-          className={cn(
-            'flex items-center gap-2 rounded-md px-3 py-2 text-sm w-full hover:bg-slate-100 text-ink',
-            collapsed && 'justify-center px-0'
-          )}
-          title="Log out"
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Log out</span>}
-        </button>
+        {collapsed ? (
+          <div className="flex justify-center">
+            <button
+              onClick={logout}
+              className="grid place-items-center h-10 w-10 rounded-lg hover:bg-slate-100 text-ink"
+              title="Log out"
+              aria-label="Log out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm w-full hover:bg-slate-100 text-ink"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            <span>Log out</span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -204,7 +221,7 @@ export function Sidebar() {
       <aside
         className={cn(
           'hidden lg:flex fixed inset-y-0 left-0 bg-white border-r border-slate-200 sidebar-transition z-30',
-          collapsed ? 'w-[68px]' : 'w-64'
+          collapsed ? 'w-[72px]' : 'w-64'
         )}
       >
         {SidebarInner}
@@ -218,10 +235,12 @@ export function Sidebar() {
 function Section({ label, children, collapsed }: { label: string; children: React.ReactNode; collapsed: boolean }) {
   return (
     <div>
-      {!collapsed && (
+      {collapsed ? (
+        <div className="mx-auto my-2 h-px w-8 bg-slate-200" aria-hidden />
+      ) : (
         <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{label}</div>
       )}
-      <div className="space-y-0.5">{children}</div>
+      <div className={cn(collapsed ? 'space-y-1' : 'space-y-0.5')}>{children}</div>
     </div>
   );
 }
@@ -255,18 +274,35 @@ function NavItem({
   tint?: Tint;
 }) {
   const effectiveTint: Tint = tint ?? 'brand';
+
+  if (collapsed) {
+    return (
+      <div className="flex justify-center">
+        <Link
+          href={href}
+          title={label}
+          aria-label={label}
+          className={cn(
+            'grid place-items-center h-10 w-10 rounded-lg transition-colors',
+            active ? tintActive[effectiveTint] : 'text-ink hover:bg-slate-100',
+          )}
+        >
+          <Icon className={cn('h-4 w-4', active ? tintIcon[effectiveTint] : 'text-ink-muted')} />
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <Link
       href={href}
-      title={collapsed ? label : undefined}
       className={cn(
         'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
         active ? tintActive[effectiveTint] : 'text-ink hover:bg-slate-100',
-        collapsed && 'justify-center px-0',
       )}
     >
       <Icon className={cn('h-4 w-4 shrink-0', active ? tintIcon[effectiveTint] : 'text-ink-muted')} />
-      {!collapsed && <span className="truncate">{label}</span>}
+      <span className="truncate">{label}</span>
     </Link>
   );
 }
@@ -287,18 +323,35 @@ function QuickAction({
     lavender: 'bg-lavender-500 hover:bg-lavender-600',
     peach:    'bg-peach-500 hover:bg-peach-600',
   };
+
+  if (collapsed) {
+    return (
+      <div className="flex justify-center">
+        <Link
+          href={href}
+          title={label}
+          aria-label={label}
+          className={cn(
+            'grid place-items-center h-10 w-10 rounded-lg text-white shadow-sm transition-colors',
+            bgMap[tint],
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <Link
       href={href}
-      title={collapsed ? label : undefined}
       className={cn(
-        'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white transition-colors shadow-sm',
+        'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white shadow-sm transition-colors',
         bgMap[tint],
-        collapsed && 'justify-center px-0',
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      {!collapsed && <span className="truncate">{label}</span>}
+      <span className="truncate">{label}</span>
     </Link>
   );
 }
