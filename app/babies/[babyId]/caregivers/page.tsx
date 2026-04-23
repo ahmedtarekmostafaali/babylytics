@@ -15,13 +15,15 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
   if (!baby) notFound();
 
   // We rely on RLS — only owners can see/edit baby_users for this baby.
-  const { data: rows } = await supabase
+  type CaregiverRow = { baby_id: string; user_id: string; role: 'owner' | 'editor' | 'viewer'; created_at: string };
+  const { data: rowsRaw } = await supabase
     .from('baby_users')
     .select('baby_id,user_id,role,created_at')
     .eq('baby_id', params.babyId);
+  const rows = (rowsRaw ?? []) as CaregiverRow[];
 
-  const ownerCount = (rows ?? []).filter(r => r.role === 'owner').length;
-  const me = (rows ?? []).find(r => r.user_id === user?.id);
+  const ownerCount = rows.filter(r => r.role === 'owner').length;
+  const me = rows.find(r => r.user_id === user?.id);
   const iAmOwner = me?.role === 'owner';
 
   return (
@@ -37,8 +39,8 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
         <Card>
           <CardHeader><CardTitle>Current caregivers</CardTitle></CardHeader>
           <CardContent className="divide-y divide-slate-100 text-sm">
-            {(rows ?? []).length === 0 && <p className="text-slate-500">No caregivers visible (owner-only view).</p>}
-            {rows?.map(r => (
+            {rows.length === 0 && <p className="text-slate-500">No caregivers visible (owner-only view).</p>}
+            {rows.map(r => (
               <div key={r.user_id} className="flex items-center justify-between py-2">
                 <div>
                   <div className="font-medium">{r.user_id === user?.id ? 'You' : r.user_id.slice(0,8) + '…'}</div>

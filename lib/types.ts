@@ -182,11 +182,16 @@ export interface MedicationKpis {
 }
 
 // Supabase Database type. Shallow shape for now — full typed schema can be
-// generated with `supabase gen types typescript`.
+// generated with `supabase gen types typescript --linked > lib/db.types.ts`.
+// We use `any` rather than `unknown` for Row/Args/Returns so supabase-js's
+// generic inference (GetResult) doesn't collapse our select() results to
+// `never` in strict mode. The app-level types above (Baby, Feeding, etc.)
+// give back the real shape where we need it.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface Database {
   public: {
-    Tables: Record<string, { Row: unknown; Insert: unknown; Update: unknown }>;
-    Views:  Record<string, { Row: unknown }>;
-    Functions: Record<string, { Args: unknown; Returns: unknown }>;
+    Tables: Record<string, { Row: any; Insert: any; Update: any }>;
+    Views:  Record<string, { Row: any }>;
+    Functions: Record<string, { Args: any; Returns: any }>;
   };
 }
