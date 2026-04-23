@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Nav } from '@/components/Nav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { MeasurementForm } from '@/components/forms/MeasurementForm';
 
@@ -16,7 +15,6 @@ export default async function EditMeasurement({ params }: { params: { babyId: st
   if (!data) notFound();
   return (
     <div>
-      <Nav />
       <main className="max-w-xl mx-auto px-4 py-6">
         <Link href={`/babies/${params.babyId}`} className="text-sm text-slate-500 hover:underline">← back</Link>
         <Card className="mt-3">

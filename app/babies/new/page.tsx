@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Nav } from '@/components/Nav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input, Label, Select } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -46,7 +45,6 @@ export default function NewBabyPage() {
 
   return (
     <div>
-      <Nav />
       <main className="max-w-xl mx-auto px-4 py-8">
         <Card>
           <CardHeader><CardTitle className="text-base">Add a baby</CardTitle></CardHeader>

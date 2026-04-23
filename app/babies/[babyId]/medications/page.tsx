@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Nav } from '@/components/Nav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { fmtDateTime } from '@/lib/dates';
@@ -28,7 +27,6 @@ export default async function MedicationsList({ params }: { params: { babyId: st
 
   return (
     <div>
-      <Nav />
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>

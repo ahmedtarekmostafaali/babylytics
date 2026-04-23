@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Nav } from '@/components/Nav';
 import { OcrReview } from '@/components/OcrReview';
 import type { StructuredOcr } from '@/lib/types';
 
@@ -36,7 +35,6 @@ export default async function OcrReviewPage({ params }: { params: { babyId: stri
 
   return (
     <div>
-      <Nav />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>

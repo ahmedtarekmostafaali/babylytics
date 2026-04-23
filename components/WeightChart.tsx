@@ -10,12 +10,12 @@ export function WeightChart({ data }: { data: { measured_at: string; weight_kg: 
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer>
-        <LineChart data={rows}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-          <XAxis dataKey="label" />
-          <YAxis unit=" kg" domain={['dataMin - 0.2', 'dataMax + 0.2']} />
-          <Tooltip />
-          <Line type="monotone" dataKey="weight_kg" stroke="#4f6df5" strokeWidth={2} dot={{ r: 3 }} name="weight (kg)" />
+        <LineChart data={rows} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+          <XAxis dataKey="label" tick={{ fill: '#8A8A8A', fontSize: 11 }} />
+          <YAxis unit=" kg" domain={['dataMin - 0.2', 'dataMax + 0.2']} tick={{ fill: '#8A8A8A', fontSize: 11 }} />
+          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E5E7EB', fontSize: 12 }} />
+          <Line type="monotone" dataKey="weight_kg" stroke="#7BAEDC" strokeWidth={2.5} dot={{ r: 3, fill: '#7BAEDC' }} activeDot={{ r: 5 }} name="weight (kg)" />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -23,5 +23,5 @@ export function WeightChart({ data }: { data: { measured_at: string; weight_kg: 
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="h-64 grid place-items-center text-sm text-slate-500">{children}</div>;
+  return <div className="h-64 grid place-items-center text-sm text-ink-muted">{children}</div>;
 }

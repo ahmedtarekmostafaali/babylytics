@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Nav } from '@/components/Nav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { InviteForm } from '@/components/forms/InviteForm';
 import { fmtDate } from '@/lib/dates';
@@ -28,7 +27,6 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
 
   return (
     <div>
-      <Nav email={user?.email} />
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
         <div>
           <Link href={`/babies/${params.babyId}`} className="text-sm text-slate-500 hover:underline">← {baby.name}</Link>

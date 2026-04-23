@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Nav } from '@/components/Nav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { BabyEditForm, type BabyEditValue } from '@/components/forms/BabyEditForm';
 
@@ -33,7 +32,6 @@ export default async function EditBabyPage({ params }: { params: { babyId: strin
 
   return (
     <div>
-      <Nav email={user?.email} />
       <main className="max-w-xl mx-auto px-4 py-6">
         <Link href={`/babies/${params.babyId}`} className="text-sm text-slate-500 hover:underline">← back to {baby.name}</Link>
         <Card className="mt-3">

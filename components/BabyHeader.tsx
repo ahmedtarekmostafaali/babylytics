@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { ageInDays } from '@/lib/dates';
 import { fmtKg } from '@/lib/units';
+import { Baby as BabyIcon } from 'lucide-react';
 
 export function BabyHeader({
   baby,
@@ -10,26 +10,15 @@ export function BabyHeader({
   currentWeightKg: number | null;
 }) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{baby.name}</h1>
-          <p className="text-sm text-slate-500">
-            {baby.gender} · {ageInDays(baby.dob)} days old · current weight {fmtKg(currentWeightKg)}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <Link href={`/babies/${baby.id}/edit`}        className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">Edit profile</Link>
-          <Link href={`/babies/${baby.id}/medications`} className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">Medications</Link>
-          <Link href={`/babies/${baby.id}/caregivers`}  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">Caregivers</Link>
-        </div>
+    <div className="flex items-center gap-4">
+      <div className="h-12 w-12 rounded-full bg-brand-100 text-brand-700 grid place-items-center shrink-0">
+        <BabyIcon className="h-6 w-6" />
       </div>
-      <div className="flex flex-wrap gap-2 text-sm">
-        <Link href={`/babies/${baby.id}/feedings/new`}      className="rounded-md bg-brand-500 px-3 py-1.5 text-white hover:bg-brand-600">Log feed</Link>
-        <Link href={`/babies/${baby.id}/stool/new`}         className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">Log stool</Link>
-        <Link href={`/babies/${baby.id}/medications/log`}   className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">Log dose</Link>
-        <Link href={`/babies/${baby.id}/measurements/new`}  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">Log measurement</Link>
-        <Link href={`/babies/${baby.id}/upload`}            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">Upload file</Link>
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold text-ink-strong truncate">{baby.name}</h1>
+        <p className="text-sm text-ink-muted">
+          {baby.gender} · {ageInDays(baby.dob)} days old · current weight {fmtKg(currentWeightKg)}
+        </p>
       </div>
     </div>
   );
