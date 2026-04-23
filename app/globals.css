@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body { height: 100%; }
+body {
+  background: #f7f8fb;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* basic focus ring so we don't need a separate a11y pass */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #4f6df5;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
