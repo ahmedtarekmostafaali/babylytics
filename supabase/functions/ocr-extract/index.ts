@@ -114,6 +114,10 @@ If the document contains nothing extractable, return empty arrays and confidence
 // ---- Provider: Anthropic ---------------------------------------------------
 async function ocrWithAnthropic(bytesB64: string, mime: string): Promise<OcrResult> {
   if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not set');
+  // Route PDFs through the `document` content block; images through `image`.
+  const contentBlock = mime === 'application/pdf'
+    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf',        data: bytesB64 } }
+    : { type: 'image',    source: { type: 'base64', media_type: mime || 'image/jpeg',     data: bytesB64 } };
   const body = {
     model: ANTHROPIC_MODEL,
     max_tokens: 2048,
@@ -121,7 +125,7 @@ async function ocrWithAnthropic(bytesB64: string, mime: string): Promise<OcrResu
     messages: [{
       role: 'user',
       content: [
-        { type: 'image', source: { type: 'base64', media_type: mime || 'image/jpeg', data: bytesB64 } },
+        contentBlock,
         { type: 'text',  text: 'Extract the structured events from this document. Return JSON only.' },
       ],
     }],
@@ -211,6 +215,20 @@ async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(bin);
 }
 
+// Sniff the real image MIME from the first few bytes (magic numbers). Browsers
+// and upload flows can lie about content-type — iPhone screenshots end up as
+// .png wrappers around JPEG bytes, which Claude rejects with HTTP 400. Trusting
+// the bytes is strictly safer than trusting the header.
+function sniffImageMime(buf: Uint8Array, fallback: string): string {
+  if (buf.length >= 3 && buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return 'image/jpeg';
+  if (buf.length >= 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return 'image/png';
+  if (buf.length >= 6 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) return 'image/gif';
+  if (buf.length >= 12 && buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46
+      && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return 'image/webp';
+  if (buf.length >= 4 && buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) return 'application/pdf';
+  return fallback;
+}
+
 // ---- Handler ---------------------------------------------------------------
 // deno-lint-ignore no-explicit-any
 (globalThis as any).Deno.serve(async (req: Request) => {
@@ -254,7 +272,13 @@ async function blobToBase64(blob: Blob): Promise<string> {
     await svc.from('medical_files').update({ ocr_status: 'failed' }).eq('id', file.id);
     return json({ error: 'storage download failed', detail: dErr?.message }, 500);
   }
-  const b64 = await blobToBase64(blob);
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  const sniffedMime = sniffImageMime(buf.slice(0, 16), file.mime_type ?? 'image/jpeg');
+  // chunked btoa to avoid stack blow-ups on big files
+  let bin = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < buf.length; i += CHUNK) bin += String.fromCharCode(...buf.subarray(i, i + CHUNK));
+  const b64 = btoa(bin);
 
   // 4. Provider
   const provider = (body.provider ?? OCR_PROVIDER).toLowerCase();
@@ -262,7 +286,7 @@ async function blobToBase64(blob: Blob): Promise<string> {
   try {
     if      (provider === 'google')    result = await ocrWithGoogle(b64);
     else if (provider === 'tesseract') throw new Error('tesseract not available in Edge Functions');
-    else                               result = await ocrWithAnthropic(b64, file.mime_type ?? 'image/jpeg');
+    else                               result = await ocrWithAnthropic(b64, sniffedMime);
   } catch (e) {
     await svc.from('medical_files').update({ ocr_status: 'failed' }).eq('id', file.id);
     const msg = e instanceof Error ? e.message : String(e);
