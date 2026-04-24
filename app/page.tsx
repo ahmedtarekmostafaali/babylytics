@@ -5,7 +5,7 @@ import { Wordmark } from '@/components/Wordmark';
 import { HeroOrbit } from '@/components/HeroOrbit';
 import {
   Milk, Moon, Baby, Check, Star, ArrowRight,
-  BarChart3, Brain, Clipboard, Sparkles,
+  BarChart3, Brain, Clipboard, Sparkles, Apple, Smartphone,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -18,44 +18,43 @@ export default async function Landing() {
   return (
     <div className="bg-gradient-to-b from-white to-brand-50 min-h-screen">
       {/* ======= Header ======= */}
-      <header className="sticky top-0 z-30 backdrop-blur bg-white/70 border-b border-slate-200/60">
+      <header className="sticky top-0 z-30 backdrop-blur bg-white/75 border-b border-slate-200/60">
         <div className="max-w-6xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/"><Wordmark size="md" /></Link>
           <nav className="hidden md:flex items-center gap-7 text-sm text-ink">
-            <a href="#features"  className="hover:text-ink-strong">Features</a>
-            <a href="#how"       className="hover:text-ink-strong">How it works</a>
-            <a href="#ocr"       className="hover:text-ink-strong">Smart Scan</a>
+            <a href="#features"     className="hover:text-ink-strong">Features</a>
+            <a href="#how"          className="hover:text-ink-strong">How it works</a>
+            <a href="#ocr"          className="hover:text-ink-strong">Smart Scan</a>
             <a href="#testimonials" className="hover:text-ink-strong">Parents</a>
           </nav>
           <div className="flex items-center gap-2">
             <Link href="/login"    className="hidden sm:inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50">Log in</Link>
-            <Link href="/register" className="inline-flex items-center rounded-md bg-coral-500 px-4 py-2 text-sm font-medium text-white hover:bg-coral-600 shadow-sm">Sign up free</Link>
+            <Link href="/register" className="inline-flex items-center rounded-md bg-coral-500 px-4 py-2 text-sm font-medium text-white hover:bg-coral-600 shadow-sm">Get started free</Link>
           </div>
         </div>
       </header>
 
       {/* ======= Hero ======= */}
-      <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-12 lg:pt-20 pb-16 grid lg:grid-cols-2 gap-10 items-center">
+      <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-12 lg:pt-16 pb-10 grid lg:grid-cols-2 gap-10 items-center">
         <div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]">
             <span className="text-coral-500">Track today.</span><br />
             <span className="text-mint-600">Nurture tomorrow.</span>
           </h1>
           <p className="mt-5 text-lg text-ink max-w-lg">
-            Clinical-grade tracking for feedings, stool, medications, growth and medical records —
-            with handwritten-note OCR that understands English and Arabic.
+            Smart baby tracking for modern parents. Feedings, stool, medications, growth, and medical records — with handwritten-note OCR for English and Arabic.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/register"
-              className="inline-flex items-center gap-2 rounded-md bg-coral-500 px-5 py-3 text-white font-medium hover:bg-coral-600 shadow-sm">
+              className="inline-flex items-center gap-2 rounded-lg bg-coral-500 px-5 py-3 text-white font-medium hover:bg-coral-600 shadow-sm">
               Get started free <ArrowRight className="h-4 w-4" />
             </Link>
             <a href="#how"
-              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-5 py-3 font-medium text-ink hover:bg-slate-50">
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 font-medium text-ink hover:bg-slate-50">
               <span className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 grid place-items-center">
                 <Sparkles className="h-3.5 w-3.5" />
               </span>
-              See how it works
+              Watch demo
             </a>
           </div>
 
@@ -71,35 +70,42 @@ export default async function Landing() {
               <div className="flex text-peach-500">
                 {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-4 w-4 fill-current" />)}
               </div>
-              <span className="text-sm text-ink">Loved by caregivers worldwide</span>
+              <span className="text-sm text-ink">Loved by 10,000+ parents</span>
             </div>
           </div>
         </div>
 
-        <div className="relative">
-          <HeroOrbit />
+        <div className="relative"><HeroOrbit /></div>
+      </section>
+
+      {/* ======= Trust bar ======= */}
+      <section className="max-w-6xl mx-auto px-4 lg:px-8 pb-10">
+        <p className="text-center text-sm text-ink-muted">Trusted by parents and loved by babies</p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-ink-muted/80 font-serif">
+          <span className="text-xl italic tracking-tight">Forbes</span>
+          <span className="text-xl font-extrabold tracking-tight">theBUMP</span>
+          <span className="text-xl tracking-tight">babycenter</span>
+          <span className="text-xl italic tracking-tight font-bold">Parents.</span>
+          <span className="text-xl tracking-tight font-semibold">verywell <span className="font-normal">family</span></span>
         </div>
       </section>
 
       {/* ======= Feature cards ======= */}
       <section id="features" className="max-w-6xl mx-auto px-4 lg:px-8 py-6 grid gap-5 md:grid-cols-3">
         <FeatureCard
-          tint="coral"
-          Icon={Milk}
+          tint="coral" Icon={Milk}
           title="Feeding tracker"
-          text="Log every bottle, breastfeed, and solid. See daily and weekly totals against your pediatrician's recommended intake."
+          text="Log breastfeeding, bottles, and solid foods. Get smart reminders and daily targets based on weight."
         />
         <FeatureCard
-          tint="lavender"
-          Icon={Moon}
+          tint="lavender" Icon={Moon}
           title="Sleep & quiet time"
-          text="Track rest patterns and quiet time. Record sleep logs so you and your co-parent stay on the same page."
+          text="Record sleep logs and downtime. Track rest patterns across the week so you know what's normal for your baby."
         />
         <FeatureCard
-          tint="peach"
-          Icon={Baby}
-          title="Diaper & stool health"
-          text="Record stool size, color, and consistency. Catch changes early and share a clear log with your doctor."
+          tint="peach" Icon={Baby}
+          title="Diaper & health"
+          text="Monitor diapers, stool patterns, medication doses and health changes over time — with clinical audit trail."
         />
       </section>
 
@@ -111,13 +117,13 @@ export default async function Landing() {
             Understand your baby&apos;s patterns effortlessly.
           </h2>
           <ul className="mt-5 space-y-3 text-ink">
-            <Bullet tint="mint">Rolling-window KPIs: total feed, recommended, remaining, feeding %</Bullet>
-            <Bullet tint="brand">Weight trend with automatic growth curve</Bullet>
-            <Bullet tint="peach">Daily feed/stool summaries and printable reports</Bullet>
+            <Bullet tint="mint">Personalized daily summaries</Bullet>
+            <Bullet tint="brand">Detect trends and out-of-pattern changes</Bullet>
+            <Bullet tint="peach">Gentle, evidence-based recommendations</Bullet>
             <Bullet tint="lavender">Medication adherence at a glance</Bullet>
           </ul>
           <div className="mt-7">
-            <Link href="/register" className="inline-flex items-center gap-2 rounded-md bg-brand-500 px-4 py-2.5 text-white text-sm font-medium hover:bg-brand-600 shadow-sm">
+            <Link href="/register" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-white text-sm font-medium hover:bg-brand-600 shadow-sm">
               Explore the dashboard <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -130,9 +136,9 @@ export default async function Landing() {
             <span className="text-xs text-ink-muted">Today</span>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-3">
-            <MockKpi tint="peach"    icon={<Milk     className="h-4 w-4" />} title="Feeding" value="5 feeds" sub="680 ml" />
-            <MockKpi tint="lavender" icon={<Moon     className="h-4 w-4" />} title="Sleep"   value="8h 45m"  sub="score 85" />
-            <MockKpi tint="mint"     icon={<Baby     className="h-4 w-4" />} title="Diaper"  value="4 times" sub="normal"  />
+            <MockKpi tint="peach"    icon={<Milk  className="h-4 w-4" />} title="Feeding" value="5 feeds" sub="680 ml" />
+            <MockKpi tint="lavender" icon={<Moon  className="h-4 w-4" />} title="Sleep"   value="8h 45m"  sub="score 85" />
+            <MockKpi tint="mint"     icon={<Baby  className="h-4 w-4" />} title="Diaper"  value="4 times" sub="normal"  />
           </div>
           <MockBarChart />
           <div className="mt-4 text-xs font-semibold text-ink-muted uppercase tracking-wider">Daily timeline</div>
@@ -150,10 +156,14 @@ export default async function Landing() {
           <div className="text-xs font-semibold tracking-wider text-mint-600 uppercase">How it works</div>
           <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">Three steps to a clearer picture.</h2>
         </div>
-        <div className="mt-10 grid md:grid-cols-3 gap-8">
+        <div className="mt-10 grid md:grid-cols-3 gap-8 relative">
+          {/* Dashed connectors (desktop only) */}
+          <svg className="hidden md:block absolute top-10 left-[16%] right-[16%] h-6 pointer-events-none" viewBox="0 0 400 24" preserveAspectRatio="none">
+            <path d="M0,12 C80,-8 120,32 200,12 C280,-8 320,32 400,12" stroke="#C2D9EE" strokeWidth="1.5" strokeDasharray="3 4" fill="none" />
+          </svg>
           <Step n={1} tint="brand"    Icon={Clipboard} title="Log daily activities" text="Feedings, stools, meds, measurements — entered in seconds or uploaded as handwritten notes." />
           <Step n={2} tint="mint"     Icon={Brain}     title="Automatic analysis"   text="Every entry runs through smart rules and aggregations — no spreadsheets, no manual math." />
-          <Step n={3} tint="coral"    Icon={BarChart3} title="Get insights"         text="Daily & full reports, trend charts, adherence tracking. Print for your pediatrician." />
+          <Step n={3} tint="coral"    Icon={BarChart3} title="Get smart insights"   text="Daily &amp; full reports, trend charts, adherence tracking. Print for your pediatrician." />
         </div>
       </section>
 
@@ -162,7 +172,7 @@ export default async function Landing() {
         <div>
           <div className="text-xs font-semibold tracking-wider text-coral-500 uppercase">Smart Scan · OCR</div>
           <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">
-            Upload handwritten notes.<br />We digitize everything.
+            From handwritten notes to smart data.
           </h2>
           <ul className="mt-5 space-y-3 text-ink">
             <Bullet tint="coral">Scan daily logs — English, Arabic, or mixed</Bullet>
@@ -170,7 +180,7 @@ export default async function Landing() {
             <Bullet tint="peach">Edit &amp; confirm before saving — nothing is auto-applied</Bullet>
           </ul>
           <div className="mt-7">
-            <Link href="/register" className="inline-flex items-center gap-2 rounded-md bg-coral-500 px-4 py-2.5 text-white text-sm font-medium hover:bg-coral-600 shadow-sm">
+            <Link href="/register" className="inline-flex items-center gap-2 rounded-lg bg-coral-500 px-4 py-2.5 text-white text-sm font-medium hover:bg-coral-600 shadow-sm">
               Try Smart Scan <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -186,25 +196,16 @@ export default async function Landing() {
           <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">The calm your brain has been asking for.</h2>
         </div>
         <div className="mt-10 grid md:grid-cols-3 gap-5">
-          <Quote
-            name="Sarah M."
-            tint="coral"
-            text="This app changed how I understand my baby's routine. The OCR for my handwritten logs saves me hours."
-          />
-          <Quote
-            name="James T."
-            tint="mint"
-            text="The daily report feels like a weekly briefing from a NICU nurse. We bring it to every pediatrician visit."
-          />
-          <Quote
-            name="Priya K."
-            tint="lavender"
-            text="Arabic + English handwriting recognition is what sold us — nothing else on the market does this well."
-          />
+          <Quote name="Sarah M." tint="coral"
+            text="This app changed how I understand my baby's routine. The OCR for my handwritten logs saves me hours." />
+          <Quote name="James T." tint="mint"
+            text="The daily report feels like a weekly briefing from a NICU nurse. We bring it to every pediatrician visit." />
+          <Quote name="Priya K." tint="lavender"
+            text="Arabic + English handwriting recognition is what sold us — nothing else on the market does this well." />
         </div>
       </section>
 
-      {/* ======= CTA ======= */}
+      {/* ======= CTA with app-store buttons ======= */}
       <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-16 pb-24">
         <div className="rounded-3xl bg-gradient-to-r from-coral-50 via-peach-50 to-mint-50 border border-slate-200 p-10 text-center relative overflow-hidden">
           <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-coral-100 blur-2xl" />
@@ -213,15 +214,22 @@ export default async function Landing() {
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-strong">
               Start tracking your baby&apos;s journey today.
             </h2>
-            <div className="mt-6 flex items-center justify-center gap-3">
-              <Link href="/register" className="inline-flex items-center gap-2 rounded-md bg-coral-500 px-6 py-3 text-white font-medium hover:bg-coral-600 shadow-sm">
+            <p className="mt-2 text-sm text-ink">It&apos;s free, easy and made with love.</p>
+            <div className="mt-6 flex items-center justify-center flex-wrap gap-3">
+              <Link href="/register" className="inline-flex items-center gap-2 rounded-lg bg-coral-500 px-6 py-3 text-white font-medium hover:bg-coral-600 shadow-sm">
                 Create free account
               </Link>
-              <Link href="/login" className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-6 py-3 font-medium text-ink hover:bg-slate-50">
+              <Link href="/login" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3 font-medium text-ink hover:bg-slate-50">
                 Log in
               </Link>
             </div>
-            <p className="mt-3 text-xs text-ink-muted">No credit card required.</p>
+            <p className="mt-2 text-xs text-ink-muted">No credit card required.</p>
+
+            {/* App store / Play store pills (coming soon links to web app for now) */}
+            <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
+              <StoreBadge platform="apple" />
+              <StoreBadge platform="google" />
+            </div>
           </div>
         </div>
       </section>
@@ -269,13 +277,10 @@ function Avatar({ tint, initial }: { tint: 'coral'|'mint'|'lavender'|'peach'; in
   );
 }
 
-function FeatureCard({
-  tint, Icon, title, text,
-}: {
+function FeatureCard({ tint, Icon, title, text }: {
   tint: 'coral'|'mint'|'lavender'|'peach'|'brand';
   Icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  text: string;
+  title: string; text: string;
 }) {
   const bgIcon = {
     coral:    'bg-coral-100 text-coral-600',
@@ -285,17 +290,17 @@ function FeatureCard({
     brand:    'bg-brand-100 text-brand-600',
   }[tint];
   const linkColor = {
-    coral: 'text-coral-600', mint: 'text-mint-600', lavender: 'text-lavender-600',
-    peach: 'text-peach-600', brand: 'text-brand-600',
+    coral:'text-coral-600', mint:'text-mint-600', lavender:'text-lavender-600',
+    peach:'text-peach-600', brand:'text-brand-600',
   }[tint];
   return (
-    <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-card">
-      <div className={`h-12 w-12 rounded-full grid place-items-center ${bgIcon}`}>
-        <Icon className="h-6 w-6" />
+    <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-card text-center">
+      <div className={`mx-auto h-14 w-14 rounded-full grid place-items-center ${bgIcon}`}>
+        <Icon className="h-7 w-7" />
       </div>
       <h3 className="mt-4 text-lg font-semibold text-ink-strong">{title}</h3>
       <p className="mt-2 text-sm text-ink">{text}</p>
-      <a href="#features" className={`mt-3 inline-flex items-center gap-1 text-sm font-medium ${linkColor}`}>
+      <a href="#features" className={`mt-4 inline-flex items-center gap-1 text-sm font-medium ${linkColor}`}>
         Learn more <ArrowRight className="h-3.5 w-3.5" />
       </a>
     </div>
@@ -321,9 +326,9 @@ function Bullet({ tint, children }: { tint: 'brand'|'mint'|'coral'|'lavender'|'p
 }
 
 function MockKpi({ tint, title, value, sub, icon }: {
-  tint: 'peach'|'lavender'|'mint'|'brand'|'coral';
-  title: string; value: string; sub: string;
-  icon: React.ReactNode;
+  tint:'peach'|'lavender'|'mint'|'brand'|'coral';
+  title:string; value:string; sub:string;
+  icon:React.ReactNode;
 }) {
   const bg = { peach:'bg-peach-50', lavender:'bg-lavender-50', mint:'bg-mint-50', brand:'bg-brand-50', coral:'bg-coral-50' }[tint];
   const fg = { peach:'text-peach-600', lavender:'text-lavender-600', mint:'text-mint-600', brand:'text-brand-600', coral:'text-coral-600' }[tint];
@@ -356,10 +361,10 @@ function MockBarChart() {
 }
 
 function TimelineRow({ time, tint, title, sub, icon }: {
-  time: string;
-  tint: 'coral'|'peach'|'lavender'|'mint'|'brand';
-  title: string; sub: string;
-  icon: React.ReactNode;
+  time:string;
+  tint:'coral'|'peach'|'lavender'|'mint'|'brand';
+  title:string; sub:string;
+  icon:React.ReactNode;
 }) {
   const bg = {
     coral: 'bg-coral-100 text-coral-700',
@@ -381,20 +386,20 @@ function TimelineRow({ time, tint, title, sub, icon }: {
 }
 
 function Step({ n, tint, Icon, title, text }: {
-  n: number;
-  tint: 'brand'|'mint'|'coral'|'peach'|'lavender';
-  Icon: React.ComponentType<{ className?: string }>;
-  title: string; text: string;
+  n:number;
+  tint:'brand'|'mint'|'coral'|'peach'|'lavender';
+  Icon:React.ComponentType<{ className?: string }>;
+  title:string; text:string;
 }) {
   const ring = {
-    brand: 'bg-brand-100 text-brand-700 ring-brand-200',
-    mint:  'bg-mint-100 text-mint-700 ring-mint-200',
-    coral: 'bg-coral-100 text-coral-700 ring-coral-200',
-    peach: 'bg-peach-100 text-peach-700 ring-peach-200',
-    lavender: 'bg-lavender-100 text-lavender-700 ring-lavender-200',
+    brand:'bg-brand-100 text-brand-700',
+    mint: 'bg-mint-100 text-mint-700',
+    coral:'bg-coral-100 text-coral-700',
+    peach:'bg-peach-100 text-peach-700',
+    lavender:'bg-lavender-100 text-lavender-700',
   }[tint];
   const badge = {
-    brand: 'bg-brand-500', mint: 'bg-mint-500', coral: 'bg-coral-500', peach: 'bg-peach-500', lavender: 'bg-lavender-500',
+    brand:'bg-brand-500', mint:'bg-mint-500', coral:'bg-coral-500', peach:'bg-peach-500', lavender:'bg-lavender-500',
   }[tint];
   return (
     <div className="relative text-center">
@@ -408,17 +413,19 @@ function Step({ n, tint, Icon, title, text }: {
   );
 }
 
-function Quote({ name, tint, text }: { name: string; tint: 'coral'|'mint'|'lavender'|'peach'; text: string }) {
-  const bg = { coral:'bg-coral-200', mint:'bg-mint-200', lavender:'bg-lavender-200', peach:'bg-peach-200' }[tint];
+function Quote({ name, tint, text }: { name:string; tint:'coral'|'mint'|'lavender'|'peach'; text:string }) {
+  const ring = { coral:'bg-coral-200', mint:'bg-mint-200', lavender:'bg-lavender-200', peach:'bg-peach-200' }[tint];
   return (
     <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-card">
       <div className="flex items-start gap-3">
-        <span className={`h-10 w-10 rounded-full grid place-items-center text-white font-bold ${bg}`}>{name.charAt(0)}</span>
-        <div>
+        <span className={`h-12 w-12 rounded-full grid place-items-center text-white font-bold text-lg ${ring}`}>{name.charAt(0)}</span>
+        <div className="flex-1">
           <p className="text-sm text-ink">&ldquo;{text}&rdquo;</p>
-          <div className="mt-2 flex items-center gap-1 text-peach-500">
-            {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-3.5 w-3.5 fill-current" />)}
-            <span className="ml-2 text-xs text-ink-muted">— {name}</span>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-ink-muted">— {name}</span>
+            <div className="flex gap-0.5 text-peach-500">
+              {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-3 w-3 fill-current" />)}
+            </div>
           </div>
         </div>
       </div>
@@ -426,13 +433,11 @@ function Quote({ name, tint, text }: { name: string; tint: 'coral'|'mint'|'laven
   );
 }
 
-function FooterCol({ title, children }: { title: string; children: React.ReactNode }) {
+function FooterCol({ title, children }: { title:string; children:React.ReactNode }) {
   return (
     <div>
       <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{title}</div>
-      <div className="mt-3 space-y-2 flex flex-col [&>*]:text-ink [&>*]:hover:text-ink-strong">
-        {children}
-      </div>
+      <div className="mt-3 space-y-2 flex flex-col [&>*]:text-ink [&>*]:hover:text-ink-strong">{children}</div>
     </div>
   );
 }
@@ -462,12 +467,12 @@ function OcrBeforeAfter() {
         <div className="pt-2 text-sm">
           <div className="font-semibold text-ink-strong mb-2">May 14, 2024</div>
           <div className="divide-y divide-slate-100">
-            <OcrRow time="08:00" Icon={Milk}     tint="coral"    title="Breastfeeding" sub="15 min each side" />
-            <OcrRow time="10:00" Icon={Milk}     tint="peach"    title="Bottle feeding" sub="120 ml" />
-            <OcrRow time="13:00" Icon={Moon}     tint="lavender" title="Nap"           sub="1 h 30m" />
-            <OcrRow time="15:00" Icon={Baby}     tint="mint"     title="Diaper"        sub="Dirty" />
-            <OcrRow time="18:00" Icon={Milk}     tint="peach"    title="Bottle feeding" sub="100 ml" />
-            <OcrRow time="21:00" Icon={Milk}     tint="coral"    title="Breastfeeding" sub="10 min each side" />
+            <OcrRow time="08:00" Icon={Milk} tint="coral"    title="Breastfeeding" sub="15 min each side" />
+            <OcrRow time="10:00" Icon={Milk} tint="peach"    title="Bottle feeding" sub="120 ml" />
+            <OcrRow time="13:00" Icon={Moon} tint="lavender" title="Nap"           sub="1 h 30m" />
+            <OcrRow time="15:00" Icon={Baby} tint="mint"     title="Diaper"        sub="Dirty" />
+            <OcrRow time="18:00" Icon={Milk} tint="peach"    title="Bottle feeding" sub="100 ml" />
+            <OcrRow time="21:00" Icon={Milk} tint="coral"    title="Breastfeeding" sub="10 min each side" />
           </div>
           <button className="mt-3 w-full rounded-md bg-mint-500 text-white text-sm font-medium py-2 hover:bg-mint-600">
             Review &amp; Save
@@ -479,10 +484,10 @@ function OcrBeforeAfter() {
 }
 
 function OcrRow({ time, Icon, tint, title, sub }: {
-  time: string;
-  Icon: React.ComponentType<{ className?: string }>;
-  tint: 'coral'|'peach'|'mint'|'lavender';
-  title: string; sub: string;
+  time:string;
+  Icon:React.ComponentType<{ className?: string }>;
+  tint:'coral'|'peach'|'mint'|'lavender';
+  title:string; sub:string;
 }) {
   const bg = {
     coral: 'bg-coral-100 text-coral-700',
@@ -500,3 +505,17 @@ function OcrRow({ time, Icon, tint, title, sub }: {
   );
 }
 
+function StoreBadge({ platform }: { platform: 'apple'|'google' }) {
+  const Icon = platform === 'apple' ? Apple : Smartphone;
+  const top = platform === 'apple' ? 'Download on the' : 'GET IT ON';
+  const bottom = platform === 'apple' ? 'App Store' : 'Google Play';
+  return (
+    <a href="#" className="inline-flex items-center gap-3 rounded-lg bg-ink-strong text-white px-4 py-2.5 hover:bg-black">
+      <Icon className="h-6 w-6" />
+      <span className="text-left leading-tight">
+        <span className="block text-[10px] uppercase tracking-wider opacity-80">{top}</span>
+        <span className="block text-sm font-semibold">{bottom}</span>
+      </span>
+    </a>
+  );
+}
