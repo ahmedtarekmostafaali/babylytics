@@ -96,8 +96,8 @@ export const VaccinationSchema = z.object({
   administered_at: z.string().nullable().optional(),
   dose_number: z.coerce.number().int().min(1).max(10).nullable().optional(),
   total_doses: z.coerce.number().int().min(1).max(10).nullable().optional(),
-  status: z.enum(['scheduled','administered','missed','cancelled']),
+  status: z.enum(['scheduled','administered','skipped','missed']),
   provider: z.string().max(200).nullable().optional(),
-  lot_number: z.string().max(80).nullable().optional(),
+  batch_number: z.string().max(80).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
