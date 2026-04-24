@@ -183,6 +183,7 @@ export default async function BabyPage({
             <div className="text-lg font-semibold text-ink-strong">{range.label}</div>
           </div>
           <DateRangeFilter currentKey={range.key} />
+        </div>
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
           <KpiCard tint="peach" icon={Milk}   label="Total feed"
             value={fmtMl(f.total_feed_ml)} sub={`${f.feed_count ?? 0} feeds · avg ${fmtMl(f.avg_feed_ml)}`}
