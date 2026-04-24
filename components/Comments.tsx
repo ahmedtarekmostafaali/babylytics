@@ -53,7 +53,11 @@ export function Comments({
       .eq('target_table', target)
       .eq('target_id', targetId)
       .is('deleted_at', null);
-    if (scopeDate) q = q.eq('scope_date', scopeDate);
+    if (scopeDate) {
+      // Show comments tagged with this specific date plus any legacy comments
+      // that were posted before scope_date existed (scope_date = NULL).
+      q = q.or(`scope_date.eq.${scopeDate},scope_date.is.null`);
+    }
     q.order('created_at', { ascending: true })
       .then(({ data }) => { setRows((data ?? []) as Row[]); setLoading(false); });
   }, [target, targetId, scopeDate]);

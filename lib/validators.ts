@@ -90,6 +90,27 @@ export const TemperatureSchema = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
+export const DoctorSchema = z.object({
+  name:      z.string().min(1).max(200),
+  specialty: z.string().max(120).nullable().optional(),
+  clinic:    z.string().max(200).nullable().optional(),
+  phone:     z.string().max(40).nullable().optional(),
+  email:     z.string().email().max(200).nullable().optional().or(z.literal('').transform(() => null)),
+  address:   z.string().max(400).nullable().optional(),
+  notes:     z.string().max(2000).nullable().optional(),
+  is_primary: z.boolean().optional(),
+});
+
+export const AppointmentSchema = z.object({
+  doctor_id:   z.string().uuid().nullable().optional(),
+  scheduled_at: z.string().min(1),
+  duration_min: z.coerce.number().int().min(1).max(600).nullable().optional(),
+  purpose:     z.string().max(200).nullable().optional(),
+  location:    z.string().max(200).nullable().optional(),
+  status:      z.enum(['scheduled','completed','cancelled','missed','rescheduled']).default('scheduled'),
+  notes:       z.string().max(2000).nullable().optional(),
+});
+
 export const VaccinationSchema = z.object({
   vaccine_name: z.string().min(1).max(200),
   scheduled_at: z.string().nullable().optional(),

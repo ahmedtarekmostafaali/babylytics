@@ -5,11 +5,11 @@ import { BabyProfileForm, type BabyProfileValue } from '@/components/forms/BabyP
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { Sparkline } from '@/components/Sparkline';
 import { signAvatarUrl } from '@/lib/baby-avatar';
-import { ageInDays, fmtDate } from '@/lib/dates';
+import { ageInDays } from '@/lib/dates';
 import { fmtKg, fmtCm } from '@/lib/units';
 import {
   Cake, Flag, Droplet, Star, Eye, TrendingUp, ExternalLink,
-  UserPlus, Camera, Share2, Stethoscope, CalendarClock,
+  UserPlus, Camera, Share2, Stethoscope,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -160,32 +160,21 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
             </ul>
           </section>
 
-          {/* Doctor / Next appointment — parent only */}
-          {canEditHealth && (baby.doctor_name || baby.next_appointment_at) && (
-            <section className="rounded-2xl bg-gradient-to-br from-lavender-50 to-white border border-lavender-200 shadow-card p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="h-9 w-9 rounded-xl bg-lavender-500 text-white grid place-items-center">
-                  <Stethoscope className="h-4 w-4" />
+          {/* Doctors & appointments shortcut — parent/owner only */}
+          {canEditHealth && (
+            <Link href={`/babies/${params.babyId}/doctors`}
+              className="block rounded-2xl bg-gradient-to-br from-lavender-500 to-brand-500 text-white shadow-card hover:shadow-panel transition p-5">
+              <div className="flex items-center gap-3">
+                <span className="h-10 w-10 rounded-xl bg-white/20 grid place-items-center shrink-0">
+                  <Stethoscope className="h-5 w-5" />
                 </span>
-                <h3 className="text-sm font-bold text-ink-strong">Doctor</h3>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs uppercase tracking-wider opacity-80">Health</div>
+                  <div className="font-bold">Doctors &amp; appointments</div>
+                  <p className="text-xs opacity-90 mt-0.5">Manage your pediatrician, specialists and upcoming visits.</p>
+                </div>
               </div>
-              {baby.doctor_name && (
-                <div className="mb-3">
-                  <div className="font-semibold text-ink-strong">{baby.doctor_name}</div>
-                  {baby.doctor_clinic && <div className="text-xs text-ink-muted">{baby.doctor_clinic}</div>}
-                  {baby.doctor_phone && <div className="text-xs text-lavender-700 font-medium">{baby.doctor_phone}</div>}
-                </div>
-              )}
-              {baby.next_appointment_at && (
-                <div className="rounded-xl bg-white border border-slate-200 p-3">
-                  <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-lavender-700">
-                    <CalendarClock className="h-3.5 w-3.5" /> Next appointment
-                  </div>
-                  <div className="mt-1 font-semibold text-ink-strong">{fmtDate(baby.next_appointment_at)}</div>
-                  {baby.next_appointment_notes && <div className="text-xs text-ink-muted truncate">{baby.next_appointment_notes}</div>}
-                </div>
-              )}
-            </section>
+            </Link>
           )}
 
           {/* Growth summary */}

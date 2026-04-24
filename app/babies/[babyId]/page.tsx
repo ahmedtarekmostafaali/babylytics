@@ -15,6 +15,7 @@ import { signAvatarUrl } from '@/lib/baby-avatar';
 import {
   Milk, Moon, Droplet, Pill, Scale, Thermometer, Syringe, Bell,
   TrendingUp, ArrowUpRight, FileText, Sparkles, Plus, ClipboardList, ArrowRight, Activity,
+  Stethoscope, CalendarClock,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -58,6 +59,8 @@ export default async function BabyOverview({
     weightSeries,
     upcomingVaccines,
     lowConf,
+    nextAppointment,
+    myRole,
   ] = await Promise.all([
     supabase.from('feedings')
       .select('id,feeding_time,milk_type,quantity_ml,duration_min').eq('baby_id', babyId).is('deleted_at', null)
@@ -144,6 +147,11 @@ export default async function BabyOverview({
       .select('id,file_id,confidence_score,created_at,status')
       .eq('baby_id', babyId).eq('status', 'extracted').eq('flag_low_confidence', true)
       .order('created_at', { ascending: false }).limit(5),
+
+    // Next upcoming appointment — parent-only, read via the helper RPC that
+    // already enforces its own access check.
+    supabase.rpc('next_appointment', { p_baby: babyId }),
+    supabase.rpc('my_baby_role', { b: babyId }),
   ]);
 
   const w = (currentWeight.data as number | null) ?? null;
@@ -553,6 +561,53 @@ export default async function BabyOverview({
 
         {/* ───── RIGHT: Reminders + Growth + OCR CTA ───── */}
         <div className="space-y-4">
+          {/* Next appointment — parent/owner only */}
+          {(() => {
+            const role = (myRole?.data as string | null) ?? null;
+            const isParent = role === 'owner' || role === 'parent' || role === 'editor';
+            const appt = (nextAppointment?.data as { id: string; doctor_id: string | null; doctor_name: string | null; scheduled_at: string; purpose: string | null; location: string | null; status: string }[] | null)?.[0];
+            if (!isParent) return null;
+            if (!appt) {
+              return (
+                <Link href={`/babies/${babyId}/doctors/appointments/new`}
+                  className="block rounded-2xl border border-dashed border-lavender-300 bg-lavender-50/40 p-4 hover:bg-lavender-50 transition">
+                  <div className="flex items-center gap-3">
+                    <span className="h-10 w-10 rounded-xl bg-lavender-100 text-lavender-600 grid place-items-center shrink-0">
+                      <CalendarClock className="h-5 w-5" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-ink-strong">No upcoming appointment</div>
+                      <div className="text-xs text-ink-muted">Tap to book one with your pediatrician.</div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-ink-muted" />
+                  </div>
+                </Link>
+              );
+            }
+            return (
+              <Link href={`/babies/${babyId}/doctors/appointments/${appt.id}`}
+                className="block relative overflow-hidden rounded-2xl bg-gradient-to-br from-lavender-500 to-brand-500 text-white p-5 shadow-card hover:shadow-panel transition">
+                <div className="absolute -top-6 -right-6 h-28 w-28 rounded-full bg-white/20 blur-xl" aria-hidden />
+                <div className="relative">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="h-4 w-4 opacity-90" />
+                    <div className="text-xs uppercase tracking-wider opacity-90">Next appointment</div>
+                  </div>
+                  <div className="mt-2 text-xl font-bold leading-tight">{fmtDateTime(appt.scheduled_at)}</div>
+                  <div className="text-sm opacity-95 mt-0.5 truncate">
+                    {appt.purpose ?? 'Visit'}
+                    {appt.doctor_name ? ` · ${appt.doctor_name}` : ''}
+                  </div>
+                  {appt.location && <div className="text-xs opacity-80 truncate mt-0.5">at {appt.location}</div>}
+                  <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold bg-white/20 rounded-full px-3 py-1">
+                    <Stethoscope className="h-3 w-3" /> Open appointment
+                    <ArrowRight className="h-3 w-3" />
+                  </div>
+                </div>
+              </Link>
+            );
+          })()}
+
           {/* Upcoming reminders */}
           <Panel
             title="Upcoming reminders"
@@ -692,7 +747,9 @@ export default async function BabyOverview({
       </Link>
 
       {/* ═══ CAREGIVER NOTES ═══ */}
-      <Comments babyId={babyId} target="babies" targetId={babyId} title="Caregiver notes" />
+      <Comments babyId={babyId} target="babies" targetId={babyId}
+        scopeDate={focusDate}
+        title={`Caregiver notes · ${fmtDate(day.start)}`} />
     </div>
   );
 }

@@ -98,14 +98,24 @@ export default async function SmartScan({
   const latestExtByFile = new Map<string, ExtractedRow>();
   for (const e of allExtracted) if (!latestExtByFile.has(e.file_id)) latestExtByFile.set(e.file_id, e);
 
-  // Tab grouping
-  const archiveFiles = allFiles.filter(f => f.kind === 'other' || f.kind === 'stool_image' || !latestExtByFile.has(f.id));
-  const ocrFiles     = allFiles.filter(f => latestExtByFile.has(f.id));
+  // Tab grouping:
+  //   OCR Inbox  = every file of a "scannable" kind, with OR without a
+  //                successful extraction (so uploads that failed OCR still
+  //                surface instead of being hidden in the archive).
+  //   Needs Review = the subset flagged as low-confidence by Claude.
+  //   Confirmed    = extractions the user has saved to logs.
+  //   Archive      = everything else (stool images, "other").
+  const OCR_KINDS = new Set(['daily_note', 'prescription', 'report']);
+  const ocrFiles     = allFiles.filter(f => OCR_KINDS.has(f.kind));
+  const archiveFiles = allFiles.filter(f => !OCR_KINDS.has(f.kind));
   const needsReview  = ocrFiles.filter(f => {
-    const e = latestExtByFile.get(f.id)!;
-    return e.status === 'extracted' && e.flag_low_confidence;
+    const e = latestExtByFile.get(f.id);
+    return e ? (e.status === 'extracted' && e.flag_low_confidence) : true; // no extraction at all = also needs review
   });
-  const confirmed    = ocrFiles.filter(f => latestExtByFile.get(f.id)!.status === 'confirmed');
+  const confirmed    = ocrFiles.filter(f => {
+    const e = latestExtByFile.get(f.id);
+    return e?.status === 'confirmed';
+  });
 
   const listByTab: Record<Tab, FileRow[]> = {
     inbox:     ocrFiles,
@@ -218,7 +228,9 @@ export default async function SmartScan({
                   : ext.flag_low_confidence   ? { label: 'Low confidence', tint: 'bg-peach-100 text-peach-700' }
                   : ext.status === 'extracted'? { label: 'Needs review', tint: 'bg-lavender-100 text-lavender-700' }
                   : { label: ext.status, tint: 'bg-slate-100 text-ink-muted' })
-                : { label: tab === 'archive' ? 'Archive' : 'No OCR', tint: 'bg-slate-100 text-ink-muted' };
+                : (tab === 'archive'
+                  ? { label: 'Archive', tint: 'bg-slate-100 text-ink-muted' }
+                  : { label: 'Not scanned', tint: 'bg-peach-100 text-peach-700' });
               return (
                 <li key={f.id}>
                   <Link href={`/babies/${params.babyId}/ocr?tab=${tab}&file=${f.id}`}
@@ -375,7 +387,9 @@ function DetailPanel({
               ? <span className="rounded-full bg-peach-100 text-peach-700 text-[11px] font-semibold px-2.5 py-1">Low confidence</span>
               : <span className="rounded-full bg-lavender-100 text-lavender-700 text-[11px] font-semibold px-2.5 py-1">Needs review</span>
         ) : (
-          <span className="rounded-full bg-slate-100 text-ink-muted text-[11px] font-semibold px-2.5 py-1">Archive</span>
+          file.kind === 'other' || file.kind === 'stool_image'
+            ? <span className="rounded-full bg-slate-100 text-ink-muted text-[11px] font-semibold px-2.5 py-1">Archive</span>
+            : <span className="rounded-full bg-peach-100 text-peach-700 text-[11px] font-semibold px-2.5 py-1">Not scanned</span>
         )}
       </div>
 

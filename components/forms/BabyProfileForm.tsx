@@ -315,25 +315,32 @@ export function BabyProfileForm({
                 )}
               </Select>
             </Field>
-            <Field label="Doctor name">
-              <Input value={docName} onChange={e => setDocName(e.target.value)} placeholder="Dr. Sarah Ahmed" />
-            </Field>
-            <Field label="Doctor phone">
-              <Input value={docPhone} onChange={e => setDocPhone(e.target.value)} placeholder="+20 100 000 0000" />
-            </Field>
-            <Field label="Clinic / hospital">
-              <Input value={docClinic} onChange={e => setDocClinic(e.target.value)} placeholder="Cairo Children Clinic" />
-            </Field>
-            <Field label="Next appointment">
-              <Input type="datetime-local" value={appt} onChange={e => setAppt(e.target.value)} />
-            </Field>
-            <Field label="Appointment note">
-              <Input value={apptNotes} onChange={e => setApptNotes(e.target.value)} placeholder="2-month check-up" />
-            </Field>
           </div>
-          <div className="mt-4 rounded-2xl bg-lavender-50 border border-lavender-200 p-3 text-xs text-lavender-900">
-            Doctor details and appointments are visible to parents and owners only. Doctors, nurses, and caregivers won&apos;t see this tab.
+          <div className="mt-5 rounded-2xl border border-lavender-200 bg-gradient-to-br from-lavender-50 to-white p-4 flex items-start gap-3">
+            <span className="h-10 w-10 rounded-xl bg-lavender-500 text-white grid place-items-center shrink-0">
+              <Stethoscope className="h-5 w-5" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-ink-strong">Doctors &amp; appointments moved</div>
+              <p className="text-xs text-ink-muted mt-0.5">
+                You can now add <strong>multiple doctors</strong> (pediatrician, specialist, dentist) and book
+                appointments with each of them from their own dedicated page.
+              </p>
+              <a href={`/babies/${baby.id}/doctors`}
+                className="mt-2 inline-flex items-center gap-1 rounded-full bg-lavender-500 hover:bg-lavender-600 text-white text-xs font-semibold px-3 py-1.5">
+                Open Doctors &amp; appointments →
+              </a>
+            </div>
           </div>
+          <div className="mt-3 text-xs text-ink-muted">
+            Doctor details and appointments are visible to parents and owners only — doctors, nurses and caregivers don&apos;t see this section.
+          </div>
+          {/* Hidden fields kept to preserve the form's state contract. */}
+          <input type="hidden" value={docName ?? ''} readOnly />
+          <input type="hidden" value={docPhone ?? ''} readOnly />
+          <input type="hidden" value={docClinic ?? ''} readOnly />
+          <input type="hidden" value={appt ?? ''} readOnly />
+          <input type="hidden" value={apptNotes ?? ''} readOnly />
         </SectionCard>
       )}
 

@@ -65,23 +65,33 @@ function parseBreast(notes: string | null): { left: number | null; right: number
   return { left: l ? Number(l[1]) : null, right: r ? Number(r[1]) : null };
 }
 
+type MilkType = 'breast' | 'formula' | 'mixed' | 'solid' | 'other';
+const MILK_TYPES: MilkType[] = ['breast', 'formula', 'mixed', 'solid', 'other'];
+
 export default async function FeedingsLog({
   params, searchParams,
 }: {
   params: { babyId: string };
-  searchParams: { range?: string; start?: string; end?: string; id?: string };
+  searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
   const range = parseRangeParam(searchParams);
+  // Kind filter — accepts a single `type=` or comma-separated list. Empty = all.
+  const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean) as MilkType[];
+  const activeTypes: MilkType[] = rawTypes.filter((t): t is MilkType => MILK_TYPES.includes(t));
+  const typeFilterActive = activeTypes.length > 0 && activeTypes.length < MILK_TYPES.length;
+
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 
+  let feedQuery = supabase.from('feedings')
+    .select('id,feeding_time,milk_type,quantity_ml,duration_min,kcal,source,notes,created_at')
+    .eq('baby_id', params.babyId).is('deleted_at', null)
+    .gte('feeding_time', range.start).lte('feeding_time', range.end);
+  if (typeFilterActive) feedQuery = feedQuery.in('milk_type', activeTypes);
+
   const [{ data: rowsData }, { data: todayData }] = await Promise.all([
-    supabase.from('feedings')
-      .select('id,feeding_time,milk_type,quantity_ml,duration_min,kcal,source,notes,created_at')
-      .eq('baby_id', params.babyId).is('deleted_at', null)
-      .gte('feeding_time', range.start).lte('feeding_time', range.end)
-      .order('feeding_time', { ascending: false }).limit(500),
+    feedQuery.order('feeding_time', { ascending: false }).limit(500),
     (async () => {
       const w = dayWindow(todayLocalDate());
       return supabase.from('feedings')
@@ -119,9 +129,6 @@ export default async function FeedingsLog({
         subtitle={`All recorded feedings for ${baby.name}.`}
         right={
           <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-              <Filter className="h-4 w-4" /> Filter
-            </button>
             <Link href={`/babies/${params.babyId}/feedings/new`}
               className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-peach-500 to-coral-500 hover:brightness-105 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
               <Plus className="h-4 w-4" /> Log feed
@@ -129,7 +136,22 @@ export default async function FeedingsLog({
           </div>
         } />
 
-      <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+      <div className="flex items-center gap-3 flex-wrap">
+        <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+        <div className="inline-flex items-center gap-1 rounded-2xl bg-white border border-slate-200 p-1 shadow-sm flex-wrap">
+          <span className="px-2 py-1.5 text-xs font-semibold text-ink-muted inline-flex items-center gap-1">
+            <Filter className="h-3 w-3" /> Type
+          </span>
+          <FilterChip href={buildFilterHref(params.babyId, range.key, null)}
+            label="All" active={!typeFilterActive} />
+          {MILK_TYPES.map(t => (
+            <FilterChip key={t}
+              href={buildFilterHref(params.babyId, range.key, toggleType(activeTypes, t))}
+              label={t.charAt(0).toUpperCase() + t.slice(1)}
+              active={activeTypes.includes(t)} />
+          ))}
+        </div>
+      </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
         {/* LIST */}
@@ -367,6 +389,31 @@ function SummaryRow({ icon: Icon, tint, label, value }: {
       <span className="font-bold text-ink-strong">{value}</span>
     </li>
   );
+}
+
+function FilterChip({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link href={href}
+      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+        active ? 'bg-peach-500 text-white shadow-sm' : 'text-ink-muted hover:text-ink hover:bg-slate-50'
+      }`}>
+      {label}
+    </Link>
+  );
+}
+
+function toggleType(active: MilkType[], t: MilkType): MilkType[] | null {
+  // Clicking a chip toggles that one in/out of the active set. Empty = show All.
+  const has = active.includes(t);
+  const next = has ? active.filter(x => x !== t) : [...active, t];
+  return next.length === 0 ? null : next;
+}
+
+function buildFilterHref(babyId: string, range: string, types: MilkType[] | null): string {
+  const q = new URLSearchParams();
+  q.set('range', range);
+  if (types && types.length > 0) q.set('type', types.join(','));
+  return `/babies/${babyId}/feedings?${q.toString()}`;
 }
 
 function LastNDaysHint() {
