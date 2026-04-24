@@ -1,26 +1,18 @@
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Sparkline } from '@/components/Sparkline';
 
 type Tint = 'neutral' | 'brand' | 'mint' | 'coral' | 'lavender' | 'peach';
 type Tone = 'neutral' | 'positive' | 'warning' | 'danger';
 
-const tintBg: Record<Tint, string> = {
-  neutral:  'bg-white',
-  brand:    'bg-gradient-to-br from-brand-50 to-white',
-  mint:     'bg-gradient-to-br from-mint-50 to-white',
-  coral:    'bg-gradient-to-br from-coral-50 to-white',
-  lavender: 'bg-gradient-to-br from-lavender-50 to-white',
-  peach:    'bg-gradient-to-br from-peach-50 to-white',
-};
-
-const tintIcon: Record<Tint, string> = {
-  neutral:  'bg-slate-100 text-ink-muted',
-  brand:    'bg-brand-100 text-brand-600',
-  mint:     'bg-mint-100 text-mint-600',
-  coral:    'bg-coral-100 text-coral-600',
-  lavender: 'bg-lavender-100 text-lavender-600',
-  peach:    'bg-peach-100 text-peach-600',
+const TINT_CSS: Record<Tint, { bg: string; iconBg: string; iconFg: string; accent: string; color: string }> = {
+  neutral:  { bg: 'bg-white',                                          iconBg: 'bg-slate-100',    iconFg: 'text-ink-muted',    accent: 'bg-slate-100',    color: '#94A3B8' },
+  brand:    { bg: 'bg-gradient-to-br from-brand-50 via-white to-white', iconBg: 'bg-brand-500',    iconFg: 'text-white',        accent: 'bg-brand-100',    color: '#7BAEDC' },
+  mint:     { bg: 'bg-gradient-to-br from-mint-50 via-white to-white',  iconBg: 'bg-mint-500',     iconFg: 'text-white',        accent: 'bg-mint-100',     color: '#7FC8A9' },
+  coral:    { bg: 'bg-gradient-to-br from-coral-50 via-white to-white', iconBg: 'bg-coral-500',    iconFg: 'text-white',        accent: 'bg-coral-100',    color: '#F4A6A6' },
+  lavender: { bg: 'bg-gradient-to-br from-lavender-50 via-white to-white', iconBg: 'bg-lavender-500', iconFg: 'text-white',     accent: 'bg-lavender-100', color: '#B9A7D8' },
+  peach:    { bg: 'bg-gradient-to-br from-peach-50 via-white to-white', iconBg: 'bg-peach-500',    iconFg: 'text-white',        accent: 'bg-peach-100',    color: '#F6C177' },
 };
 
 const toneText: Record<Tone, string> = {
@@ -37,56 +29,60 @@ export interface KpiCardProps {
   tint?: Tint;
   tone?: Tone;
   icon?: LucideIcon;
-  /** Optional trend direction shown as an arrow + tone color */
   trend?: 'up' | 'down' | 'flat';
-  /** Optional short text next to the trend arrow, e.g. "+12% vs last week" */
   trendLabel?: string;
+  /** Optional tiny trend line below the value */
+  spark?: number[];
 }
 
 export function KpiCard({
-  label, value, sub, tint = 'neutral', tone = 'neutral', icon: Icon, trend, trendLabel,
+  label, value, sub, tint = 'neutral', tone = 'neutral', icon: Icon, trend, trendLabel, spark,
 }: KpiCardProps) {
+  const t = TINT_CSS[tint];
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
   const trendColor =
-    trend === 'up'   ? 'text-mint-700  bg-mint-100' :
+    trend === 'up'   ? 'text-mint-700 bg-mint-100'  :
     trend === 'down' ? 'text-coral-700 bg-coral-100' :
                        'text-ink-muted bg-slate-100';
 
   return (
     <div className={cn(
-      'relative overflow-hidden rounded-2xl border border-slate-200/70 p-4 sm:p-5 shadow-card',
-      tintBg[tint],
+      'relative overflow-hidden rounded-3xl border border-slate-200/70 p-5 shadow-card',
+      t.bg,
     )}>
-      {/* subtle watermark icon in the corner */}
-      {Icon && (
-        <div className="absolute -top-3 -right-3 opacity-10">
-          <Icon className="h-16 w-16" />
-        </div>
-      )}
+      {/* decorative glow */}
+      <div className={cn('absolute -top-10 -right-10 h-32 w-32 rounded-full blur-2xl opacity-60', t.accent)} />
 
-      <div className="flex items-start justify-between gap-2">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</div>
-        {Icon && (
-          <div className={cn('h-9 w-9 rounded-xl grid place-items-center shrink-0', tintIcon[tint])}>
-            <Icon className="h-4 w-4" />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</div>
+          {Icon && (
+            <div className={cn('h-10 w-10 rounded-2xl grid place-items-center shrink-0 shadow-sm', t.iconBg, t.iconFg)}>
+              <Icon className="h-5 w-5" />
+            </div>
+          )}
+        </div>
+
+        <div className={cn('mt-3 text-3xl font-bold tracking-tight', toneText[tone])}>
+          {value}
+        </div>
+
+        {spark && spark.length > 1 && (
+          <div className="mt-2">
+            <Sparkline data={spark} color={t.color} width={160} height={28} />
           </div>
         )}
-      </div>
 
-      <div className={cn('mt-3 text-2xl sm:text-3xl font-bold tracking-tight', toneText[tone])}>
-        {value}
-      </div>
-
-      {sub && <div className="mt-1 text-xs text-ink-muted">{sub}</div>}
-
-      {trend && (
-        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium">
-          <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5', trendColor)}>
-            <TrendIcon className="h-3 w-3" />
-            {trendLabel ?? (trend === 'up' ? 'up' : trend === 'down' ? 'down' : 'flat')}
-          </span>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          {sub && <div className="text-xs text-ink-muted">{sub}</div>}
+          {trend && (
+            <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ml-auto', trendColor)}>
+              <TrendIcon className="h-3 w-3" />
+              {trendLabel ?? (trend === 'up' ? 'up' : trend === 'down' ? 'down' : 'flat')}
+            </span>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
