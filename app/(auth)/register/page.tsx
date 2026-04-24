@@ -12,17 +12,22 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [ageOK, setAgeOK]     = useState(false);
+  const [consent, setConsent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setErr(null); setMsg(null); setLoading(true);
+    setErr(null); setMsg(null);
+    if (!ageOK) { setErr('Please confirm you are 18+.'); return; }
+    if (!consent) { setErr('Please accept the Privacy Policy and Terms to continue.'); return; }
+    setLoading(true);
     const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({
       email, password,
-      options: { data: { display_name: displayName } },
+      options: { data: { display_name: displayName, consent_accepted_at: new Date().toISOString() } },
     });
     setLoading(false);
     if (error) { setErr(error.message); return; }
@@ -56,7 +61,7 @@ export default function RegisterPage() {
             <ul className="space-y-2 text-ink text-sm">
               <PerkRow>Free forever · no credit card</PerkRow>
               <PerkRow>English + Arabic handwritten-note OCR</PerkRow>
-              <PerkRow>Owner / editor / viewer caregiver roles</PerkRow>
+              <PerkRow>Parent / doctor / nurse / viewer roles</PerkRow>
               <PerkRow>Printable clinical reports</PerkRow>
             </ul>
           </div>
@@ -86,9 +91,27 @@ export default function RegisterPage() {
                 value={password} onChange={e => setPassword(e.target.value)}
                 className="h-12 w-full rounded-2xl bg-white border border-slate-200 px-4 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
             </Field>
+            <label className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-ink cursor-pointer">
+              <input type="checkbox" checked={ageOK} onChange={e => setAgeOK(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-coral-500" />
+              <span>I confirm I&apos;m at least <strong>18 years old</strong> and a parent or legal guardian of any baby I&apos;ll add.</span>
+            </label>
+
+            <label className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-ink cursor-pointer">
+              <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-coral-500" />
+              <span>
+                I have read and agree to the{' '}
+                <Link href="/privacy" target="_blank" className="text-brand-700 underline font-semibold">Privacy Policy</Link>,{' '}
+                <Link href="/terms"   target="_blank" className="text-brand-700 underline font-semibold">Terms of Service</Link> and{' '}
+                <Link href="/disclaimer" target="_blank" className="text-coral-700 underline font-semibold">Medical Disclaimer</Link>.
+                I understand Babylytics <strong>is not a medical device</strong> and does not replace advice from a healthcare professional.
+              </span>
+            </label>
+
             {err && <p className="text-sm text-coral-600">{err}</p>}
             {msg && <p className="text-sm text-mint-700">{msg}</p>}
-            <button type="submit" disabled={loading}
+            <button type="submit" disabled={loading || !ageOK || !consent}
               className="w-full h-12 rounded-2xl bg-coral-500 hover:bg-coral-600 text-white font-semibold shadow-sm disabled:opacity-60">
               {loading ? 'Creating…' : 'Create account'}
             </button>
