@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent } from '@/components/ui/Card';
 import { FeedingForm } from '@/components/forms/FeedingForm';
+import { Comments } from '@/components/Comments';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +34,7 @@ export default async function EditFeeding({ params }: { params: { babyId: string
           duration_min: data.duration_min, notes: data.notes,
         }} />
       </CardContent></Card>
+      <Comments babyId={params.babyId} target="feedings" targetId={data.id} />
     </PageShell>
   );
 }

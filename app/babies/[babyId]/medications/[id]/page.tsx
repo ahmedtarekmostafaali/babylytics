@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent } from '@/components/ui/Card';
 import { MedicationForm } from '@/components/forms/MedicationForm';
+import { Comments } from '@/components/Comments';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,7 @@ export default async function EditMedication({ params }: { params: { babyId: str
           prescribed_by: data.prescribed_by, notes: data.notes,
         }} />
       </CardContent></Card>
+      <Comments babyId={params.babyId} target="medications" targetId={data.id} />
     </PageShell>
   );
 }

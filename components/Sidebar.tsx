@@ -11,7 +11,7 @@ import { signAvatarUrl } from '@/lib/baby-avatar';
 import { ageInDays } from '@/lib/dates';
 import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
-  LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown,
+  LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe,
 } from 'lucide-react';
 
 type BabyRow = { id: string; name: string; dob: string; avatar_path: string | null };
@@ -81,7 +81,14 @@ export function Sidebar() {
     <div className="h-full flex flex-col relative">
       {/* Wordmark header */}
       <div className={cn('flex items-center h-16 border-b border-slate-200/70', collapsed ? 'justify-center px-2' : 'px-5')}>
-        <Link href="/dashboard"><Wordmark size={collapsed ? 'sm' : 'md'} showLogo={true} /></Link>
+        <Link href="/dashboard" className="flex items-center" title="Babylytics">
+          {collapsed ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/Logo.png" alt="Babylytics" className="h-9 w-9 rounded-lg object-cover" />
+          ) : (
+            <Wordmark size="md" showLogo={true} />
+          )}
+        </Link>
         <button
           className="ml-auto lg:hidden h-8 w-8 grid place-items-center rounded-md hover:bg-slate-100"
           onClick={() => setMobileOpen(false)}
@@ -148,6 +155,8 @@ export function Sidebar() {
               <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}   label="Stool"        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />
               <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}      label="Medications"  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="lavender" />
               <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}     label="Measurements" active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />
+              <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label="Temperature"  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />
+              <NavItem href={`/babies/${currentBabyId}/vaccinations`}  icon={Syringe}   label="Vaccinations" active={pathname?.startsWith(`/babies/${currentBabyId}/vaccinations`) ?? false} collapsed={collapsed} tint="lavender" />
             </NavGroup>
 
             <NavGroup label="TOOLS" collapsed={collapsed}>

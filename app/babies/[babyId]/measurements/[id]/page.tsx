@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent } from '@/components/ui/Card';
 import { MeasurementForm } from '@/components/forms/MeasurementForm';
+import { Comments } from '@/components/Comments';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ export default async function EditMeasurement({ params }: { params: { babyId: st
           head_circ_cm: data.head_circ_cm, notes: data.notes,
         }} />
       </CardContent></Card>
+      <Comments babyId={params.babyId} target="measurements" targetId={data.id} />
     </PageShell>
   );
 }

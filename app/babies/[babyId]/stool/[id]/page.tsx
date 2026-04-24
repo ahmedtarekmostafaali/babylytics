@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent } from '@/components/ui/Card';
 import { StoolForm } from '@/components/forms/StoolForm';
+import { Comments } from '@/components/Comments';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,7 @@ export default async function EditStool({ params }: { params: { babyId: string; 
           has_diaper_rash: data.has_diaper_rash, notes: data.notes,
         }} />
       </CardContent></Card>
+      <Comments babyId={params.babyId} target="stool_logs" targetId={data.id} />
     </PageShell>
   );
 }
