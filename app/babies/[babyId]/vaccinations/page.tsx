@@ -29,12 +29,23 @@ type Row = {
   created_at: string;
 };
 
-const STATUS_META: Record<Row['status'], { icon: React.ComponentType<{ className?: string }>; chip: string; label: string }> = {
+type DisplayStatus = Row['status'] | 'overdue';
+
+const STATUS_META: Record<DisplayStatus, { icon: React.ComponentType<{ className?: string }>; chip: string; label: string }> = {
   scheduled:    { icon: CalendarClock, chip: 'bg-brand-100 text-brand-700',   label: 'Scheduled' },
+  overdue:      { icon: AlertTriangle, chip: 'bg-coral-100 text-coral-700',   label: 'Overdue' },
   administered: { icon: CheckCircle2,  chip: 'bg-mint-100  text-mint-700',    label: 'Done' },
   skipped:      { icon: XCircle,       chip: 'bg-peach-100 text-peach-700',   label: 'Skipped' },
   missed:       { icon: AlertTriangle, chip: 'bg-coral-100 text-coral-700',   label: 'Missed' },
 };
+
+/** Promote "scheduled" → "overdue" when the scheduled time is already past. */
+function effectiveStatus(r: Row, nowMs: number): DisplayStatus {
+  if (r.status === 'scheduled' && r.scheduled_at && new Date(r.scheduled_at).getTime() < nowMs) {
+    return 'overdue';
+  }
+  return r.status;
+}
 
 type Tab = 'all' | 'overdue' | 'upcoming' | 'done';
 
@@ -165,7 +176,7 @@ export default async function VaccinationsLog({
               <ul className="divide-y divide-slate-100">
                 {list.map(r => {
                   const active = selected?.id === r.id;
-                  const meta = STATUS_META[r.status];
+                  const meta = STATUS_META[effectiveStatus(r, now)];
                   const when = r.status === 'administered' && r.administered_at ? r.administered_at : r.scheduled_at;
                   return (
                     <li key={r.id}>
@@ -214,7 +225,7 @@ export default async function VaccinationsLog({
                 {!selected ? (
                   <div className="p-8 text-center text-sm text-ink-muted">Pick an entry from the list.</div>
                 ) : (() => {
-                  const meta = STATUS_META[selected.status];
+                  const meta = STATUS_META[effectiveStatus(selected, now)];
                   return (
                     <div className="p-5 space-y-4">
                       <div className="flex items-center gap-3">
@@ -268,7 +279,9 @@ export default async function VaccinationsLog({
                         </div>
                       )}
                       <div className="border-t border-slate-100 pt-3">
-                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Logged on</div>
+                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
+                          {selected.status === 'administered' ? 'Logged on' : 'Added on'}
+                        </div>
                         <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
                       </div>
                     </div>

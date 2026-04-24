@@ -200,7 +200,7 @@ export default async function FeedingsLog({
                             {fmtTime(r.feeding_time)}
                           </div>
                           <div className="text-[10px] text-ink-muted uppercase tracking-wider">
-                            {new Date(r.feeding_time).getHours() >= 12 ? 'PM' : 'AM'}
+                            24h
                           </div>
                         </div>
                         {/* Icon */}

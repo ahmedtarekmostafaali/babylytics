@@ -46,7 +46,7 @@ export default function NewBabyPage() {
 
   return (
     <PageShell max="3xl">
-      <PageHeader backHref="/dashboard" backLabel="dashboard"
+      <PageHeader backHref="/dashboard" backLabel="Dashboard"
         eyebrow="Welcome" eyebrowTint="coral" title="Add a baby"
         subtitle="You can always change these later on the profile page." />
       <Card>

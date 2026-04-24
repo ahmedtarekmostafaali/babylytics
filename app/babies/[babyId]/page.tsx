@@ -325,12 +325,24 @@ export default async function BabyOverview({
   const thisWeek = (weekFeeds.data ?? []).length;
   const lastWeek = (prevWeekFeeds.data ?? []).length;
   const pct = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
-  const insightText = pct == null
-    ? `You've logged ${thisWeek} feeding${thisWeek === 1 ? '' : 's'} this week — keep it up!`
-    : pct >= 0
-      ? `${baby.name}'s feeding frequency is up ${pct}% this week. Great job!`
-      : `${baby.name}'s feeding frequency is down ${Math.abs(pct)}% this week — check in if anything's off.`;
-  const insightPositive = pct == null || pct >= 0;
+  // Match the tone to what actually happened. "Keep it up" when the count is
+  // zero is nonsense for a baby-tracker.
+  let insightText: string;
+  let insightPositive = true;
+  if (thisWeek === 0) {
+    insightText = lastWeek > 0
+      ? `No feedings logged this week — last week had ${lastWeek}. Tap Quick Add to catch up.`
+      : `No feedings logged yet. Tap Quick Add at the bottom to start tracking.`;
+    insightPositive = false;
+  } else if (pct == null) {
+    insightText = `You've logged ${thisWeek} feeding${thisWeek === 1 ? '' : 's'} this week.`;
+  } else if (pct >= 0) {
+    insightText   = `${baby.name}'s feeding frequency is up ${pct}% this week. Great job!`;
+    insightPositive = true;
+  } else {
+    insightText   = `${baby.name}'s feeding frequency is down ${Math.abs(pct)}% this week — check in if anything's off.`;
+    insightPositive = false;
+  }
 
   // ───────── Growth progress: latest vs birth
   const weightRows = (weightSeries.data ?? []) as { measured_at: string; weight_kg: number | null }[];
@@ -471,13 +483,13 @@ export default async function BabyOverview({
           label="Medications"
           value={nextDose?.name ?? (lastDose.data ? `Last: ${lastDose.data.status}` : 'No doses')}
           sub={
-            nextDose?.isOverdue ? `DUE — was ${fmtTime(nextDose.nextAt!)}`
+            nextDose?.isOverdue ? `overdue by ${fmtRelative(nextDose.nextAt!).replace(/ ago$/, '')}`
             : nextDose?.nextAt  ? `next ${fmtTime(nextDose.nextAt)}`
             : (lastDose.data    ? fmtRelative(lastDose.data.medication_time) : 'add a prescription')
           }
           time={nextDose?.nextAt ?? lastDose.data?.medication_time ?? null}
           href={`/babies/${babyId}/medications`}
-          badge={nextDose?.isOverdue ? 'due now' : nextDose?.nextAt ? 'next dose' : undefined}
+          badge={nextDose?.isOverdue ? 'overdue' : nextDose?.nextAt ? 'next dose' : undefined}
         />
         <LastCard
           tint="brand" icon={Scale}
@@ -650,15 +662,22 @@ export default async function BabyOverview({
           })()}
 
           {/* Upcoming reminders */}
-          <Panel
-            title="Upcoming reminders"
-            subtitle={
-              reminders.length === 0
+          {(() => {
+            // The list renders up to 3 meds + all upcoming vaccinations, so the
+            // subtitle counts the same thing the user sees.
+            const shownMeds = reminders.slice(0, 3).length;
+            const vaxCount  = (upcomingVaccines.data ?? []).length;
+            const totalShown = shownMeds + vaxCount;
+            const subtitle =
+              totalShown === 0
                 ? 'no active meds'
                 : overdueCount > 0
-                  ? `${overdueCount} due now · ${reminders.length - overdueCount} upcoming`
-                  : `${reminders.length} active`
-            }
+                  ? `${overdueCount} due now · ${totalShown - overdueCount} upcoming`
+                  : `${totalShown} upcoming`;
+            return (
+          <Panel
+            title="Upcoming reminders"
+            subtitle={subtitle}
             icon={Bell}
             tint={overdueCount > 0 ? 'coral' : 'peach'}
             compact
@@ -734,6 +753,8 @@ export default async function BabyOverview({
               </ul>
             )}
           </Panel>
+            );
+          })()}
 
           {/* Growth progress */}
           <Panel

@@ -152,9 +152,7 @@ export default async function StoolLog({
                         className={`grid grid-cols-[76px_44px_1fr_auto] items-center gap-3 px-4 py-3 hover:bg-slate-50 transition ${active ? 'bg-mint-50/60' : ''}`}>
                         <div className="text-right">
                           <div className="text-sm font-bold text-ink-strong leading-tight">{fmtTime(r.stool_time)}</div>
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">
-                            {new Date(r.stool_time).getHours() >= 12 ? 'PM' : 'AM'}
-                          </div>
+                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">24h</div>
                         </div>
                         <span className="h-10 w-10 rounded-xl grid place-items-center shrink-0 bg-mint-100 text-mint-600">
                           <Droplet className="h-5 w-5" />

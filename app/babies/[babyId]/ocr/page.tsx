@@ -109,16 +109,18 @@ export default async function SmartScan({
   //   Confirmed    = extractions the user has saved to logs.
   //   Archive      = everything else (stool images, "other").
   const OCR_KINDS = new Set(['daily_note', 'prescription', 'report']);
-  const ocrFiles     = allFiles.filter(f => OCR_KINDS.has(f.kind));
+  const ocrFilesAll  = allFiles.filter(f => OCR_KINDS.has(f.kind));
   const archiveFiles = allFiles.filter(f => !OCR_KINDS.has(f.kind));
-  const needsReview  = ocrFiles.filter(f => {
+  const confirmed    = ocrFilesAll.filter(f => latestExtByFile.get(f.id)?.status === 'confirmed');
+  const needsReview  = ocrFilesAll.filter(f => {
     const e = latestExtByFile.get(f.id);
-    return e ? (e.status === 'extracted' && e.flag_low_confidence) : true; // no extraction at all = also needs review
+    if (!e) return true;                                // never scanned → needs review
+    if (e.status === 'confirmed') return false;          // already handled
+    return e.flag_low_confidence || e.status === 'extracted'; // low-conf or pending
   });
-  const confirmed    = ocrFiles.filter(f => {
-    const e = latestExtByFile.get(f.id);
-    return e?.status === 'confirmed';
-  });
+  // Inbox = OCR-able files that aren't in Confirmed (pending or needs-review).
+  // That way every file lives in exactly one bucket across the four tabs.
+  const ocrFiles = ocrFilesAll.filter(f => latestExtByFile.get(f.id)?.status !== 'confirmed');
 
   const listByTab: Record<Tab, FileRow[]> = {
     inbox:     ocrFiles,

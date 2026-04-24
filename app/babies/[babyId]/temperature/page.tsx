@@ -165,9 +165,7 @@ export default async function TemperatureLog({
                         className={`grid grid-cols-[76px_44px_1fr_auto] items-center gap-3 px-4 py-3 hover:bg-slate-50 transition ${active ? 'bg-coral-50/60' : ''}`}>
                         <div className="text-right">
                           <div className="text-sm font-bold text-ink-strong leading-tight">{fmtTime(r.measured_at)}</div>
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">
-                            {new Date(r.measured_at).getHours() >= 12 ? 'PM' : 'AM'}
-                          </div>
+                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">24h</div>
                         </div>
                         <span className="h-10 w-10 rounded-xl bg-coral-100 text-coral-600 grid place-items-center shrink-0">
                           <Thermometer className="h-5 w-5" />
@@ -266,8 +264,8 @@ export default async function TemperatureLog({
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2">
               <MiniStat label="Readings" value={todays.length} />
-              <MiniStat label="Avg" value={todayAvg != null ? `${todayAvg.toFixed(1)}°` : '—'} />
-              <MiniStat label="Peak" value={todayPeak != null ? `${todayPeak.toFixed(1)}°` : '—'} />
+              <MiniStat label="Avg" value={todayAvg != null ? `${todayAvg.toFixed(1)} °C` : '—'} />
+              <MiniStat label="Peak" value={todayPeak != null ? `${todayPeak.toFixed(1)} °C` : '—'} />
             </div>
             {sparkValues.length > 1 && (
               <div className="mt-4">

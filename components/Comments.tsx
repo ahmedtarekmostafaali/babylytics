@@ -43,6 +43,7 @@ export function Comments({
   const [posting, setPosting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [me, setMe] = useState<{ id: string; email: string | null } | null>(null);
+  const [authors, setAuthors] = useState<Record<string, { name: string; email: string | null }>>({});
 
   useEffect(() => {
     const supabase = createClient();
@@ -61,7 +62,26 @@ export function Comments({
       q = q.or(`scope_date.eq.${scopeDate},scope_date.is.null`);
     }
     q.order('created_at', { ascending: true })
-      .then(({ data }) => { setRows((data ?? []) as Row[]); setLoading(false); });
+      .then(async ({ data }) => {
+        const list = (data ?? []) as Row[];
+        setRows(list);
+        // Resolve author display names from `profiles` (RLS allows it for
+        // co-sharing caregivers per migration 011).
+        const ids = Array.from(new Set(list.map(r => r.author)));
+        if (ids.length > 0) {
+          const { data: profs } = await supabase.from('profiles')
+            .select('id,email,display_name').in('id', ids);
+          const next: Record<string, { name: string; email: string | null }> = {};
+          for (const p of (profs ?? []) as { id: string; email: string; display_name: string | null }[]) {
+            next[p.id] = {
+              name: p.display_name || (p.email ? p.email.split('@')[0]! : p.id.slice(0, 8)),
+              email: p.email ?? null,
+            };
+          }
+          setAuthors(next);
+        }
+        setLoading(false);
+      });
   }, [target, targetId, scopeDate]);
 
   async function submit(e: React.FormEvent) {
@@ -112,11 +132,15 @@ export function Comments({
           return (
             <div key={c.id} className="flex items-start gap-3">
               <span className="h-8 w-8 rounded-full bg-brand-100 text-brand-700 grid place-items-center text-xs font-bold shrink-0">
-                {isMine ? (me?.email ?? '?').charAt(0).toUpperCase() : c.author.slice(0, 2).toUpperCase()}
+                {isMine
+                  ? (me?.email ?? '?').charAt(0).toUpperCase()
+                  : (authors[c.author]?.name ?? '?').charAt(0).toUpperCase()}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="font-semibold text-ink-strong">{isMine ? 'You' : shortId(c.author)}</span>
+                  <span className="font-semibold text-ink-strong">
+                    {isMine ? 'You' : (authors[c.author]?.name ?? 'Caregiver')}
+                  </span>
                   <span className="text-ink-muted">{fmtRelative(c.created_at)}</span>
                   {isMine && (
                     <button onClick={() => remove(c.id)} className="ml-auto text-ink-muted hover:text-coral-600" aria-label="Delete comment">

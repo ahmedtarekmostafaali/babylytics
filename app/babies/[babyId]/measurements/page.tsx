@@ -163,9 +163,7 @@ export default async function MeasurementsLog({
                         className={`grid grid-cols-[76px_44px_1fr_auto] items-center gap-3 px-4 py-3 hover:bg-slate-50 transition ${active ? 'bg-brand-50/60' : ''}`}>
                         <div className="text-right">
                           <div className="text-sm font-bold text-ink-strong leading-tight">{fmtTime(r.measured_at)}</div>
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">
-                            {new Date(r.measured_at).getHours() >= 12 ? 'PM' : 'AM'}
-                          </div>
+                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">24h</div>
                         </div>
                         <span className="h-10 w-10 rounded-xl bg-brand-100 text-brand-600 grid place-items-center shrink-0">
                           <Scale className="h-5 w-5" />

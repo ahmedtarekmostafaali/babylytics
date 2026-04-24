@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import { ageInDays } from '@/lib/dates';
+import { ageInDays, fmtDateTime } from '@/lib/dates';
 import { fmtKg } from '@/lib/units';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import { BabyAvatar } from '@/components/BabyAvatar';
@@ -16,6 +16,19 @@ function greetingFor(hour: number): string {
   if (hour < 17) return 'Good afternoon';
   if (hour < 22) return 'Good evening';
   return 'Good night';
+}
+
+/** Map DB notification_kind values to user-friendly labels with correct casing. */
+function friendlyNotificationLabel(kind: string): string {
+  const map: Record<string, string> = {
+    medication_due:      'Medication due',
+    medication_missed:   'Medication missed',
+    low_ocr_confidence:  'Low OCR confidence',
+    file_ready:          'File ready',
+    feeding_alert:       'Feeding alert',
+    stool_alert:         'Stool alert',
+  };
+  return map[kind] ?? kind.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 const PALETTES = [
@@ -164,8 +177,8 @@ export default async function DashboardPage() {
             {unread.map(n => (
               <Link key={n.id} href={`/babies/${n.baby_id}`}
                 className="flex items-center justify-between py-3 px-4 hover:bg-slate-50">
-                <span className="font-medium text-ink-strong capitalize">{n.kind.replace(/_/g, ' ')}</span>
-                <span className="text-xs text-ink-muted">{new Date(n.created_at).toLocaleString()}</span>
+                <span className="font-medium text-ink-strong">{friendlyNotificationLabel(n.kind)}</span>
+                <span className="text-xs text-ink-muted">{fmtDateTime(n.created_at)}</span>
               </Link>
             ))}
           </div>
