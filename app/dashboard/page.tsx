@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { ageInDays } from '@/lib/dates';
 import { fmtKg } from '@/lib/units';
-import { Baby as BabyIcon, Bell, Plus, Heart, Sparkles, ArrowRight } from 'lucide-react';
+import { signAvatarUrl } from '@/lib/baby-avatar';
+import { BabyAvatar } from '@/components/BabyAvatar';
+import { Bell, Plus, Heart, Sparkles, ArrowRight } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +30,7 @@ export default async function DashboardPage() {
 
   const [{ data: babies }, { data: unread }, { data: profile }] = await Promise.all([
     supabase.from('babies')
-      .select('id,name,dob,gender,birth_weight_kg')
+      .select('id,name,dob,gender,birth_weight_kg,avatar_path')
       .is('deleted_at', null)
       .order('created_at', { ascending: false }),
     supabase.from('notifications')
@@ -39,12 +41,17 @@ export default async function DashboardPage() {
     supabase.from('profiles').select('display_name').eq('id', user?.id ?? '').single(),
   ]);
 
-  // Fetch current weight for each baby — small N, sequential is fine
+  // Fetch current weight + avatar URL for each baby — small N, parallel fine
   const weights: Record<string, number | null> = {};
+  const avatars: Record<string, string | null> = {};
   if (babies) {
-    await Promise.all((babies as { id: string }[]).map(async b => {
-      const { data } = await supabase.rpc('current_weight_kg', { p_baby: b.id });
-      weights[b.id] = data as number | null;
+    await Promise.all((babies as { id: string; avatar_path: string | null }[]).map(async b => {
+      const [w, a] = await Promise.all([
+        supabase.rpc('current_weight_kg', { p_baby: b.id }),
+        signAvatarUrl(supabase, b.avatar_path),
+      ]);
+      weights[b.id] = w.data as number | null;
+      avatars[b.id] = a;
     }));
   }
 
@@ -106,9 +113,7 @@ export default async function DashboardPage() {
                     <div className={`absolute -top-10 -right-10 h-32 w-32 rounded-full blur-2xl opacity-70 ${p.blob}`} />
                     <div className="relative p-5">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="h-14 w-14 rounded-2xl bg-white shadow-sm grid place-items-center">
-                          <BabyIcon className={`h-7 w-7 ${p.text}`} />
-                        </div>
+                        <BabyAvatar url={avatars[b.id]} size="lg" />
                         <span className={`rounded-full bg-white/80 ${p.text} text-[11px] font-semibold px-2 py-0.5`}>
                           {ageInDays(b.dob)} days
                         </span>

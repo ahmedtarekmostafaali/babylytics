@@ -1,23 +1,20 @@
 import { ageInDays } from '@/lib/dates';
 import { fmtKg } from '@/lib/units';
-import { Baby as BabyIcon, Sparkles } from 'lucide-react';
+import { BabyAvatar } from '@/components/BabyAvatar';
+import { Sparkles } from 'lucide-react';
 
-/**
- * Dramatic baby-dashboard hero. Full-bleed gradient, illustrated blob shapes,
- * floating baby avatar on the right. Inspired by the Mariam "Your Parenting
- * Journey" card.
- */
 export function BabyHeader({
   baby,
   currentWeightKg,
+  avatarUrl,
 }: {
   baby: { id: string; name: string; dob: string; gender: string; birth_weight_kg: number | null };
   currentWeightKg: number | null;
+  avatarUrl?: string | null;
 }) {
   const age = ageInDays(baby.dob);
   return (
     <div className="relative overflow-hidden rounded-[32px] border border-slate-200/70 bg-gradient-to-br from-coral-50 via-peach-50 to-mint-50 shadow-card">
-      {/* organic background blobs */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 800 300" preserveAspectRatio="none" aria-hidden>
         <defs>
           <radialGradient id="bh-grad-a" cx="20%" cy="30%" r="60%">
@@ -36,19 +33,13 @@ export function BabyHeader({
       </svg>
 
       <div className="relative p-6 sm:p-8 flex items-center gap-6 flex-wrap">
-        {/* big circular avatar */}
-        <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0">
-          <div className="absolute inset-0 rounded-full bg-white shadow-card" />
-          <div className="absolute inset-2 rounded-full bg-gradient-to-br from-brand-100 to-mint-100 grid place-items-center">
-            <BabyIcon className="h-10 w-10 sm:h-12 sm:w-12 text-brand-600" />
-          </div>
+        <div className="relative">
+          <BabyAvatar url={avatarUrl ?? null} size="2xl" />
           <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-peach-500" />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-mint-700">
-            Baby profile
-          </div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-mint-700">Baby profile</div>
           <h1 className="mt-1 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong leading-tight">
             Hello {baby.name} <span className="text-coral-500">🤍</span>
           </h1>

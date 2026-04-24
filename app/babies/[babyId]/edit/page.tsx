@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent } from '@/components/ui/Card';
 import { BabyEditForm, type BabyEditValue } from '@/components/forms/BabyEditForm';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { signAvatarUrl } from '@/lib/baby-avatar';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,19 +13,20 @@ export default async function EditBabyPage({ params }: { params: { babyId: strin
 
   const { data: baby } = await supabase
     .from('babies')
-    .select('id,name,dob,gender,birth_weight_kg,birth_height_cm,feeding_factor_ml_per_kg_per_day,notes')
+    .select('id,name,dob,gender,birth_weight_kg,birth_height_cm,feeding_factor_ml_per_kg_per_day,notes,avatar_path')
     .eq('id', params.babyId)
     .is('deleted_at', null)
     .single();
   if (!baby) notFound();
 
-  const [{ data: membership }, { data: currentWeight }] = await Promise.all([
+  const [{ data: membership }, { data: currentWeight }, avatarUrl] = await Promise.all([
     supabase.from('baby_users')
       .select('role')
       .eq('baby_id', params.babyId)
       .eq('user_id', user?.id ?? '')
       .single(),
     supabase.rpc('current_weight_kg', { p_baby: params.babyId }),
+    signAvatarUrl(supabase, baby.avatar_path),
   ]);
 
   const canDelete = membership?.role === 'owner';
@@ -33,12 +35,13 @@ export default async function EditBabyPage({ params }: { params: { babyId: strin
     <PageShell max="3xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
         eyebrow="Profile" eyebrowTint="brand" title="Edit baby profile"
-        subtitle="Name, date of birth, birth stats, and feeding factor." />
+        subtitle="Photo, name, date of birth, birth stats, and feeding factor." />
       <Card><CardContent className="py-6">
         <BabyEditForm
           baby={baby as BabyEditValue}
           currentWeightKg={currentWeight as number | null}
           canDelete={canDelete}
+          avatarUrl={avatarUrl}
         />
       </CardContent></Card>
     </PageShell>

@@ -11,6 +11,7 @@ import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { fmtDateTime, fmtRelative, parseRangeParam } from '@/lib/dates';
 import { fmtMl, fmtPct, fmtKg } from '@/lib/units';
+import { signAvatarUrl } from '@/lib/baby-avatar';
 import { Milk, Target, TrendingDown, Percent, Droplet, Droplets, Pill, Scale, Moon, ArrowRight } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -27,9 +28,10 @@ export default async function BabyPage({
 
   const { data: baby } = await supabase
     .from('babies')
-    .select('id,name,dob,gender,birth_weight_kg,feeding_factor_ml_per_kg_per_day')
+    .select('id,name,dob,gender,birth_weight_kg,feeding_factor_ml_per_kg_per_day,avatar_path')
     .eq('id', babyId).is('deleted_at', null).single();
   if (!baby) notFound();
+  const avatarUrl = await signAvatarUrl(supabase, baby.avatar_path);
 
   const seriesDays = Math.min(Math.max(range.days, 14), 90);
 
@@ -109,6 +111,7 @@ export default async function BabyPage({
       <BabyHeader
         baby={baby as { id: string; name: string; dob: string; gender: string; birth_weight_kg: number | null }}
         currentWeightKg={w}
+        avatarUrl={avatarUrl}
       />
 
       {lowConf.data && lowConf.data.length > 0 && (

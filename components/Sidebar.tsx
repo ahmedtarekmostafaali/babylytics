@@ -180,9 +180,9 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="lg:hidden sticky top-0 z-30 h-14 bg-white border-b border-slate-200 px-3 flex items-center gap-2">
+      <div className="lg:hidden sticky top-0 z-30 h-14 bg-gradient-to-r from-white via-brand-50/60 to-coral-50/60 border-b border-slate-200/70 px-3 flex items-center gap-2 backdrop-blur">
         <button
-          className="h-10 w-10 grid place-items-center rounded-md hover:bg-slate-100"
+          className="h-10 w-10 grid place-items-center rounded-md hover:bg-white/70"
           onClick={() => setMobileOpen(true)}
           aria-label="Open menu"
         >
@@ -210,7 +210,7 @@ export function Sidebar() {
         />
         <aside
           className={cn(
-            'absolute left-0 top-0 h-full w-72 bg-white border-r border-slate-200 sidebar-transition',
+            'absolute left-0 top-0 h-full w-72 bg-gradient-to-b from-white via-brand-50/70 to-coral-50/60 border-r border-slate-200/70 sidebar-transition',
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           )}
         >
@@ -221,7 +221,7 @@ export function Sidebar() {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'hidden lg:flex fixed inset-y-0 left-0 bg-white border-r border-slate-200 sidebar-transition z-30',
+          'hidden lg:flex fixed inset-y-0 left-0 bg-gradient-to-b from-white via-brand-50/70 to-coral-50/40 border-r border-slate-200/70 sidebar-transition z-30',
           collapsed ? 'w-[72px]' : 'w-64'
         )}
       >
