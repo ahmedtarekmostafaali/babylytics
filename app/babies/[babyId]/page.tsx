@@ -299,7 +299,8 @@ export default async function BabyOverview({
   const lastTakenByMed = new Map<string, string>();
   for (const r of recentTakenList) if (!lastTakenByMed.has(r.medication_id)) lastTakenByMed.set(r.medication_id, r.medication_time);
 
-  type Reminder = { medId: string; name: string; dosage: string | null; nextAt: string | null };
+  type Reminder = { medId: string; name: string; dosage: string | null; nextAt: string | null; isOverdue: boolean };
+  const nowMs = Date.now();
   const reminders: Reminder[] = activeMedsList.map(m => {
     const last = lastTakenByMed.get(m.id);
     let nextAt: string | null = null;
@@ -308,12 +309,16 @@ export default async function BabyOverview({
     } else if (m.starts_at) {
       nextAt = m.starts_at;
     }
-    return { medId: m.id, name: m.name, dosage: m.dosage, nextAt };
+    const isOverdue = nextAt != null && new Date(nextAt).getTime() <= nowMs;
+    return { medId: m.id, name: m.name, dosage: m.dosage, nextAt, isOverdue };
   }).sort((a, b) => {
+    // Overdue first, then soonest upcoming
+    if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
     const ta = a.nextAt ? new Date(a.nextAt).getTime() : Infinity;
     const tb = b.nextAt ? new Date(b.nextAt).getTime() : Infinity;
     return ta - tb;
   });
+  const overdueCount = reminders.filter(r => r.isOverdue).length;
   const nextDose = reminders.find(r => r.nextAt);
 
   // ───────── Insight banner: compare week-over-week feeding count
@@ -364,16 +369,48 @@ export default async function BabyOverview({
         </div>
         <div className="flex items-center gap-2">
           <DayPicker babyId={babyId} value={focusDate} />
-          <button className="relative h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm" aria-label="Notifications">
-            <Bell className="h-4 w-4 text-ink" />
-            {(lowConf.data?.length ?? 0) > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-coral-500 text-white text-[10px] grid place-items-center font-bold">
-                {lowConf.data?.length}
-              </span>
-            )}
-          </button>
+          {(() => {
+            const notifCount = (lowConf.data?.length ?? 0) + overdueCount;
+            return (
+              <button className="relative h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm" aria-label="Notifications">
+                <Bell className={`h-4 w-4 ${overdueCount > 0 ? 'text-coral-600' : 'text-ink'}`} />
+                {notifCount > 0 && (
+                  <span className={`absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full text-white text-[10px] grid place-items-center font-bold ${overdueCount > 0 ? 'bg-coral-500' : 'bg-peach-500'}`}>
+                    {notifCount}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
         </div>
       </header>
+
+      {/* ═══ OVERDUE MEDICATION BANNER ═══ */}
+      {overdueCount > 0 && (
+        <div className="rounded-2xl border-2 border-coral-400 bg-gradient-to-r from-coral-50 via-coral-50/60 to-white p-4 text-sm shadow-card flex items-start gap-3 animate-pulse">
+          <Pill className="h-5 w-5 text-coral-600 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <div className="font-bold text-coral-900">
+              {overdueCount} medication dose{overdueCount > 1 ? 's' : ''} due now
+            </div>
+            <p className="text-coral-800/90 mt-0.5">Log them as taken, missed, or skipped — they&apos;re past the scheduled time.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {reminders.filter(r => r.isOverdue).slice(0, 4).map(r => (
+                <Link key={r.medId} href={`/babies/${babyId}/medications/log?m=${r.medId}`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-coral-600 px-3 py-1 text-xs font-semibold text-white hover:bg-coral-700">
+                  <Pill className="h-3 w-3" /> Log {r.name}
+                </Link>
+              ))}
+              {reminders.filter(r => r.isOverdue).length > 4 && (
+                <Link href={`/babies/${babyId}/medications`}
+                  className="rounded-full border border-coral-300 bg-white px-3 py-1 text-xs font-semibold text-coral-700 hover:bg-coral-50">
+                  + {reminders.filter(r => r.isOverdue).length - 4} more
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ LOW-CONFIDENCE OCR BANNER ═══ */}
       {(lowConf.data?.length ?? 0) > 0 && (
@@ -430,13 +467,17 @@ export default async function BabyOverview({
           href={`/babies/${babyId}/stool`}
         />
         <LastCard
-          tint="peach" icon={Pill}
+          tint={nextDose?.isOverdue ? 'coral' : 'peach'} icon={Pill}
           label="Medications"
           value={nextDose?.name ?? (lastDose.data ? `Last: ${lastDose.data.status}` : 'No doses')}
-          sub={nextDose?.nextAt ? `next ${fmtTime(nextDose.nextAt)}` : (lastDose.data ? fmtRelative(lastDose.data.medication_time) : 'add a prescription')}
+          sub={
+            nextDose?.isOverdue ? `DUE — was ${fmtTime(nextDose.nextAt!)}`
+            : nextDose?.nextAt  ? `next ${fmtTime(nextDose.nextAt)}`
+            : (lastDose.data    ? fmtRelative(lastDose.data.medication_time) : 'add a prescription')
+          }
           time={nextDose?.nextAt ?? lastDose.data?.medication_time ?? null}
           href={`/babies/${babyId}/medications`}
-          badge={nextDose?.nextAt ? 'next dose' : undefined}
+          badge={nextDose?.isOverdue ? 'due now' : nextDose?.nextAt ? 'next dose' : undefined}
         />
         <LastCard
           tint="brand" icon={Scale}
@@ -611,9 +652,15 @@ export default async function BabyOverview({
           {/* Upcoming reminders */}
           <Panel
             title="Upcoming reminders"
-            subtitle={reminders.length === 0 ? 'no active meds' : `${reminders.length} active`}
+            subtitle={
+              reminders.length === 0
+                ? 'no active meds'
+                : overdueCount > 0
+                  ? `${overdueCount} due now · ${reminders.length - overdueCount} upcoming`
+                  : `${reminders.length} active`
+            }
             icon={Bell}
-            tint="peach"
+            tint={overdueCount > 0 ? 'coral' : 'peach'}
             compact
           >
             {reminders.length === 0 ? (
@@ -627,18 +674,40 @@ export default async function BabyOverview({
             ) : (
               <ul className="space-y-2">
                 {reminders.slice(0, 3).map(r => (
-                  <li key={r.medId} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2">
-                    <span className="h-9 w-9 rounded-xl bg-peach-100 text-peach-700 grid place-items-center shrink-0">
+                  <li key={r.medId}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${
+                      r.isOverdue
+                        ? 'border-coral-300 bg-coral-50'
+                        : 'border-slate-100 bg-white'
+                    }`}>
+                    <span className={`h-9 w-9 rounded-xl grid place-items-center shrink-0 ${
+                      r.isOverdue ? 'bg-coral-500 text-white' : 'bg-peach-100 text-peach-700'
+                    }`}>
                       <Bell className="h-4 w-4" />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-ink-strong truncate">{r.name}</div>
-                      <div className="text-[11px] text-ink-muted truncate">
-                        {r.nextAt ? `next ${fmtDateTime(r.nextAt)}` : 'no schedule yet'}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-semibold text-ink-strong truncate">{r.name}</span>
+                        {r.isOverdue && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider rounded-full bg-coral-500 text-white px-1.5 py-0.5">
+                            due now
+                          </span>
+                        )}
+                      </div>
+                      <div className={`text-[11px] truncate ${r.isOverdue ? 'text-coral-700 font-medium' : 'text-ink-muted'}`}>
+                        {r.nextAt
+                          ? (r.isOverdue
+                              ? `Was due ${fmtRelative(r.nextAt)}`
+                              : `Next ${fmtDateTime(r.nextAt)}`)
+                          : 'no schedule yet'}
                       </div>
                     </div>
                     <Link href={`/babies/${babyId}/medications/log?m=${r.medId}`}
-                      className="rounded-full bg-lavender-500 text-white text-[11px] px-2.5 py-1 hover:bg-lavender-600 whitespace-nowrap">
+                      className={`rounded-full text-white text-[11px] px-2.5 py-1 whitespace-nowrap ${
+                        r.isOverdue
+                          ? 'bg-coral-600 hover:bg-coral-700 font-semibold'
+                          : 'bg-lavender-500 hover:bg-lavender-600'
+                      }`}>
                       Log
                     </Link>
                   </li>

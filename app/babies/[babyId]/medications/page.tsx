@@ -78,12 +78,40 @@ export default async function MedicationsLog({
   const todays = (todayLogs ?? []) as { status: LogRow['status'] }[];
   const medById = new Map(meds.map(m => [m.id, m]));
 
-  const todayTaken = todays.filter(t => t.status === 'taken').length;
-  const todayMissed = todays.filter(t => t.status === 'missed').length;
+  const todayTaken   = todays.filter(t => t.status === 'taken').length;
+  const todayMissed  = todays.filter(t => t.status === 'missed').length;
   const todaySkipped = todays.filter(t => t.status === 'skipped').length;
-  const adherence = todays.length > 0 ? Math.round((todayTaken / todays.length) * 100) : null;
 
   const activeMeds = meds.filter(m => !m.ends_at || new Date(m.ends_at).getTime() > Date.now());
+
+  // Compute how many doses SHOULD be given today based on each active med's
+  // schedule (starts_at + N × frequency_hours), clipped to today's window.
+  // This gives Summary a real denominator instead of just "doses logged".
+  const { start: todayStartIso, end: todayEndIso } = dayWindow(todayLocalDate());
+  const todayStartMs = new Date(todayStartIso).getTime();
+  const todayEndMs   = new Date(todayEndIso).getTime();
+  const nowMs        = Date.now();
+  let todayDueTotal   = 0;
+  let todayDueByNow   = 0;
+  for (const m of activeMeds) {
+    if (!m.frequency_hours || !m.starts_at) continue;
+    const step = Number(m.frequency_hours) * 3600000;
+    if (step <= 0) continue;
+    const startMs = new Date(m.starts_at).getTime();
+    const endMs   = m.ends_at ? new Date(m.ends_at).getTime() : Number.POSITIVE_INFINITY;
+    // First scheduled dose at or after today's start
+    let t = startMs;
+    if (t < todayStartMs) t += Math.ceil((todayStartMs - t) / step) * step;
+    for (; t < todayEndMs && t <= endMs; t += step) {
+      todayDueTotal += 1;
+      if (t <= nowMs) todayDueByNow += 1;
+    }
+  }
+  const todayLogged  = todayTaken + todayMissed + todaySkipped;
+  const todayPending = Math.max(0, todayDueByNow - todayLogged);
+  const adherence    = todayDueTotal > 0
+    ? Math.round((todayTaken / todayDueTotal) * 100)
+    : (todayLogged > 0 ? Math.round((todayTaken / todayLogged) * 100) : null);
 
   const buckets = new Map<string, LogRow[]>();
   for (const r of logs) {
@@ -93,6 +121,22 @@ export default async function MedicationsLog({
   }
   const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.medication_time), list }));
   const selected = searchParams.id ? logs.find(l => l.id === searchParams.id) : logs[0];
+
+  // Map medication → ISO of its last "taken" dose (from the fetched logs). Used
+  // to badge active prescriptions whose next computed dose time is overdue.
+  const lastTakenByMed = new Map<string, string>();
+  for (const l of logs) {
+    if (l.status !== 'taken') continue;
+    if (!lastTakenByMed.has(l.medication_id)) lastTakenByMed.set(l.medication_id, l.medication_time);
+  }
+  function medIsOverdue(m: Med): boolean {
+    if (!m.frequency_hours) return false;
+    const last = lastTakenByMed.get(m.id);
+    const baseline = last ?? m.starts_at;
+    if (!baseline) return false;
+    const next = new Date(baseline).getTime() + Number(m.frequency_hours) * 3600000;
+    return next <= nowMs;
+  }
 
   return (
     <PageShell max="5xl">
@@ -121,25 +165,46 @@ export default async function MedicationsLog({
             <span className="text-xs text-ink-muted">every drug shown with its schedule</span>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {activeMeds.map(m => (
-              <Link key={m.id} href={`/babies/${params.babyId}/medications/${m.id}`}
-                className="flex items-center gap-3 rounded-xl bg-white border border-slate-100 p-3 hover:bg-lavender-50/50 transition">
-                <span className="h-10 w-10 rounded-xl bg-lavender-100 text-lavender-600 grid place-items-center shrink-0">
-                  <Pill className="h-5 w-5" />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-ink-strong truncate">{m.name}{m.dosage ? ` · ${m.dosage}` : ''}</div>
-                  <div className="text-xs text-ink-muted truncate">
-                    every {m.frequency_hours ?? '—'}h · {m.route}
-                    {m.prescribed_by ? ` · Rx by ${m.prescribed_by}` : ''}
-                  </div>
+            {activeMeds.map(m => {
+              const overdue = medIsOverdue(m);
+              return (
+                <div key={m.id}
+                  className={`flex items-center gap-3 rounded-xl p-3 transition border ${
+                    overdue
+                      ? 'bg-coral-50 border-coral-200 hover:bg-coral-100/70'
+                      : 'bg-white border-slate-100 hover:bg-lavender-50/50'
+                  }`}>
+                  <Link href={`/babies/${params.babyId}/medications/${m.id}`}
+                    className="flex items-center gap-3 flex-1 min-w-0">
+                    <span className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${
+                      overdue ? 'bg-coral-500 text-white' : 'bg-lavender-100 text-lavender-600'
+                    }`}>
+                      <Pill className="h-5 w-5" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-ink-strong truncate">{m.name}{m.dosage ? ` · ${m.dosage}` : ''}</span>
+                        {overdue && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider rounded-full bg-coral-500 text-white px-1.5 py-0.5">
+                            due
+                          </span>
+                        )}
+                      </div>
+                      <div className={`text-xs truncate ${overdue ? 'text-coral-800/90 font-medium' : 'text-ink-muted'}`}>
+                        every {m.frequency_hours ?? '—'}h · {m.route}
+                        {m.prescribed_by ? ` · Rx by ${m.prescribed_by}` : ''}
+                      </div>
+                    </div>
+                  </Link>
+                  <Link href={`/babies/${params.babyId}/medications/log?m=${m.id}`}
+                    className={`rounded-full text-white text-[11px] px-2.5 py-1 whitespace-nowrap font-semibold ${
+                      overdue ? 'bg-coral-600 hover:bg-coral-700' : 'bg-lavender-500 hover:bg-lavender-600'
+                    }`}>
+                    Log
+                  </Link>
                 </div>
-                <Link href={`/babies/${params.babyId}/medications/log?m=${m.id}`}
-                  className="rounded-full bg-lavender-500 text-white text-[11px] px-2.5 py-1 hover:bg-lavender-600">
-                  Log
-                </Link>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -276,30 +341,69 @@ export default async function MedicationsLog({
             })()}
           </section>
 
-          <section className="rounded-2xl bg-lavender-50 border border-lavender-200 p-4 flex items-start gap-3">
-            <span className="h-8 w-8 rounded-xl bg-lavender-500 text-white grid place-items-center shrink-0">
+          {/* Adherence banner — compares taken vs scheduled doses for the day. */}
+          <section className={`rounded-2xl border p-4 flex items-start gap-3 ${
+            todayPending > 0
+              ? 'bg-coral-50 border-coral-200'
+              : adherence != null && adherence >= 90
+                ? 'bg-mint-50 border-mint-200'
+                : 'bg-lavender-50 border-lavender-200'
+          }`}>
+            <span className={`h-8 w-8 rounded-xl text-white grid place-items-center shrink-0 ${
+              todayPending > 0 ? 'bg-coral-500' : adherence != null && adherence >= 90 ? 'bg-mint-500' : 'bg-lavender-500'
+            }`}>
               <Sparkles className="h-4 w-4" />
             </span>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-lavender-900">
-                {adherence == null ? 'No doses today yet' : adherence >= 90 ? 'Great adherence' : adherence >= 70 ? 'On track' : 'Needs attention'}
+              <div className="text-sm font-bold text-ink-strong">
+                {todayDueTotal === 0
+                  ? 'No doses scheduled today'
+                  : todayPending > 0
+                    ? `${todayPending} dose${todayPending === 1 ? '' : 's'} still to log`
+                    : adherence != null && adherence >= 90
+                      ? 'Great adherence'
+                      : adherence != null && adherence >= 70
+                        ? 'On track'
+                        : 'Needs attention'}
               </div>
-              <div className="text-xs text-lavender-900/90">
-                {adherence == null
-                  ? 'Log your first dose of the day to see today\'s adherence.'
-                  : `${todayTaken}/${todays.length} doses taken today · ${adherence}% adherence.`}
+              <div className="text-xs text-ink-muted">
+                {todayDueTotal === 0
+                  ? 'All active medications are "as-needed" or have no frequency set.'
+                  : `${todayTaken}/${todayDueTotal} scheduled doses taken today · ${adherence ?? 0}% adherence.`}
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
-            <h3 className="text-sm font-bold text-ink-strong mb-3">Summary (Today)</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-ink-strong">Summary (Today)</h3>
+              {todayDueTotal > 0 && (
+                <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
+                  {todayLogged} / {todayDueTotal} logged
+                </span>
+              )}
+            </div>
             <ul className="space-y-2 text-sm">
-              <AdhRow icon={CheckCircle2}    tint="mint"     label="Taken"   value={todayTaken} />
-              <AdhRow icon={AlertTriangle}   tint="coral"    label="Missed"  value={todayMissed} />
-              <AdhRow icon={XCircle}         tint="peach"    label="Skipped" value={todaySkipped} />
-              <AdhRow icon={Pill}            tint="lavender" label="Total"   value={todays.length} />
+              <AdhRow icon={CheckCircle2}    tint="mint"     label="Taken"      value={todayTaken} />
+              <AdhRow icon={AlertTriangle}   tint="coral"    label="Missed"     value={todayMissed} />
+              <AdhRow icon={XCircle}         tint="peach"    label="Skipped"    value={todaySkipped} />
+              <AdhRow icon={Pill}            tint="lavender" label="Due today"  value={todayDueTotal} />
+              {todayPending > 0 && (
+                <AdhRow icon={AlertTriangle} tint="coral"    label="Still to log" value={todayPending} />
+              )}
             </ul>
+            {todayDueTotal > 0 && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1">
+                  <span>Progress</span>
+                  <span>{adherence ?? 0}%</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-mint-400 to-mint-600"
+                    style={{ width: `${Math.max(4, Math.min(100, adherence ?? 0))}%` }} />
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </div>
