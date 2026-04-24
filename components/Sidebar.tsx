@@ -198,7 +198,11 @@ export function Sidebar() {
             ? // eslint-disable-next-line @next/next/no-img-element
               <img src="/Logo.png" alt="" className="h-7 w-7 rounded-md object-cover" onError={() => setLogoError(true)} />
             : <div className="h-7 w-7 rounded-md bg-brand-500 text-white grid place-items-center text-sm font-bold">B</div>}
-          <span className="font-semibold text-ink">Babylytics</span>
+          <span className="font-extrabold tracking-tight flex items-baseline">
+            {['b','a','b','y','l','y','t','i','c','s'].map((l, i) => (
+              <span key={i} className={['text-brand-500','text-mint-500','text-peach-500','text-coral-500','text-lavender-500','text-brand-500','text-mint-500','text-peach-500','text-coral-500','text-lavender-500'][i]}>{l}</span>
+            ))}
+          </span>
         </Link>
       </div>
 

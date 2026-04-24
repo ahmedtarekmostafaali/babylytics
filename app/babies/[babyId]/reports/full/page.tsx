@@ -73,9 +73,9 @@ export default async function FullReport({
 
       {/* Printable header */}
       <div className="hidden print:block">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-300">
+        <div className="flex items-center justify-between pb-2 border-b-2 border-brand-500">
           <Wordmark size="md" />
-          <div className="text-right text-xs text-ink-muted">
+          <div className="text-right text-[10px] text-ink-muted">
             Full detail report<br />
             Generated {fmtDateTime(new Date().toISOString())}
           </div>
