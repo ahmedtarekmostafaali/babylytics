@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { KpiCard } from '@/components/KpiCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { PrintButton } from '@/components/PrintButton';
+import { Wordmark } from '@/components/Wordmark';
 import { fmtDate, fmtDateTime, fmtRelative, parseRangeParam, ageInDays } from '@/lib/dates';
 import { fmtMl, fmtPct, fmtKg, fmtCm } from '@/lib/units';
 import { Milk, Droplet, Pill, Scale, Ruler, FileText, Activity, AlertTriangle } from 'lucide-react';
@@ -72,10 +73,19 @@ export default async function FullReport({
 
       {/* Printable header */}
       <div className="hidden print:block">
-        <h1 className="text-2xl font-bold">Babylytics — Full report</h1>
-        <p className="text-sm">{baby.name} ({baby.gender}) · born {fmtDate(baby.dob)} ({ageInDays(baby.dob)} days old)</p>
-        <p className="text-sm">Report range: {fmtDate(range.start)} → {fmtDate(range.end)}</p>
-        <hr className="my-3" />
+        <div className="flex items-center justify-between pb-2 border-b border-slate-300">
+          <Wordmark size="md" />
+          <div className="text-right text-xs text-ink-muted">
+            Full detail report<br />
+            Generated {fmtDateTime(new Date().toISOString())}
+          </div>
+        </div>
+        <div className="mt-3">
+          <h1 className="text-2xl font-bold text-ink-strong">
+            {baby.name} <span className="text-ink-muted font-normal text-base">({baby.gender}, {ageInDays(baby.dob)} days)</span>
+          </h1>
+          <p className="text-sm text-ink-muted">Born {fmtDate(baby.dob)} · Report range: {fmtDate(range.start)} → {fmtDate(range.end)}</p>
+        </div>
       </div>
 
       {/* Baby profile card */}

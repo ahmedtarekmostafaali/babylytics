@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { KpiCard } from '@/components/KpiCard';
 import { DayPicker } from '@/components/DayPicker';
 import { PrintButton } from '@/components/PrintButton';
+import { Wordmark } from '@/components/Wordmark';
 import { dayWindow, fmtDateTime, fmtDate, todayLocalDate } from '@/lib/dates';
 import { fmtMl, fmtPct, fmtKg, fmtCm } from '@/lib/units';
 import { Milk, Droplet, Pill, Scale, Ruler } from 'lucide-react';
@@ -63,9 +64,17 @@ export default async function DailyReport({
 
       {/* Printable header */}
       <div className="hidden print:block">
-        <h1 className="text-2xl font-bold">Babylytics — Daily report</h1>
-        <p className="text-sm">{baby.name} · {fmtDate(isoDate)}</p>
-        <hr className="my-2" />
+        <div className="flex items-center justify-between pb-2 border-b border-slate-300">
+          <Wordmark size="md" />
+          <div className="text-right text-xs text-ink-muted">
+            Daily report<br />
+            Generated {fmtDateTime(new Date().toISOString())}
+          </div>
+        </div>
+        <div className="mt-3">
+          <h1 className="text-2xl font-bold text-ink-strong">{baby.name} — {fmtDate(isoDate)}</h1>
+          <p className="text-sm text-ink-muted">Daily care summary</p>
+        </div>
       </div>
 
       <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
