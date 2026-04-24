@@ -18,7 +18,7 @@ const ROLE_OPTIONS: { value: CaregiverRole; label: string; desc: string; icon: R
 export function InviteForm({ babyId }: { babyId: string }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
-  const [role, setRole]   = useState<CaregiverRole>('caregiver');
+  const [role, setRole]   = useState<CaregiverRole>('nurse');
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
