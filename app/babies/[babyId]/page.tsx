@@ -1,21 +1,20 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { BabyHeader } from '@/components/BabyHeader';
-import { KpiCard } from '@/components/KpiCard';
-import { ActivityTile } from '@/components/ActivityTile';
-import { FeedingChart } from '@/components/FeedingChart';
-import { WeightChart } from '@/components/WeightChart';
-import { StoolChart } from '@/components/StoolChart';
-import { DateRangeFilter } from '@/components/DateRangeFilter';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { fmtDate, fmtDateTime, fmtRelative, parseRangeParam } from '@/lib/dates';
-import { fmtMl, fmtPct, fmtKg } from '@/lib/units';
-import { signAvatarUrl } from '@/lib/baby-avatar';
+import { BabyAvatar } from '@/components/BabyAvatar';
+import { DayPicker } from '@/components/DayPicker';
+import { SummaryDonut } from '@/components/SummaryDonut';
+import { Sparkline } from '@/components/Sparkline';
 import { Comments } from '@/components/Comments';
 import {
-  Milk, Target, TrendingDown, Percent, Droplet, Droplets, Pill, Scale, Moon, ArrowRight,
-  Thermometer, Syringe,
+  ageInDays, dayWindow, fmtDate, fmtDateTime, fmtRelative, fmtTime,
+  lastNDaysWindow, todayLocalDate, TIMEZONE,
+} from '@/lib/dates';
+import { fmtKg, fmtMl } from '@/lib/units';
+import { signAvatarUrl } from '@/lib/baby-avatar';
+import {
+  Milk, Moon, Droplet, Pill, Scale, Thermometer, Syringe, Bell,
+  TrendingUp, ArrowUpRight, FileText, Sparkles, Plus, ClipboardList, ArrowRight, Activity,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -26,414 +25,826 @@ export async function generateMetadata({ params }: { params: { babyId: string } 
   return { title: data?.name ? `${data.name} · Overview` : 'Baby overview' };
 }
 
-export default async function BabyPage({
+type Tint = 'brand' | 'mint' | 'coral' | 'peach' | 'lavender';
+
+export default async function BabyOverview({
   params, searchParams,
 }: {
   params: { babyId: string };
-  searchParams: { range?: string; start?: string; end?: string };
+  searchParams: { d?: string };
 }) {
   const supabase = createClient();
   const babyId = params.babyId;
-  const range = parseRangeParam(searchParams);
+  const focusDate = searchParams.d ?? todayLocalDate();
+  const day = dayWindow(focusDate);
+  const last7 = lastNDaysWindow(7);
+  const last14 = lastNDaysWindow(14);
 
   const { data: baby } = await supabase
     .from('babies')
     .select('id,name,dob,gender,birth_weight_kg,feeding_factor_ml_per_kg_per_day,avatar_path')
     .eq('id', babyId).is('deleted_at', null).single();
   if (!baby) notFound();
-  const avatarUrl = await signAvatarUrl(supabase, baby.avatar_path);
 
-  const seriesDays = Math.min(Math.max(range.days, 14), 90);
+  const avatarUrl = await signAvatarUrl(supabase, baby.avatar_path);
+  const age = ageInDays(baby.dob);
 
   const [
-    feedingKpi, stoolKpi, medicationKpi,
-    feedingSeries, stoolSeries, weightSeries,
+    lastFeed, lastTemp, lastStool, lastDose, lastMeasurement,
     currentWeight,
-    lastFeed, lastStool, lastMeasurement, lastDose,
-    lowConf, activeMeds,
-    tempWindow, lastTemp,
-    upcomingVaccines, administeredVaccines,
+    todayFeeds, todayStool, todayMeds, todayTemps, todayMeasurements,
+    activeMeds, recentTaken,
+    weekFeeds, weekStool, weekTemps, prevWeekFeeds,
+    weightSeries,
+    upcomingVaccines,
+    lowConf,
   ] = await Promise.all([
-    supabase.rpc('feeding_kpis',         { p_baby: babyId, p_start: range.start, p_end: range.end }).single(),
-    supabase.rpc('stool_kpis',           { p_baby: babyId, p_start: range.start, p_end: range.end }).single(),
-    supabase.rpc('medication_kpis',      { p_baby: babyId, p_start: range.start, p_end: range.end }).single(),
-    supabase.rpc('daily_feeding_series', { p_baby: babyId, p_days: seriesDays }),
-    supabase.rpc('daily_stool_series',   { p_baby: babyId, p_days: seriesDays }),
-    supabase.rpc('weight_trend',         { p_baby: babyId, p_days: 365 }),
-    supabase.rpc('current_weight_kg',    { p_baby: babyId }),
+    supabase.from('feedings')
+      .select('id,feeding_time,milk_type,quantity_ml,duration_min').eq('baby_id', babyId).is('deleted_at', null)
+      .order('feeding_time', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('temperature_logs')
+      .select('id,measured_at,temperature_c,method').eq('baby_id', babyId).is('deleted_at', null)
+      .order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('stool_logs')
+      .select('id,stool_time,quantity_category,color').eq('baby_id', babyId).is('deleted_at', null)
+      .order('stool_time', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('medication_logs')
+      .select('id,medication_id,medication_time,status,actual_dosage').eq('baby_id', babyId).is('deleted_at', null)
+      .order('medication_time', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('measurements')
+      .select('id,measured_at,weight_kg,height_cm').eq('baby_id', babyId).is('deleted_at', null)
+      .order('measured_at', { ascending: false }).limit(1).maybeSingle(),
 
-    // "Most recent X" for activity tiles
-    supabase.from('feedings').select('id,feeding_time,milk_type,quantity_ml').eq('baby_id', babyId).is('deleted_at', null).order('feeding_time', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('stool_logs').select('id,stool_time,quantity_category,quantity_ml,color').eq('baby_id', babyId).is('deleted_at', null).order('stool_time', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('measurements').select('id,measured_at,weight_kg,height_cm').eq('baby_id', babyId).is('deleted_at', null).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('medication_logs').select('id,medication_id,medication_time,status,actual_dosage').eq('baby_id', babyId).is('deleted_at', null).order('medication_time', { ascending: false }).limit(1).maybeSingle(),
+    supabase.rpc('current_weight_kg', { p_baby: babyId }),
+
+    // Today's activity (for Timeline + Insights)
+    supabase.from('feedings')
+      .select('id,feeding_time,milk_type,quantity_ml,duration_min,notes').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('feeding_time', day.start).lt('feeding_time', day.end)
+      .order('feeding_time', { ascending: true }),
+    supabase.from('stool_logs')
+      .select('id,stool_time,quantity_category,color,notes').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('stool_time', day.start).lt('stool_time', day.end)
+      .order('stool_time', { ascending: true }),
+    supabase.from('medication_logs')
+      .select('id,medication_id,medication_time,status,actual_dosage,notes').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('medication_time', day.start).lt('medication_time', day.end)
+      .order('medication_time', { ascending: true }),
+    supabase.from('temperature_logs')
+      .select('id,measured_at,temperature_c,method,notes').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('measured_at', day.start).lt('measured_at', day.end)
+      .order('measured_at', { ascending: true }),
+    supabase.from('measurements')
+      .select('id,measured_at,weight_kg,height_cm,head_circ_cm').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('measured_at', day.start).lt('measured_at', day.end)
+      .order('measured_at', { ascending: true }),
+
+    // Active meds + recent taken doses to compute "next dose"
+    supabase.from('medications')
+      .select('id,name,dosage,route,frequency_hours,starts_at,ends_at').eq('baby_id', babyId).is('deleted_at', null)
+      .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString()}`)
+      .order('starts_at', { ascending: false }),
+    supabase.from('medication_logs')
+      .select('medication_id,medication_time,status').eq('baby_id', babyId).is('deleted_at', null)
+      .eq('status', 'taken').gte('medication_time', last7.start)
+      .order('medication_time', { ascending: false }),
+
+    // Rolling 7-day windows for mini insights
+    supabase.from('feedings')
+      .select('id,feeding_time,milk_type,quantity_ml').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('feeding_time', last7.start).lt('feeding_time', last7.end),
+    supabase.from('stool_logs')
+      .select('id,stool_time,quantity_category').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('stool_time', last7.start).lt('stool_time', last7.end),
+    supabase.from('temperature_logs')
+      .select('id,measured_at,temperature_c').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('measured_at', last14.start).lt('measured_at', last14.end),
+    // Previous week — for the "up X%" insight banner
+    supabase.from('feedings').select('id').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('feeding_time', new Date(new Date(last7.start).getTime() - 7 * 86400000).toISOString())
+      .lt('feeding_time', last7.start),
+
+    supabase.rpc('weight_trend', { p_baby: babyId, p_days: 365 }),
+
+    supabase.from('vaccinations')
+      .select('id,vaccine_name,scheduled_at,dose_number,total_doses,status').eq('baby_id', babyId).is('deleted_at', null)
+      .eq('status', 'scheduled').order('scheduled_at', { ascending: true }).limit(2),
 
     supabase.from('extracted_text')
       .select('id,file_id,confidence_score,created_at,status')
       .eq('baby_id', babyId).eq('status', 'extracted').eq('flag_low_confidence', true)
       .order('created_at', { ascending: false }).limit(5),
-    supabase.from('medications')
-      .select('id,name,dosage,route,frequency_hours,starts_at,ends_at')
-      .eq('baby_id', babyId).is('deleted_at', null)
-      .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString()}`)
-      .order('starts_at', { ascending: false }),
-
-    // Temperature readings in the current range
-    supabase.from('temperature_logs')
-      .select('id,measured_at,temperature_c,method')
-      .eq('baby_id', babyId).is('deleted_at', null)
-      .gte('measured_at', range.start).lt('measured_at', range.end)
-      .order('measured_at', { ascending: false }),
-    supabase.from('temperature_logs')
-      .select('id,measured_at,temperature_c,method')
-      .eq('baby_id', babyId).is('deleted_at', null)
-      .order('measured_at', { ascending: false }).limit(1).maybeSingle(),
-
-    // Vaccinations
-    supabase.from('vaccinations')
-      .select('id,vaccine_name,scheduled_at,dose_number,total_doses,status')
-      .eq('baby_id', babyId).is('deleted_at', null).eq('status', 'scheduled')
-      .order('scheduled_at', { ascending: true }).limit(3),
-    supabase.from('vaccinations')
-      .select('id,vaccine_name,administered_at,dose_number,total_doses,status')
-      .eq('baby_id', babyId).is('deleted_at', null).eq('status', 'administered')
-      .order('administered_at', { ascending: false }).limit(3),
   ]);
 
-  const f = (feedingKpi.data    ?? {}) as { total_feed_ml: number; avg_feed_ml: number; feed_count: number; recommended_feed_ml: number; feeding_percentage: number };
-  const s = (stoolKpi.data      ?? {}) as { stool_count: number; total_ml: number; small_count: number; medium_count: number; large_count: number; last_stool_at: string | null };
-  const m = (medicationKpi.data ?? {}) as { total_doses: number; taken: number; missed: number; adherence_pct: number };
-  const w = currentWeight.data as number | null;
+  const w = (currentWeight.data as number | null) ?? null;
 
-  const factor = Number(baby.feeding_factor_ml_per_kg_per_day ?? 150);
-  const recommendedDaily = Number(f.recommended_feed_ml) || 0;
-  const windowRecommended = Math.round(recommendedDaily * range.days);
-  const totalMl = Number(f.total_feed_ml) || 0;
-  const windowPct = windowRecommended > 0 ? Math.round((totalMl / windowRecommended) * 100) : 0;
-  const windowRemaining = Math.max(0, windowRecommended - totalMl);
+  // ───────── Timeline: combine today's events
+  type TimelineItem = {
+    at: string;
+    tint: Tint;
+    icon: typeof Milk;
+    title: string;
+    subtitle?: string;
+    href: string;
+  };
+  const tl: TimelineItem[] = [];
+  for (const r of (todayFeeds.data ?? [])) {
+    const bits: string[] = [];
+    if (r.quantity_ml) bits.push(fmtMl(r.quantity_ml));
+    if (r.duration_min) bits.push(`${r.duration_min} min`);
+    bits.push(r.milk_type);
+    tl.push({
+      at: r.feeding_time, tint: 'coral', icon: Milk,
+      title: 'Feeding',
+      subtitle: bits.join(' · '),
+      href: `/babies/${babyId}/feedings/${r.id}`,
+    });
+  }
+  for (const r of (todayStool.data ?? [])) {
+    tl.push({
+      at: r.stool_time, tint: 'mint', icon: Droplet,
+      title: 'Stool',
+      subtitle: [r.quantity_category, r.color].filter(Boolean).join(' · ') || 'logged',
+      href: `/babies/${babyId}/stool/${r.id}`,
+    });
+  }
+  const medMap = new Map(((activeMeds.data ?? []) as { id: string; name: string }[]).map(m => [m.id, m.name]));
+  for (const r of (todayMeds.data ?? [])) {
+    tl.push({
+      at: r.medication_time, tint: 'lavender', icon: Pill,
+      title: `Medication · ${r.status}`,
+      subtitle: [medMap.get(r.medication_id) ?? 'dose', r.actual_dosage].filter(Boolean).join(' · '),
+      href: `/babies/${babyId}/medications/log/${r.id}`,
+    });
+  }
+  for (const r of (todayTemps.data ?? [])) {
+    tl.push({
+      at: r.measured_at, tint: 'peach', icon: Thermometer,
+      title: 'Temperature',
+      subtitle: `${Number(r.temperature_c).toFixed(1)} °C · ${r.method}`,
+      href: `/babies/${babyId}/temperature/${r.id}`,
+    });
+  }
+  for (const r of (todayMeasurements.data ?? [])) {
+    tl.push({
+      at: r.measured_at, tint: 'brand', icon: Scale,
+      title: 'Measurement',
+      subtitle: [r.weight_kg ? fmtKg(r.weight_kg) : null, r.height_cm ? `${r.height_cm} cm` : null].filter(Boolean).join(' · '),
+      href: `/babies/${babyId}/measurements/${r.id}`,
+    });
+  }
+  tl.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
-  // Sparkline data — last 14 days of feeding totals
-  const feedingSparkData = ((feedingSeries.data ?? []) as { total_ml: number | string }[])
-    .slice(-14).map(r => Number(r.total_ml));
-  const stoolSparkData = ((stoolSeries.data ?? []) as { stool_count: number | string }[])
-    .slice(-14).map(r => Number(r.stool_count));
-  const weightSparkData = ((weightSeries.data ?? []) as { weight_kg: number | null }[])
-    .filter(r => r.weight_kg != null).map(r => Number(r.weight_kg));
+  // ───────── Insights: last 7 days breakdowns
+  // Feeding count per day (for bar chart)
+  const feedByDay = new Map<string, number>();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const key = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    feedByDay.set(key, 0);
+  }
+  for (const r of (weekFeeds.data ?? []) as { feeding_time: string }[]) {
+    const k = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(r.feeding_time));
+    if (feedByDay.has(k)) feedByDay.set(k, (feedByDay.get(k) ?? 0) + 1);
+  }
+  const feedBars = Array.from(feedByDay.entries()).map(([day, n]) => ({ day, n }));
 
-  // Last-feed/stool metadata for the activity tiles
-  const lastFeedTitle = lastFeed.data
-    ? `${fmtMl(lastFeed.data.quantity_ml)} · ${lastFeed.data.milk_type}`
-    : 'Last feed';
-  const lastFeedSub = lastFeed.data ? fmtDateTime(lastFeed.data.feeding_time) : 'log your first feeding';
+  // Temperature line (max per day, last 7d)
+  const tempByDay = new Map<string, number | null>();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const key = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    tempByDay.set(key, null);
+  }
+  for (const r of (weekTemps.data ?? []) as { measured_at: string; temperature_c: number | string }[]) {
+    const k = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(r.measured_at));
+    if (!tempByDay.has(k)) continue;
+    const v = Number(r.temperature_c);
+    const prev = tempByDay.get(k);
+    if (!Number.isFinite(v)) continue;
+    tempByDay.set(k, prev == null ? v : Math.max(prev, v));
+  }
+  const tempLine = Array.from(tempByDay.values()).map(v => (v == null ? 36.8 : v));
+  const lastTempValue = (lastTemp.data?.temperature_c != null) ? Number(lastTemp.data.temperature_c) : null;
 
-  const lastStoolTitle = lastStool.data
-    ? `${lastStool.data.quantity_category ?? 'stool'}${lastStool.data.quantity_ml ? ` · ${fmtMl(lastStool.data.quantity_ml)}` : ''}${lastStool.data.color ? ` · ${lastStool.data.color}` : ''}`
-    : 'No stool yet';
-  const lastStoolSub = lastStool.data ? fmtDateTime(lastStool.data.stool_time) : 'log your first entry';
+  // Stool summary donut (last 7d, by category)
+  type StoolRow = { quantity_category: string | null };
+  const stoolCounts = { small: 0, medium: 0, large: 0 };
+  for (const r of (weekStool.data ?? []) as StoolRow[]) {
+    const c = (r.quantity_category ?? '').toLowerCase();
+    if (c === 'small') stoolCounts.small++;
+    else if (c === 'medium') stoolCounts.medium++;
+    else if (c === 'large') stoolCounts.large++;
+  }
+  const stoolSegments = [
+    { label: 'Small',  value: stoolCounts.small,  color: '#7FC8A9' },
+    { label: 'Medium', value: stoolCounts.medium, color: '#7BAEDC' },
+    { label: 'Large',  value: stoolCounts.large,  color: '#B9A7D8' },
+  ];
 
-  const lastDoseTitle = lastDose.data ? `Dose ${lastDose.data.status}` : 'No doses yet';
-  const lastDoseSub = lastDose.data ? fmtDateTime(lastDose.data.medication_time) : 'add a prescription first';
+  // Feeding breakdown donut (last 7d, by milk_type)
+  type FeedRow = { milk_type: string; quantity_ml: number | string | null };
+  const feedCounts: Record<string, number> = {};
+  for (const r of (weekFeeds.data ?? []) as FeedRow[]) {
+    const k = (r.milk_type ?? 'other').toLowerCase();
+    feedCounts[k] = (feedCounts[k] ?? 0) + 1;
+  }
+  const feedColorMap: Record<string, string> = {
+    breast: '#F4A6A6', formula: '#F6C177', mixed: '#B9A7D8', solid: '#7FC8A9', other: '#CBD5E1',
+  };
+  const feedSegments = Object.entries(feedCounts).map(([label, value]) => ({
+    label: label.charAt(0).toUpperCase() + label.slice(1),
+    value,
+    color: feedColorMap[label] ?? '#CBD5E1',
+  }));
 
-  const lastMeasureTitle = lastMeasurement.data
-    ? `${lastMeasurement.data.weight_kg ? fmtKg(lastMeasurement.data.weight_kg) : '—'}${lastMeasurement.data.height_cm ? ` · ${lastMeasurement.data.height_cm} cm` : ''}`
-    : 'No measurements';
-  const lastMeasureSub = lastMeasurement.data ? fmtDateTime(lastMeasurement.data.measured_at) : 'add one to unlock feeding targets';
+  // ───────── Next dose computation
+  type Med = { id: string; name: string; dosage: string | null; route: string; frequency_hours: number | null; starts_at: string | null; ends_at: string | null };
+  const activeMedsList = (activeMeds.data ?? []) as Med[];
+  const recentTakenList = (recentTaken.data ?? []) as { medication_id: string; medication_time: string }[];
+  const lastTakenByMed = new Map<string, string>();
+  for (const r of recentTakenList) if (!lastTakenByMed.has(r.medication_id)) lastTakenByMed.set(r.medication_id, r.medication_time);
+
+  type Reminder = { medId: string; name: string; dosage: string | null; nextAt: string | null };
+  const reminders: Reminder[] = activeMedsList.map(m => {
+    const last = lastTakenByMed.get(m.id);
+    let nextAt: string | null = null;
+    if (m.frequency_hours && last) {
+      nextAt = new Date(new Date(last).getTime() + Number(m.frequency_hours) * 3600000).toISOString();
+    } else if (m.starts_at) {
+      nextAt = m.starts_at;
+    }
+    return { medId: m.id, name: m.name, dosage: m.dosage, nextAt };
+  }).sort((a, b) => {
+    const ta = a.nextAt ? new Date(a.nextAt).getTime() : Infinity;
+    const tb = b.nextAt ? new Date(b.nextAt).getTime() : Infinity;
+    return ta - tb;
+  });
+  const nextDose = reminders.find(r => r.nextAt);
+
+  // ───────── Insight banner: compare week-over-week feeding count
+  const thisWeek = (weekFeeds.data ?? []).length;
+  const lastWeek = (prevWeekFeeds.data ?? []).length;
+  const pct = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
+  const insightText = pct == null
+    ? `You've logged ${thisWeek} feeding${thisWeek === 1 ? '' : 's'} this week — keep it up!`
+    : pct >= 0
+      ? `${baby.name}'s feeding frequency is up ${pct}% this week. Great job!`
+      : `${baby.name}'s feeding frequency is down ${Math.abs(pct)}% this week — check in if anything's off.`;
+  const insightPositive = pct == null || pct >= 0;
+
+  // ───────── Growth progress: latest vs birth
+  const weightRows = (weightSeries.data ?? []) as { measured_at: string; weight_kg: number | null }[];
+  const weightPoints = weightRows.filter(r => r.weight_kg != null).map(r => Number(r.weight_kg));
+  const growthLatest = weightPoints.length ? weightPoints[weightPoints.length - 1] : null;
+  const growthDelta = growthLatest != null && baby.birth_weight_kg
+    ? growthLatest - Number(baby.birth_weight_kg) : null;
+
+  // ───────── Greeting
+  const hourInCairo = Number(new Intl.DateTimeFormat('en-GB', { timeZone: TIMEZONE, hour: '2-digit', hour12: false }).format(new Date()));
+  const greeting = hourInCairo < 5 ? 'Good night' : hourInCairo < 12 ? 'Good morning' : hourInCairo < 17 ? 'Good afternoon' : 'Good evening';
+
+  // ───────── Last-X tiles
+  const lastFeedBits: string[] = [];
+  if (lastFeed.data?.quantity_ml) lastFeedBits.push(fmtMl(lastFeed.data.quantity_ml));
+  if (lastFeed.data?.duration_min) lastFeedBits.push(`${lastFeed.data.duration_min} min`);
+  if (lastFeed.data?.milk_type) lastFeedBits.push(String(lastFeed.data.milk_type));
 
   return (
-    <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 space-y-7">
-      <BabyHeader
-        baby={baby as { id: string; name: string; dob: string; gender: string; birth_weight_kg: number | null }}
-        currentWeightKg={w}
-        avatarUrl={avatarUrl}
-      />
-
-      {lowConf.data && lowConf.data.length > 0 && (
-        <div className="rounded-2xl border border-coral-300 bg-coral-50/80 p-4 text-sm shadow-card">
-          <div className="font-semibold text-coral-700">
-            {lowConf.data.length} OCR extraction{lowConf.data.length > 1 ? 's' : ''} need{lowConf.data.length === 1 ? 's' : ''} review
-          </div>
-          <p className="text-coral-700/90 mt-1">Low confidence — please confirm or edit the extracted values before they land in your logs.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {lowConf.data.map(x => (
-              <Link key={x.id} href={`/babies/${babyId}/ocr/${x.id}`}
-                className="rounded-full bg-coral-600 px-3 py-1 text-xs text-white hover:bg-coral-700">
-                Review · {Math.round((Number(x.confidence_score) || 0) * 100)}%
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Today at a glance — Sophie-style colored activity tiles */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Today at a glance</h2>
-          <span className="text-xs text-ink-muted hidden sm:inline">tap any card to add a new entry</span>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <ActivityTile
-            href={`/babies/${babyId}/feedings/new`}
-            icon={Milk}       tint="coral"
-            title={lastFeedTitle} subtitle={lastFeedSub}
-            time={lastFeed.data?.feeding_time ?? null}
-            empty="Log a feed"
-          />
-          <ActivityTile
-            href={`/babies/${babyId}/stool/new`}
-            icon={Droplet}    tint="mint"
-            title={lastStoolTitle} subtitle={lastStoolSub}
-            time={lastStool.data?.stool_time ?? null}
-            empty="Log a stool"
-          />
-          <ActivityTile
-            href={`/babies/${babyId}/medications/log`}
-            icon={Pill}       tint="lavender"
-            title={lastDoseTitle} subtitle={lastDoseSub}
-            time={lastDose.data?.medication_time ?? null}
-            empty="Log a dose"
-          />
-          <ActivityTile
-            href={`/babies/${babyId}/measurements/new`}
-            icon={Scale}      tint="brand"
-            title={lastMeasureTitle} subtitle={lastMeasureSub}
-            time={lastMeasurement.data?.measured_at ?? null}
-            empty="Log a measurement"
-          />
-        </div>
-      </section>
-
-      {/* KPI row with range filter */}
-      <section>
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-          <div>
-            <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Analytics</h2>
-            <div className="text-lg font-semibold text-ink-strong">{range.label}</div>
-          </div>
-          <DateRangeFilter currentKey={range.key} />
-        </div>
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <KpiCard tint="peach" icon={Milk}   label="Total feed"
-            value={fmtMl(f.total_feed_ml)} sub={`${f.feed_count ?? 0} feeds · avg ${fmtMl(f.avg_feed_ml)}`}
-            spark={feedingSparkData} />
-          <KpiCard tint="peach" icon={Target} label={`Recommended`}
-            value={fmtMl(windowRecommended)} sub={w ? `${fmtKg(w)} × ${factor} ml/kg/day` : 'log a measurement'} />
-          <KpiCard tint="peach" icon={TrendingDown} label="Remaining"
-            value={fmtMl(windowRemaining)}
-            tone={windowPct < 70 ? 'warning' : 'positive'} />
-          <KpiCard tint="peach" icon={Percent} label="Feeding %"
-            value={`${windowPct}%`}
-            tone={windowPct >= 90 ? 'positive' : windowPct >= 70 ? 'neutral' : 'warning'}
-            trend={windowPct >= 90 ? 'up' : windowPct < 70 ? 'down' : undefined}
-            trendLabel={windowPct >= 90 ? 'on target' : windowPct < 70 ? 'below target' : undefined} />
-
-          <KpiCard tint="mint" icon={Droplet} label="Stool count"
-            value={s.stool_count ?? 0}
-            sub={`Small ${s.small_count ?? 0} · Medium ${s.medium_count ?? 0} · Large ${s.large_count ?? 0}`}
-            spark={stoolSparkData} />
-          <KpiCard tint="mint" icon={Droplets} label="Stool quantity"
-            value={fmtMl(s.total_ml)} sub={s.last_stool_at ? `last ${fmtRelative(s.last_stool_at)}` : 'nothing yet'} />
-          <KpiCard tint="lavender" icon={Pill} label="Med adherence"
-            value={fmtPct(m.adherence_pct)} sub={`${m.taken ?? 0}/${m.total_doses ?? 0} taken · ${m.missed ?? 0} missed`}
-            tone={(Number(m.adherence_pct) || 0) < 80 ? 'warning' : 'positive'}
-            trend={(Number(m.adherence_pct) || 0) >= 80 ? 'up' : 'down'} />
-          <KpiCard tint="brand" icon={Scale} label="Current weight"
-            value={fmtKg(w)} sub={baby.birth_weight_kg ? `birth ${fmtKg(Number(baby.birth_weight_kg))}` : 'log a measurement'}
-            spark={weightSparkData} />
-        </div>
-      </section>
-
-      {/* Active medications */}
-      {(activeMeds.data ?? []).length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Active medications</h2>
-            <Link href={`/babies/${babyId}/medications`} className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1">
-              manage <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {activeMeds.data?.map(med => (
-              <div key={med.id} className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-lavender-50 to-white border border-slate-200/70 p-4 shadow-card">
-                <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-lavender-100 blur-2xl opacity-70" />
-                <div className="relative flex items-start gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-lavender-500 text-white grid place-items-center shrink-0 shadow-sm">
-                    <Pill className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-ink-strong truncate">
-                      {med.name}{med.dosage ? <span className="text-ink font-normal"> · {med.dosage}</span> : null}
-                    </div>
-                    <div className="text-xs text-ink-muted mt-0.5">
-                      every {med.frequency_hours ?? '—'}h · {med.route}
-                    </div>
-                    <div className="mt-3 flex gap-2">
-                      <Link href={`/babies/${babyId}/medications/log?m=${med.id}`}
-                        className="rounded-full bg-lavender-500 px-3 py-1 text-xs text-white hover:bg-lavender-600">Log dose</Link>
-                      <Link href={`/babies/${babyId}/medications/${med.id}`}
-                        className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs hover:bg-slate-50">Edit</Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Temperature + Vaccinations summary */}
-      <section className="grid gap-4 lg:grid-cols-2">
-        {/* Temperature */}
-        <div className="rounded-2xl bg-gradient-to-br from-coral-50 to-white border border-slate-200/70 shadow-card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-xl bg-coral-500 text-white grid place-items-center">
-                <Thermometer className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Temperature</div>
-                <div className="text-sm font-semibold text-ink-strong">Last {range.label.toLowerCase()}</div>
-              </div>
+    <div className="max-w-6xl mx-auto px-4 lg:px-8 pt-6 pb-28 space-y-6">
+      {/* ═══ TOP ROW ═══ Greeting + date + bell */}
+      <header className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4 min-w-0">
+          <BabyAvatar url={avatarUrl ?? null} size="xl" />
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-ink-muted">
+              {greeting}
             </div>
-            <div className="flex gap-2">
-              <Link href={`/babies/${babyId}/temperature/new`}
-                className="rounded-full bg-coral-500 text-white text-xs px-3 py-1 hover:bg-coral-600">+ Log</Link>
-              <Link href={`/babies/${babyId}/temperature`}
-                className="rounded-full border border-slate-300 bg-white text-xs px-3 py-1 hover:bg-slate-50">All</Link>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-strong truncate">
+              {greeting}, {baby.name}!
+            </h1>
+            <div className="text-xs text-ink-muted mt-0.5">
+              {baby.gender} · {age} days old{w ? ` · ${fmtKg(w)}` : ''}
             </div>
           </div>
-          {(() => {
-            const temps = (tempWindow.data ?? []) as { temperature_c: number; measured_at: string }[];
-            const values = temps.map(r => Number(r.temperature_c)).filter(Number.isFinite);
-            const last = lastTemp.data as { temperature_c: number; measured_at: string; method: string } | null;
-            const hi = values.length > 0 ? Math.max(...values) : null;
-            const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
-            const lastVal = last ? Number(last.temperature_c) : null;
-            const status = lastVal == null ? 'brand' : lastVal >= 38 ? 'coral' : lastVal >= 37.5 ? 'peach' : lastVal < 36 ? 'brand' : 'mint';
-            const statusLabel = lastVal == null ? 'no reading' : lastVal >= 38 ? 'Fever' : lastVal >= 37.5 ? 'Elevated' : lastVal < 36 ? 'Low' : 'Normal';
-            const statusClr = { coral:'text-coral-700 bg-coral-100', peach:'text-peach-700 bg-peach-100', mint:'text-mint-700 bg-mint-100', brand:'text-brand-700 bg-brand-100' }[status];
-            return (
-              <div className="grid grid-cols-3 gap-2">
-                <Stat label="Latest" value={lastVal != null ? `${lastVal.toFixed(1)} °C` : '—'}
-                  sub={last ? fmtRelative(last.measured_at) : 'never'} />
-                <Stat label="Avg" value={avg != null ? `${avg.toFixed(1)} °C` : '—'}
-                  sub={values.length > 0 ? `${values.length} readings` : 'no data'} />
-                <Stat label="Peak" value={hi != null ? `${hi.toFixed(1)} °C` : '—'}
-                  sub={<span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusClr}`}>{statusLabel}</span>} />
-              </div>
-            );
-          })()}
         </div>
-
-        {/* Vaccinations */}
-        <div className="rounded-2xl bg-gradient-to-br from-lavender-50 to-white border border-slate-200/70 shadow-card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-xl bg-lavender-500 text-white grid place-items-center">
-                <Syringe className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Vaccinations</div>
-                <div className="text-sm font-semibold text-ink-strong">
-                  {(administeredVaccines.data ?? []).length} done · {(upcomingVaccines.data ?? []).length} upcoming
-                </div>
-              </div>
-            </div>
-            <Link href={`/babies/${babyId}/vaccinations`}
-              className="rounded-full border border-slate-300 bg-white text-xs px-3 py-1 hover:bg-slate-50">Open</Link>
-          </div>
-          <div className="space-y-1.5 text-sm">
-            {(upcomingVaccines.data ?? []).length === 0 && (administeredVaccines.data ?? []).length === 0 && (
-              <div className="text-xs text-ink-muted">Nothing scheduled — <Link href={`/babies/${babyId}/vaccinations`} className="text-lavender-700 hover:underline">add or suggest a plan</Link>.</div>
+        <div className="flex items-center gap-2">
+          <DayPicker babyId={babyId} value={focusDate} />
+          <button className="relative h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm" aria-label="Notifications">
+            <Bell className="h-4 w-4 text-ink" />
+            {(lowConf.data?.length ?? 0) > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-coral-500 text-white text-[10px] grid place-items-center font-bold">
+                {lowConf.data?.length}
+              </span>
             )}
-            {upcomingVaccines.data?.slice(0, 3).map(v => (
-              <div key={v.id} className="flex items-center justify-between rounded-xl bg-white border border-slate-100 px-3 py-1.5">
-                <div className="truncate">
-                  <span className="font-medium text-ink-strong">{v.vaccine_name}</span>
-                  {v.dose_number && v.total_doses ? <span className="text-ink-muted"> · {v.dose_number}/{v.total_doses}</span> : null}
-                </div>
-                <span className="text-xs text-ink-muted whitespace-nowrap ml-2">
-                  {v.scheduled_at ? fmtDate(v.scheduled_at) : 'TBD'}
-                </span>
-              </div>
-            ))}
-            {administeredVaccines.data?.slice(0, 2).map(v => (
-              <div key={v.id} className="flex items-center justify-between rounded-xl bg-mint-50 px-3 py-1.5">
-                <div className="truncate">
-                  <span className="font-medium text-ink-strong">{v.vaccine_name}</span>
-                  <span className="text-mint-700 text-xs font-semibold ml-1">✓ done</span>
-                </div>
-                <span className="text-xs text-ink-muted whitespace-nowrap">{v.administered_at ? fmtDate(v.administered_at) : ''}</span>
-              </div>
-            ))}
+          </button>
+        </div>
+      </header>
+
+      {/* ═══ LOW-CONFIDENCE OCR BANNER ═══ */}
+      {(lowConf.data?.length ?? 0) > 0 && (
+        <div className="rounded-2xl border border-coral-300 bg-coral-50/80 p-4 text-sm shadow-card flex items-start gap-3">
+          <FileText className="h-5 w-5 text-coral-600 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <div className="font-semibold text-coral-700">
+              {lowConf.data!.length} OCR extraction{lowConf.data!.length > 1 ? 's' : ''} need review
+            </div>
+            <p className="text-coral-700/90 mt-0.5">Low confidence — confirm or edit before they land in your logs.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {lowConf.data!.map(x => (
+                <Link key={x.id} href={`/babies/${babyId}/ocr/${x.id}`}
+                  className="rounded-full bg-coral-600 px-3 py-1 text-xs text-white hover:bg-coral-700">
+                  Review · {Math.round((Number(x.confidence_score) || 0) * 100)}%
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
+      )}
+
+      {/* ═══ ROW: Last X cards ═══ */}
+      <section className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        <LastCard
+          tint="coral" icon={Milk}
+          label="Last feeding"
+          value={lastFeed.data ? (lastFeedBits[0] ?? '—') : 'No data'}
+          sub={lastFeed.data ? lastFeedBits.slice(1).join(' · ') : 'tap to log'}
+          time={lastFeed.data?.feeding_time ?? null}
+          href={`/babies/${babyId}/feedings`}
+        />
+        <LastCard
+          tint="lavender" icon={Moon}
+          label="Last temperature"
+          value={lastTemp.data ? `${Number(lastTemp.data.temperature_c).toFixed(1)} °C` : 'No data'}
+          sub={lastTemp.data ? lastTemp.data.method : 'tap to log'}
+          time={lastTemp.data?.measured_at ?? null}
+          href={`/babies/${babyId}/temperature`}
+        />
+        <LastCard
+          tint="mint" icon={Droplet}
+          label="Last stool"
+          value={lastStool.data ? (lastStool.data.quantity_category ?? 'logged') : 'No data'}
+          sub={lastStool.data?.color ?? 'tap to log'}
+          time={lastStool.data?.stool_time ?? null}
+          href={`/babies/${babyId}/stool`}
+        />
+        <LastCard
+          tint="peach" icon={Pill}
+          label="Medications"
+          value={nextDose?.name ?? (lastDose.data ? `Last: ${lastDose.data.status}` : 'No doses')}
+          sub={nextDose?.nextAt ? `next ${fmtTime(nextDose.nextAt)}` : (lastDose.data ? fmtRelative(lastDose.data.medication_time) : 'add a prescription')}
+          time={nextDose?.nextAt ?? lastDose.data?.medication_time ?? null}
+          href={`/babies/${babyId}/medications`}
+          badge={nextDose?.nextAt ? 'next dose' : undefined}
+        />
+        <LastCard
+          tint="brand" icon={Scale}
+          label="Measurements"
+          value={lastMeasurement.data?.weight_kg ? fmtKg(lastMeasurement.data.weight_kg) : 'No data'}
+          sub={lastMeasurement.data?.height_cm ? `${lastMeasurement.data.height_cm} cm` : 'tap to log'}
+          time={lastMeasurement.data?.measured_at ?? null}
+          href={`/babies/${babyId}/measurements`}
+        />
       </section>
 
-      {/* Charts */}
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle>Feeding vs recommended — {seriesDays} days</CardTitle></CardHeader>
-          <CardContent><FeedingChart data={(feedingSeries.data ?? []) as { day: string; total_ml: number; recommended_ml: number }[]} /></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Weight trend — 365 days</CardTitle></CardHeader>
-          <CardContent><WeightChart data={(weightSeries.data ?? []) as { measured_at: string; weight_kg: number | null }[]} /></CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardHeader><CardTitle>Stool trend — {seriesDays} days</CardTitle></CardHeader>
-          <CardContent><StoolChart data={(stoolSeries.data ?? []) as { day: string; stool_count: number; total_ml: number }[]} /></CardContent>
-        </Card>
-      </section>
+      {/* ═══ INSIGHT BANNER ═══ */}
+      <div className={`rounded-2xl border p-4 shadow-card flex items-center gap-3 ${
+        insightPositive
+          ? 'border-mint-200 bg-gradient-to-r from-mint-50 via-white to-brand-50'
+          : 'border-peach-200 bg-gradient-to-r from-peach-50 via-white to-coral-50'
+      }`}>
+        <div className={`h-10 w-10 grid place-items-center rounded-xl ${insightPositive ? 'bg-mint-500' : 'bg-peach-500'} text-white shrink-0`}>
+          <Sparkles className="h-5 w-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Weekly insight</div>
+          <div className="font-medium text-ink-strong">{insightText}</div>
+        </div>
+        <Link href={`/babies/${babyId}/reports`} className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-xs font-medium px-3 py-1.5 text-ink-strong">
+          View report <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
 
-      {/* Quick nav footer */}
-      <section>
-        <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Jump to</h2>
-        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 text-sm">
-          <QuickLink href={`/babies/${babyId}/feedings`}     icon={Milk}    tint="coral"    label="Feedings" />
-          <QuickLink href={`/babies/${babyId}/stool`}        icon={Droplet} tint="mint"     label="Stool" />
-          <QuickLink href={`/babies/${babyId}/medications`}  icon={Pill}    tint="lavender" label="Medications" />
-          <QuickLink href={`/babies/${babyId}/measurements`} icon={Scale}   tint="brand"    label="Measurements" />
-          <QuickLink href={`/babies/${babyId}/temperature`}  icon={Thermometer} tint="coral" label="Temperature" />
-          <QuickLink href={`/babies/${babyId}/vaccinations`} icon={Syringe} tint="lavender" label="Vaccinations" />
-          <QuickLink href={`/babies/${babyId}/reports`}      icon={Moon}    tint="peach"    label="Reports" />
-          <QuickLink href={`/babies/${babyId}/upload`}       icon={Droplets} tint="coral"   label="Upload" />
+      {/* ═══ MAIN 3-COLUMN GRID ═══ */}
+      <section className="grid gap-4 lg:grid-cols-3">
+        {/* ───── LEFT: Today's Timeline ───── */}
+        <Panel
+          title="Today's timeline"
+          subtitle={fmtDate(day.start)}
+          icon={Activity}
+          tint="coral"
+        >
+          {tl.length === 0 ? (
+            <EmptyBlock
+              icon={ClipboardList}
+              title="Nothing logged today"
+              body="Use Quick Add at the bottom to log the first activity."
+            />
+          ) : (
+            <ol className="space-y-3">
+              {tl.map((it, i) => {
+                const isLast = i === tl.length - 1;
+                return (
+                  <li key={i} className="relative flex gap-3">
+                    {/* rail + dot */}
+                    <div className="relative flex flex-col items-center">
+                      <TimelineDot tint={it.tint} Icon={it.icon} />
+                      {!isLast && (
+                        <span className="flex-1 w-px my-1 bg-gradient-to-b from-slate-200 to-slate-100" />
+                      )}
+                    </div>
+                    <Link href={it.href} className="flex-1 min-w-0 rounded-xl px-3 py-2 -mx-2 hover:bg-slate-50">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-ink-strong text-sm">{it.title}</span>
+                        <span className="text-[11px] text-ink-muted whitespace-nowrap">{fmtTime(it.at)}</span>
+                      </div>
+                      {it.subtitle && <div className="text-xs text-ink-muted truncate mt-0.5">{it.subtitle}</div>}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </Panel>
+
+        {/* ───── MIDDLE: Today's Insights ───── */}
+        <Panel
+          title="Today's insights"
+          subtitle="last 7 days"
+          icon={TrendingUp}
+          tint="mint"
+        >
+          <div className="grid gap-4 grid-cols-2">
+            {/* Total feedings — bar chart */}
+            <InsightCell title="Total feedings" tint="coral" big={String(thisWeek)} unit="/ week">
+              <BarRow data={feedBars.map(b => b.n)} color="#F4A6A6" />
+            </InsightCell>
+
+            {/* Temperature — line */}
+            <InsightCell
+              title="Temperature"
+              tint="lavender"
+              big={lastTempValue != null ? `${lastTempValue.toFixed(1)}°` : '—'}
+              unit="latest"
+            >
+              <Sparkline data={tempLine} color="#B9A7D8" height={36} width={140} />
+            </InsightCell>
+
+            {/* Stool summary donut */}
+            <InsightCell title="Stool summary" tint="mint" full>
+              <SummaryDonut
+                centerLabel="week"
+                centerValue={stoolCounts.small + stoolCounts.medium + stoolCounts.large}
+                segments={stoolSegments}
+                size={100}
+                strokeWidth={11}
+              />
+            </InsightCell>
+
+            {/* Feeding breakdown donut */}
+            <InsightCell title="Feeding breakdown" tint="peach" full>
+              {feedSegments.length === 0 ? (
+                <div className="text-xs text-ink-muted">no data</div>
+              ) : (
+                <SummaryDonut
+                  centerLabel="week"
+                  centerValue={feedSegments.reduce((s, x) => s + x.value, 0)}
+                  segments={feedSegments}
+                  size={100}
+                  strokeWidth={11}
+                />
+              )}
+            </InsightCell>
+          </div>
+        </Panel>
+
+        {/* ───── RIGHT: Reminders + Growth + OCR CTA ───── */}
+        <div className="space-y-4">
+          {/* Upcoming reminders */}
+          <Panel
+            title="Upcoming reminders"
+            subtitle={reminders.length === 0 ? 'no active meds' : `${reminders.length} active`}
+            icon={Bell}
+            tint="peach"
+            compact
+          >
+            {reminders.length === 0 ? (
+              <EmptyBlock
+                icon={Pill}
+                title="No active medications"
+                body="Add a prescription to start getting reminders."
+                actionHref={`/babies/${babyId}/medications/new`}
+                actionLabel="Add medication"
+              />
+            ) : (
+              <ul className="space-y-2">
+                {reminders.slice(0, 3).map(r => (
+                  <li key={r.medId} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2">
+                    <span className="h-9 w-9 rounded-xl bg-peach-100 text-peach-700 grid place-items-center shrink-0">
+                      <Bell className="h-4 w-4" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-ink-strong truncate">{r.name}</div>
+                      <div className="text-[11px] text-ink-muted truncate">
+                        {r.nextAt ? `next ${fmtDateTime(r.nextAt)}` : 'no schedule yet'}
+                      </div>
+                    </div>
+                    <Link href={`/babies/${babyId}/medications/log?m=${r.medId}`}
+                      className="rounded-full bg-lavender-500 text-white text-[11px] px-2.5 py-1 hover:bg-lavender-600 whitespace-nowrap">
+                      Log
+                    </Link>
+                  </li>
+                ))}
+                {(upcomingVaccines.data ?? []).map(v => (
+                  <li key={v.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2">
+                    <span className="h-9 w-9 rounded-xl bg-lavender-100 text-lavender-700 grid place-items-center shrink-0">
+                      <Syringe className="h-4 w-4" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-ink-strong truncate">
+                        {v.vaccine_name}
+                        {v.dose_number && v.total_doses ? <span className="text-ink-muted font-normal"> · {v.dose_number}/{v.total_doses}</span> : null}
+                      </div>
+                      <div className="text-[11px] text-ink-muted truncate">
+                        {v.scheduled_at ? `scheduled ${fmtDate(v.scheduled_at)}` : 'TBD'}
+                      </div>
+                    </div>
+                    <Link href={`/babies/${babyId}/vaccinations/${v.id}`} className="text-[11px] text-lavender-700 hover:underline whitespace-nowrap">
+                      Open
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+
+          {/* Growth progress */}
+          <Panel
+            title="Growth progress"
+            subtitle={w ? fmtKg(w) : 'no weight yet'}
+            icon={Scale}
+            tint="brand"
+            compact
+          >
+            {weightPoints.length === 0 ? (
+              <EmptyBlock
+                icon={Scale}
+                title="No weight history"
+                body="Add a measurement to see the growth line."
+                actionHref={`/babies/${babyId}/measurements/new`}
+                actionLabel="Add measurement"
+              />
+            ) : (
+              <div>
+                <div className="flex items-end gap-3">
+                  <div>
+                    <div className="text-2xl font-bold text-ink-strong leading-none">{fmtKg(growthLatest)}</div>
+                    <div className="text-[11px] text-ink-muted mt-1">current</div>
+                  </div>
+                  {growthDelta != null && (
+                    <div className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${growthDelta >= 0 ? 'bg-mint-100 text-mint-700' : 'bg-peach-100 text-peach-700'}`}>
+                      <ArrowUpRight className="h-3 w-3" /> {growthDelta >= 0 ? '+' : ''}{growthDelta.toFixed(2)} kg since birth
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <Sparkline data={weightPoints} color="#7BAEDC" width={280} height={48} strokeWidth={2.5} />
+                </div>
+                <Link href={`/babies/${babyId}/measurements`} className="mt-2 inline-flex items-center gap-1 text-xs text-brand-600 hover:underline">
+                  View all measurements <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            )}
+          </Panel>
+
+          {/* OCR CTA */}
+          <Link href={`/babies/${babyId}/upload`}
+            className="block relative overflow-hidden rounded-2xl bg-gradient-to-br from-lavender-500 to-brand-500 text-white p-5 shadow-card hover:shadow-panel transition">
+            <div className="absolute -top-6 -right-6 h-28 w-28 rounded-full bg-white/20 blur-xl" aria-hidden />
+            <div className="relative flex items-start gap-3">
+              <div className="h-11 w-11 rounded-xl bg-white/20 grid place-items-center shrink-0">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs uppercase tracking-wider opacity-80">AI OCR</div>
+                <div className="font-bold leading-tight">Scan handwritten notes</div>
+                <p className="text-xs opacity-90 mt-1">Photograph your daily notes — Claude extracts feeds, stools and vitals for you.</p>
+              </div>
+              <ArrowRight className="h-4 w-4 opacity-70" />
+            </div>
+          </Link>
         </div>
       </section>
 
-      {/* General comments attached to the baby itself */}
+      {/* ═══ QUICK ADD BAR ═══ */}
+      <div className="hidden md:block sticky bottom-4 z-30">
+        <div className="rounded-2xl border border-slate-200 bg-white/95 backdrop-blur shadow-panel px-3 py-2">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-2 pr-1 whitespace-nowrap">Quick add</span>
+            <QuickPill href={`/babies/${babyId}/feedings/new`}     icon={Milk}        tint="coral"    label="Feeding" />
+            <QuickPill href={`/babies/${babyId}/stool/new`}        icon={Droplet}     tint="mint"     label="Stool" />
+            <QuickPill href={`/babies/${babyId}/medications/log`}  icon={Pill}        tint="lavender" label="Medication" />
+            <QuickPill href={`/babies/${babyId}/temperature/new`}  icon={Thermometer} tint="peach"    label="Temperature" />
+            <QuickPill href={`/babies/${babyId}/measurements/new`} icon={Scale}       tint="brand"    label="Measurement" />
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ MOBILE FAB ═══ */}
+      <Link href={`/babies/${babyId}/feedings/new`}
+        className="md:hidden fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-gradient-to-br from-coral-400 to-coral-600 text-white grid place-items-center shadow-panel hover:scale-105 transition"
+        aria-label="Log a feeding">
+        <Plus className="h-6 w-6" />
+      </Link>
+
+      {/* ═══ CAREGIVER NOTES ═══ */}
       <Comments babyId={babyId} target="babies" targetId={babyId} title="Caregiver notes" />
     </div>
   );
 }
 
-/** Small stat tile used inside the temperature analytics card */
-function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub: React.ReactNode }) {
+/* ─────────────────────────────────────────────────────────────
+   Inline presentational helpers
+   ───────────────────────────────────────────────────────────── */
+
+function tintClasses(tint: Tint) {
+  return {
+    coral:    { ring: 'ring-coral-200',    iconBg: 'bg-coral-100 text-coral-600',       grad: 'from-coral-50    to-white' },
+    mint:     { ring: 'ring-mint-200',     iconBg: 'bg-mint-100 text-mint-600',         grad: 'from-mint-50     to-white' },
+    lavender: { ring: 'ring-lavender-200', iconBg: 'bg-lavender-100 text-lavender-600', grad: 'from-lavender-50 to-white' },
+    peach:    { ring: 'ring-peach-200',    iconBg: 'bg-peach-100 text-peach-600',       grad: 'from-peach-50    to-white' },
+    brand:    { ring: 'ring-brand-200',    iconBg: 'bg-brand-100 text-brand-600',       grad: 'from-brand-50    to-white' },
+  }[tint];
+}
+
+/** "Last X" card at the top of the overview — compact, icon, value, sub, time chip. */
+function LastCard({
+  tint, icon: Icon, label, value, sub, time, href, badge,
+}: {
+  tint: Tint;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
+  time: string | null;
+  href: string;
+  badge?: string;
+}) {
+  const t = tintClasses(tint);
   return (
-    <div className="rounded-xl bg-white border border-slate-100 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-ink-muted">{label}</div>
-      <div className="mt-0.5 text-base font-bold text-ink-strong leading-tight">{value}</div>
-      <div className="text-[10px] text-ink-muted">{sub}</div>
+    <Link href={href}
+      className={`relative group block rounded-2xl bg-gradient-to-br ${t.grad} border border-slate-200/70 hover:shadow-panel transition p-4`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className={`h-10 w-10 rounded-xl grid place-items-center ${t.iconBg}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        {badge ? (
+          <span className="rounded-full bg-white/90 text-[10px] font-semibold uppercase tracking-wider text-ink-strong px-2 py-0.5 border border-slate-200">
+            {badge}
+          </span>
+        ) : time ? (
+          <span className="text-[10px] text-ink-muted">{fmtRelative(time)}</span>
+        ) : null}
+      </div>
+      <div className="mt-3">
+        <div className="text-[10px] uppercase tracking-wider text-ink-muted">{label}</div>
+        <div className="text-base font-bold text-ink-strong leading-tight truncate mt-0.5">{value}</div>
+        {sub && <div className="text-[11px] text-ink-muted truncate mt-0.5">{sub}</div>}
+      </div>
+    </Link>
+  );
+}
+
+function Panel({
+  title, subtitle, icon: Icon, tint, children, compact,
+}: {
+  title: string;
+  subtitle?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tint: Tint;
+  children: React.ReactNode;
+  compact?: boolean;
+}) {
+  const t = tintClasses(tint);
+  return (
+    <div className="rounded-2xl bg-white border border-slate-200/70 shadow-card overflow-hidden">
+      <div className={`flex items-center gap-3 px-4 py-3 border-b border-slate-100 bg-gradient-to-r ${t.grad}`}>
+        <span className={`h-8 w-8 rounded-lg grid place-items-center ${t.iconBg}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-ink-strong text-sm truncate">{title}</div>
+          {subtitle && <div className="text-[11px] text-ink-muted truncate">{subtitle}</div>}
+        </div>
+      </div>
+      <div className={compact ? 'p-4' : 'p-5'}>
+        {children}
+      </div>
     </div>
   );
 }
 
-function QuickLink({ href, icon: Icon, tint, label }: {
+function TimelineDot({ tint, Icon }: { tint: Tint; Icon: React.ComponentType<{ className?: string }> }) {
+  const map: Record<Tint, string> = {
+    coral: 'bg-coral-500', mint: 'bg-mint-500', lavender: 'bg-lavender-500', peach: 'bg-peach-500', brand: 'bg-brand-500',
+  };
+  return (
+    <span className={`relative mt-1 h-8 w-8 rounded-full grid place-items-center text-white shadow-sm shrink-0 ${map[tint]}`}>
+      <Icon className="h-4 w-4" />
+    </span>
+  );
+}
+
+function InsightCell({
+  title, tint, big, unit, children, full,
+}: {
+  title: string;
+  tint: Tint;
+  big?: string;
+  unit?: string;
+  children: React.ReactNode;
+  full?: boolean;
+}) {
+  const dotColor: Record<Tint, string> = {
+    coral: 'bg-coral-500', mint: 'bg-mint-500', lavender: 'bg-lavender-500', peach: 'bg-peach-500', brand: 'bg-brand-500',
+  };
+  return (
+    <div className={`rounded-xl border border-slate-100 bg-white p-3 ${full ? 'col-span-2' : ''}`}>
+      <div className="flex items-center gap-2">
+        <span className={`h-2 w-2 rounded-full ${dotColor[tint]}`} />
+        <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">{title}</div>
+      </div>
+      {big && (
+        <div className="mt-1 flex items-baseline gap-1">
+          <div className="text-lg font-bold text-ink-strong leading-none">{big}</div>
+          {unit && <div className="text-[10px] text-ink-muted">{unit}</div>}
+        </div>
+      )}
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+}
+
+function BarRow({ data, color }: { data: number[]; color: string }) {
+  const max = Math.max(...data, 1);
+  return (
+    <div className="flex items-end gap-1 h-9">
+      {data.map((v, i) => {
+        const pct = Math.max(6, (v / max) * 100);
+        return (
+          <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${pct}%`, background: color, opacity: 0.25 + (v / max) * 0.75 }} />
+        );
+      })}
+    </div>
+  );
+}
+
+function QuickPill({
+  href, icon: Icon, tint, label,
+}: {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  tint: 'coral'|'mint'|'lavender'|'brand'|'peach';
+  tint: Tint;
   label: string;
 }) {
-  const map = {
-    coral:    'bg-coral-50 text-coral-700 hover:bg-coral-100',
-    mint:     'bg-mint-50 text-mint-700 hover:bg-mint-100',
-    lavender: 'bg-lavender-50 text-lavender-700 hover:bg-lavender-100',
-    brand:    'bg-brand-50 text-brand-700 hover:bg-brand-100',
-    peach:    'bg-peach-50 text-peach-700 hover:bg-peach-100',
-  }[tint];
+  const map: Record<Tint, string> = {
+    coral:    'bg-coral-100    text-coral-700    hover:bg-coral-200',
+    mint:     'bg-mint-100     text-mint-700     hover:bg-mint-200',
+    lavender: 'bg-lavender-100 text-lavender-700 hover:bg-lavender-200',
+    peach:    'bg-peach-100    text-peach-700    hover:bg-peach-200',
+    brand:    'bg-brand-100    text-brand-700    hover:bg-brand-200',
+  };
   return (
-    <Link href={href} className={`flex items-center gap-2 rounded-2xl px-4 py-3 font-medium transition ${map}`}>
+    <Link href={href}
+      className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold whitespace-nowrap transition ${map[tint]}`}>
       <Icon className="h-4 w-4" />
       <span>{label}</span>
     </Link>
+  );
+}
+
+function EmptyBlock({
+  icon: Icon, title, body, actionHref, actionLabel,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  body: string;
+  actionHref?: string;
+  actionLabel?: string;
+}) {
+  return (
+    <div className="text-center py-6">
+      <div className="h-12 w-12 mx-auto rounded-2xl bg-slate-100 text-ink-muted grid place-items-center">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="mt-3 text-sm font-semibold text-ink-strong">{title}</div>
+      <p className="mt-1 text-xs text-ink-muted max-w-[28ch] mx-auto">{body}</p>
+      {actionHref && actionLabel && (
+        <Link href={actionHref}
+          className="mt-3 inline-flex items-center gap-1 rounded-full bg-brand-500 hover:bg-brand-600 text-white text-xs font-medium px-3 py-1.5">
+          {actionLabel} <ArrowRight className="h-3 w-3" />
+        </Link>
+      )}
+    </div>
   );
 }
