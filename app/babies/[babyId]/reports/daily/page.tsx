@@ -214,7 +214,7 @@ function MiniKpi({ tint, icon: Icon, label, value, sub }: {
 /** Compact timeline card with a colored header bar and tight rows */
 function TimelineCard({ title, tint, items }: {
   title: string;
-  tint: 'peach' | 'mint' | 'lavender' | 'brand';
+  tint: 'peach' | 'mint' | 'lavender' | 'brand' | 'coral';
   items: { time: string; line: string; sub?: string }[];
 }) {
   const tintCss = {
@@ -222,6 +222,7 @@ function TimelineCard({ title, tint, items }: {
     mint:     { head: 'bg-mint-100     text-mint-700',     border: 'border-mint-200',     dot: 'bg-mint-500' },
     lavender: { head: 'bg-lavender-100 text-lavender-700', border: 'border-lavender-200', dot: 'bg-lavender-500' },
     brand:    { head: 'bg-brand-100    text-brand-700',    border: 'border-brand-200',    dot: 'bg-brand-500' },
+    coral:    { head: 'bg-coral-100    text-coral-700',    border: 'border-coral-200',    dot: 'bg-coral-500' },
   }[tint];
 
   return (
