@@ -5,7 +5,7 @@ import { PageShell, PageHeader } from '@/components/PageHeader';
 import { SeedScheduleButton } from '@/components/SeedScheduleButton';
 import { fmtDate, fmtDateTime, fmtRelative } from '@/lib/dates';
 import {
-  Syringe, Plus, Filter, Edit3, Trash2, Sparkles, ArrowRight, Clock,
+  Syringe, Plus, Edit3, Trash2, Sparkles, ArrowRight, Clock,
   AlertTriangle, CheckCircle2, XCircle, CalendarClock,
 } from 'lucide-react';
 
@@ -84,9 +84,6 @@ export default async function VaccinationsLog({
         right={
           <div className="flex items-center gap-2">
             {rows.length === 0 && <SeedScheduleButton babyId={params.babyId} />}
-            <button className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-              <Filter className="h-4 w-4" /> Filter
-            </button>
             <Link href={`/babies/${params.babyId}/vaccinations/new`}
               className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
               <Plus className="h-4 w-4" /> Add

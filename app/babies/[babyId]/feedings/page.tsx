@@ -3,13 +3,14 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
+import { LogTypeFilter } from '@/components/LogTypeFilter';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime,
   lastNDaysWindow, todayLocalDate,
 } from '@/lib/dates';
 import { fmtMl } from '@/lib/units';
 import {
-  Milk, Baby as BabyIcon, Cookie, Plus, Filter, Edit3, Trash2, Sparkles,
+  Milk, Baby as BabyIcon, Cookie, Plus, Edit3, Trash2, Sparkles,
   ArrowRight, Clock,
 } from 'lucide-react';
 
@@ -138,19 +139,11 @@ export default async function FeedingsLog({
 
       <div className="flex items-center gap-3 flex-wrap">
         <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
-        <div className="inline-flex items-center gap-1 rounded-2xl bg-white border border-slate-200 p-1 shadow-sm flex-wrap">
-          <span className="px-2 py-1.5 text-xs font-semibold text-ink-muted inline-flex items-center gap-1">
-            <Filter className="h-3 w-3" /> Type
-          </span>
-          <FilterChip href={buildFilterHref(params.babyId, range.key, null)}
-            label="All" active={!typeFilterActive} />
-          {MILK_TYPES.map(t => (
-            <FilterChip key={t}
-              href={buildFilterHref(params.babyId, range.key, toggleType(activeTypes, t))}
-              label={t.charAt(0).toUpperCase() + t.slice(1)}
-              active={activeTypes.includes(t)} />
-          ))}
-        </div>
+        <LogTypeFilter label="Type"
+          options={MILK_TYPES.map(t => ({ key: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+          activeKeys={activeTypes}
+          baseHref={`/babies/${params.babyId}/feedings`}
+          extraParams={{ range: range.key }} />
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
@@ -389,31 +382,6 @@ function SummaryRow({ icon: Icon, tint, label, value }: {
       <span className="font-bold text-ink-strong">{value}</span>
     </li>
   );
-}
-
-function FilterChip({ href, label, active }: { href: string; label: string; active: boolean }) {
-  return (
-    <Link href={href}
-      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-        active ? 'bg-peach-500 text-white shadow-sm' : 'text-ink-muted hover:text-ink hover:bg-slate-50'
-      }`}>
-      {label}
-    </Link>
-  );
-}
-
-function toggleType(active: MilkType[], t: MilkType): MilkType[] | null {
-  // Clicking a chip toggles that one in/out of the active set. Empty = show All.
-  const has = active.includes(t);
-  const next = has ? active.filter(x => x !== t) : [...active, t];
-  return next.length === 0 ? null : next;
-}
-
-function buildFilterHref(babyId: string, range: string, types: MilkType[] | null): string {
-  const q = new URLSearchParams();
-  q.set('range', range);
-  if (types && types.length > 0) q.set('type', types.join(','));
-  return `/babies/${babyId}/feedings?${q.toString()}`;
 }
 
 function LastNDaysHint() {

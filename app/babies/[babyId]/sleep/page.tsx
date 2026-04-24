@@ -3,12 +3,13 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
+import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { Sparkline } from '@/components/Sparkline';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
 } from '@/lib/dates';
 import {
-  Moon, Bed, Car, Home, Armchair, Baby as BabyIcon, HelpCircle, Plus, Filter,
+  Moon, Bed, Car, Home, Armchair, Baby as BabyIcon, HelpCircle, Plus,
   Edit3, Trash2, Sparkles, ArrowRight, Clock, Smile, Meh, Frown,
 } from 'lucide-react';
 
@@ -53,23 +54,32 @@ function fmtDur(min: number | null | undefined): string {
   return `${h}h ${m}m`;
 }
 
+const SLEEP_QUALITIES = ['sound','restless','woke_often','unknown'] as const;
+type SleepQuality = typeof SLEEP_QUALITIES[number];
+
 export default async function SleepLog({
   params, searchParams,
 }: {
   params: { babyId: string };
-  searchParams: { range?: string; start?: string; end?: string; id?: string };
+  searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
   const range = parseRangeParam(searchParams);
+  const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  const activeQualities = rawTypes.filter((t): t is SleepQuality => (SLEEP_QUALITIES as readonly string[]).includes(t));
+  const typeFilter = activeQualities.length > 0 && activeQualities.length < SLEEP_QUALITIES.length;
+
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 
+  let q = supabase.from('sleep_logs')
+    .select('id,start_at,end_at,duration_min,location,quality,notes,created_at')
+    .eq('baby_id', params.babyId).is('deleted_at', null)
+    .gte('start_at', range.start).lte('start_at', range.end);
+  if (typeFilter) q = q.in('quality', activeQualities);
+
   const [{ data: rowsData }, { data: todayData }, { data: weekData }] = await Promise.all([
-    supabase.from('sleep_logs')
-      .select('id,start_at,end_at,duration_min,location,quality,notes,created_at')
-      .eq('baby_id', params.babyId).is('deleted_at', null)
-      .gte('start_at', range.start).lte('start_at', range.end)
-      .order('start_at', { ascending: false }).limit(500),
+    q.order('start_at', { ascending: false }).limit(500),
     (async () => {
       const w = dayWindow(todayLocalDate());
       return supabase.from('sleep_logs')
@@ -119,15 +129,10 @@ export default async function SleepLog({
         title="Sleep Log"
         subtitle={`All sleep sessions for ${baby.name}.`}
         right={
-          <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-              <Filter className="h-4 w-4" /> Filter
-            </button>
-            <Link href={`/babies/${params.babyId}/sleep/new`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Log sleep
-            </Link>
-          </div>
+          <Link href={`/babies/${params.babyId}/sleep/new`}
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+            <Plus className="h-4 w-4" /> Log sleep
+          </Link>
         } />
 
       {running && (
@@ -146,7 +151,19 @@ export default async function SleepLog({
         </div>
       )}
 
-      <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+      <div className="flex items-center gap-3 flex-wrap">
+        <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+        <LogTypeFilter label="Quality"
+          options={[
+            { key: 'sound',      label: 'Sound' },
+            { key: 'restless',   label: 'Restless' },
+            { key: 'woke_often', label: 'Woke often' },
+            { key: 'unknown',    label: 'Unknown' },
+          ]}
+          activeKeys={activeQualities}
+          baseHref={`/babies/${params.babyId}/sleep`}
+          extraParams={{ range: range.key }} />
+      </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">

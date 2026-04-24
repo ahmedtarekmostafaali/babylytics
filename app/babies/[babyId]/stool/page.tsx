@@ -3,12 +3,13 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
+import { LogTypeFilter } from '@/components/LogTypeFilter';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
 } from '@/lib/dates';
 import { fmtMl } from '@/lib/units';
 import {
-  Droplet, Plus, Filter, Edit3, Trash2, Sparkles, ArrowRight, Clock,
+  Droplet, Plus, Edit3, Trash2, Sparkles, ArrowRight, Clock,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -43,23 +44,32 @@ const SIZE_CHIP: Record<string, string> = {
   large:  'bg-lavender-50 text-lavender-700',
 };
 
+const STOOL_SIZES = ['small','medium','large'] as const;
+type StoolSize = typeof STOOL_SIZES[number];
+
 export default async function StoolLog({
   params, searchParams,
 }: {
   params: { babyId: string };
-  searchParams: { range?: string; start?: string; end?: string; id?: string };
+  searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
   const range = parseRangeParam(searchParams);
+  const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  const activeSizes = rawTypes.filter((t): t is StoolSize => (STOOL_SIZES as readonly string[]).includes(t));
+  const typeFilter = activeSizes.length > 0 && activeSizes.length < STOOL_SIZES.length;
+
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 
+  let q = supabase.from('stool_logs')
+    .select('id,stool_time,quantity_category,quantity_ml,color,consistency,has_diaper_rash,source,notes,created_at')
+    .eq('baby_id', params.babyId).is('deleted_at', null)
+    .gte('stool_time', range.start).lte('stool_time', range.end);
+  if (typeFilter) q = q.in('quantity_category', activeSizes);
+
   const [{ data: rowsData }, { data: todayData }] = await Promise.all([
-    supabase.from('stool_logs')
-      .select('id,stool_time,quantity_category,quantity_ml,color,consistency,has_diaper_rash,source,notes,created_at')
-      .eq('baby_id', params.babyId).is('deleted_at', null)
-      .gte('stool_time', range.start).lte('stool_time', range.end)
-      .order('stool_time', { ascending: false }).limit(500),
+    q.order('stool_time', { ascending: false }).limit(500),
     (async () => {
       const w = dayWindow(todayLocalDate());
       return supabase.from('stool_logs')
@@ -92,18 +102,20 @@ export default async function StoolLog({
         title="Stool Log"
         subtitle={`All recorded diaper changes for ${baby.name}.`}
         right={
-          <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-              <Filter className="h-4 w-4" /> Filter
-            </button>
-            <Link href={`/babies/${params.babyId}/stool/new`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-mint-500 to-mint-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Log stool
-            </Link>
-          </div>
+          <Link href={`/babies/${params.babyId}/stool/new`}
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-mint-500 to-mint-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+            <Plus className="h-4 w-4" /> Log stool
+          </Link>
         } />
 
-      <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+      <div className="flex items-center gap-3 flex-wrap">
+        <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+        <LogTypeFilter label="Size"
+          options={[{ key: 'small', label: 'Small' }, { key: 'medium', label: 'Medium' }, { key: 'large', label: 'Large' }]}
+          activeKeys={activeSizes}
+          baseHref={`/babies/${params.babyId}/stool`}
+          extraParams={{ range: range.key }} />
+      </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">

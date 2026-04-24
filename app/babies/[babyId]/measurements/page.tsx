@@ -3,13 +3,14 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
+import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { Sparkline } from '@/components/Sparkline';
 import {
   parseRangeParam, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
 } from '@/lib/dates';
 import { fmtKg, fmtCm } from '@/lib/units';
 import {
-  Scale, Ruler, CircleDot, Plus, Filter, Edit3, Trash2, Sparkles,
+  Scale, Ruler, CircleDot, Plus, Edit3, Trash2, Sparkles,
   ArrowRight, Clock, TrendingUp,
 } from 'lucide-react';
 
@@ -37,14 +38,20 @@ function groupHeading(iso: string): string {
   return fmtDate(iso);
 }
 
+const MEAS_KINDS = ['weight','height','head'] as const;
+type MeasKind = typeof MEAS_KINDS[number];
+
 export default async function MeasurementsLog({
   params, searchParams,
 }: {
   params: { babyId: string };
-  searchParams: { range?: string; start?: string; end?: string; id?: string };
+  searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
   const range = parseRangeParam(searchParams);
+  const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  const activeKinds = rawTypes.filter((t): t is MeasKind => (MEAS_KINDS as readonly string[]).includes(t));
+  const typeFilter = activeKinds.length > 0 && activeKinds.length < MEAS_KINDS.length;
   const { data: baby } = await supabase.from('babies').select('id,name,birth_weight_kg,birth_height_cm').eq('id', params.babyId).single();
   if (!baby) notFound();
 
@@ -60,7 +67,14 @@ export default async function MeasurementsLog({
       .order('measured_at', { ascending: true }).limit(500),
   ]);
 
-  const rows = (rowsData ?? []) as Row[];
+  const rowsAll = (rowsData ?? []) as Row[];
+  const rows = typeFilter
+    ? rowsAll.filter(r => activeKinds.some(k =>
+        (k === 'weight' && r.weight_kg != null) ||
+        (k === 'height' && r.height_cm != null) ||
+        (k === 'head'   && r.head_circ_cm != null)
+      ))
+    : rowsAll;
   const all  = (allRows ?? []) as Row[];
 
   const weightSpark = all.map(r => r.weight_kg != null ? Number(r.weight_kg) : NaN).filter(n => Number.isFinite(n));
@@ -93,18 +107,24 @@ export default async function MeasurementsLog({
         title="Measurements"
         subtitle={`Weight, height and head circumference for ${baby.name}.`}
         right={
-          <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-              <Filter className="h-4 w-4" /> Filter
-            </button>
-            <Link href={`/babies/${params.babyId}/measurements/new`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Log measurement
-            </Link>
-          </div>
+          <Link href={`/babies/${params.babyId}/measurements/new`}
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+            <Plus className="h-4 w-4" /> Log measurement
+          </Link>
         } />
 
-      <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+      <div className="flex items-center gap-3 flex-wrap">
+        <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+        <LogTypeFilter label="Includes"
+          options={[
+            { key: 'weight', label: 'Weight' },
+            { key: 'height', label: 'Height' },
+            { key: 'head',   label: 'Head' },
+          ]}
+          activeKeys={activeKinds}
+          baseHref={`/babies/${params.babyId}/measurements`}
+          extraParams={{ range: range.key }} />
+      </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">

@@ -16,13 +16,13 @@ export const metadata = { title: 'Caregivers' };
 type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor';
 
 const ROLE_META: Record<Role, { label: string; tint: string; icon: React.ComponentType<{ className?: string }> }> = {
-  owner:     { label: 'Owner',             tint: 'bg-brand-100    text-brand-700',    icon: Shield },
-  parent:    { label: 'Parent',            tint: 'bg-mint-100     text-mint-700',     icon: Shield },
-  editor:    { label: 'Parent',            tint: 'bg-mint-100     text-mint-700',     icon: Shield }, // legacy
-  doctor:    { label: 'Doctor',            tint: 'bg-lavender-100 text-lavender-700', icon: Stethoscope },
-  nurse:     { label: 'Nurse',             tint: 'bg-coral-100    text-coral-700',    icon: Heart },
-  caregiver: { label: 'Caregiver',         tint: 'bg-peach-100    text-peach-700',    icon: Users },
-  viewer:    { label: 'Viewer',            tint: 'bg-slate-100    text-ink',          icon: Eye },
+  owner:     { label: 'Owner',     tint: 'bg-brand-100    text-brand-700',    icon: Shield },
+  parent:    { label: 'Parent',    tint: 'bg-mint-100     text-mint-700',     icon: Shield },
+  editor:    { label: 'Parent',    tint: 'bg-mint-100     text-mint-700',     icon: Shield }, // legacy
+  doctor:    { label: 'Doctor',    tint: 'bg-lavender-100 text-lavender-700', icon: Stethoscope },
+  nurse:     { label: 'Nurse',     tint: 'bg-coral-100    text-coral-700',    icon: Heart },
+  caregiver: { label: 'Caregiver', tint: 'bg-peach-100    text-peach-700',    icon: Users },
+  viewer:    { label: 'Viewer',    tint: 'bg-slate-100    text-ink',          icon: Eye },
 };
 
 const ROLE_DEFS: { role: Role; title: string; perms: string }[] = [
@@ -53,7 +53,6 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
     .order('created_at', { ascending: true });
   const rows = (rowsRaw ?? []) as Row[];
 
-  // Resolve profile data for each caregiver (name + email)
   const ids = rows.map(r => r.user_id);
   const { data: profs } = ids.length
     ? await supabase.from('profiles').select('id,email,display_name').in('id', ids)
@@ -67,18 +66,15 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
   return (
     <PageShell max="3xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Team" eyebrowTint="mint" title={<>Caregivers <span className="inline-flex items-center gap-1 text-mint-600 ml-1"><Users className="h-5 w-5" /></span></>}
-        subtitle={`Manage who can access ${baby.name}'s data and what they can do.`}
-        right={
-          <Link href="#" className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-            Caregiver Guide
-          </Link>
-        } />
+        eyebrow="Team" eyebrowTint="mint"
+        title={<>Caregivers <span className="inline-flex items-center gap-1 text-mint-600 ml-1"><Users className="h-5 w-5" /></span></>}
+        subtitle={`Manage who can access ${baby.name}'s data and what they can do.`} />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* LEFT — 2/3: current + invite + roles */}
+        {/* LEFT — 2/3: current caregivers + invite */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Current caregivers */}
+          {/* Current caregivers — card-based list, not a grid, so each row
+              reliably wraps without breaking alignment. */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -89,68 +85,77 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
               </div>
             </div>
 
-            <div className="hidden md:grid grid-cols-[minmax(0,1fr)_120px_160px_130px_110px_40px] gap-4 px-5 py-2 text-[10px] font-semibold uppercase tracking-wider text-ink-muted bg-slate-50/50 border-b border-slate-100">
-              <span>Caregiver</span>
-              <span>Role</span>
-              <span>Permissions</span>
-              <span>Joined</span>
-              <span>Status</span>
-              <span>Actions</span>
-            </div>
-
             <ul className="divide-y divide-slate-100">
+              {rows.length === 0 && (
+                <li className="px-5 py-8 text-center text-sm text-ink-muted">
+                  No caregivers yet.
+                </li>
+              )}
               {rows.map(r => {
                 const prof = profById.get(r.user_id);
-                const name = prof?.display_name || (prof?.email ? prof.email.split('@')[0]! : r.user_id.slice(0, 8));
+                const name = prof?.display_name
+                  || (prof?.email ? prof.email.split('@')[0]! : r.user_id.slice(0, 8));
                 const meta = ROLE_META[r.role];
                 const isSelf = r.user_id === user?.id;
                 return (
-                  <li key={r.user_id} className="grid md:grid-cols-[minmax(0,1fr)_120px_160px_130px_110px_40px] md:items-center gap-4 px-5 py-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-100 to-mint-100 text-brand-700 grid place-items-center text-xs font-bold shrink-0">
-                        {initials(name)}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="font-semibold text-ink-strong truncate">
-                          {isSelf ? 'You' : name}{r.role === 'owner' && <span className="text-ink-muted font-normal"> (Owner)</span>}
+                  <li key={r.user_id} className="px-4 sm:px-5 py-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {/* Avatar + name */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1 basis-[240px]">
+                        <span className="h-11 w-11 rounded-full bg-gradient-to-br from-brand-100 to-mint-100 text-brand-700 grid place-items-center text-xs font-bold shrink-0">
+                          {initials(name)}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-ink-strong truncate">
+                            {isSelf ? 'You' : name}
+                            {r.role === 'owner' && <span className="text-ink-muted font-normal"> (Owner)</span>}
+                          </div>
+                          <div className="text-xs text-ink-muted truncate">{prof?.email ?? r.user_id}</div>
                         </div>
-                        <div className="text-xs text-ink-muted truncate">{prof?.email ?? '—'}</div>
                       </div>
-                    </div>
 
-                    <div>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.tint}`}>
-                        <meta.icon className="h-3 w-3" />
-                        {meta.label}
-                      </span>
-                    </div>
+                      {/* Role pill */}
+                      <div className="shrink-0">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.tint}`}>
+                          <meta.icon className="h-3 w-3" />
+                          {meta.label}
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-1.5 text-ink-muted">
-                      <PermIcon role={r.role} kind="edit" />
-                      <PermIcon role={r.role} kind="view" />
-                      <PermIcon role={r.role} kind="reports" />
-                    </div>
+                      {/* Permissions icons */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <PermIcon role={r.role} kind="view" />
+                        <PermIcon role={r.role} kind="edit" />
+                        <PermIcon role={r.role} kind="reports" />
+                      </div>
 
-                    <div className="text-xs text-ink">{fmtDate(r.created_at)}</div>
+                      {/* Joined */}
+                      <div className="text-xs text-ink-muted shrink-0 hidden sm:block min-w-[90px] text-right">
+                        <div className="text-[10px] uppercase tracking-wider text-ink-muted">Joined</div>
+                        <div className="font-semibold text-ink">{fmtDate(r.created_at)}</div>
+                      </div>
 
-                    <div>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-mint-100 text-mint-700 px-2 py-0.5 text-[11px] font-semibold">
-                        <span className="h-1.5 w-1.5 rounded-full bg-mint-500" /> Active
-                      </span>
-                    </div>
+                      {/* Status */}
+                      <div className="shrink-0 hidden sm:block">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-mint-100 text-mint-700 px-2 py-0.5 text-[11px] font-semibold">
+                          <span className="h-1.5 w-1.5 rounded-full bg-mint-500" /> Active
+                        </span>
+                      </div>
 
-                    <div>
-                      <CaregiverRowActions babyId={params.babyId} userId={r.user_id}
-                        currentRole={r.role} canManage={canManage} isSelf={isSelf} />
+                      {/* Actions menu */}
+                      <div className="shrink-0 ml-auto">
+                        <CaregiverRowActions babyId={params.babyId} userId={r.user_id}
+                          currentRole={r.role} canManage={canManage} isSelf={isSelf} />
+                      </div>
                     </div>
                   </li>
                 );
               })}
             </ul>
 
-            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 text-center text-xs text-ink-muted inline-flex items-center gap-1 justify-center w-full">
+            <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 text-xs text-ink-muted flex items-center gap-1 justify-center">
               <History className="h-3.5 w-3.5" />
-              Every change is audited. Contact your owner for the full log.
+              Every change is audited.
             </div>
           </section>
 
@@ -158,7 +163,7 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
           {canManage && (
             <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
               <div className="grid lg:grid-cols-[1fr_auto] items-start gap-6 p-5">
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-lg font-bold text-ink-strong">Invite a caregiver</h2>
                   <p className="text-xs text-ink-muted mt-0.5">They must already have a Babylytics account.</p>
                   <div className="mt-4">
@@ -173,11 +178,16 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
               </div>
             </section>
           )}
+
+          {!canManage && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-ink-muted">
+              Only the owner and parents can invite or change caregivers. Ask the baby&apos;s owner if you need a different role.
+            </div>
+          )}
         </div>
 
         {/* RIGHT — 1/3: About + role cards */}
         <div className="space-y-6">
-          {/* About caregiver access */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <h3 className="text-sm font-bold text-ink-strong mb-3">About caregiver access</h3>
             <div className="space-y-4">
@@ -190,7 +200,6 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
             </div>
           </section>
 
-          {/* Caregiver roles */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <h3 className="text-sm font-bold text-ink-strong">Caregiver roles</h3>
             <p className="text-xs text-ink-muted mt-0.5">Each role comes with different permissions.</p>
@@ -198,7 +207,7 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
               {ROLE_DEFS.map(def => {
                 const meta = ROLE_META[def.role];
                 return (
-                  <li key={def.role} className={`flex items-start gap-3 rounded-xl p-2.5 ${meta.tint.replace('text-', 'text-ink ')}`}>
+                  <li key={def.role} className="flex items-start gap-3 rounded-xl border border-slate-100 p-2.5">
                     <span className={`h-8 w-8 rounded-lg grid place-items-center shrink-0 ${meta.tint}`}>
                       <meta.icon className="h-4 w-4" />
                     </span>
@@ -221,22 +230,21 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-ink-strong">Tips</div>
-          <p className="text-xs text-ink-muted mt-0.5">Give access to trusted people only. You can review and update permissions at any time.</p>
+          <p className="text-xs text-ink-muted mt-0.5">
+            Give access to trusted people only. You can review and update permissions at any time.
+          </p>
         </div>
       </div>
     </PageShell>
   );
 }
 
-/* ────────────────────────────────────────────────────────────── */
-/* Tiny permission badges used in the table.                     */
-/* ────────────────────────────────────────────────────────────── */
 function PermIcon({ role, kind }: { role: Role; kind: 'edit' | 'view' | 'reports' }) {
   const canEdit    = role === 'owner' || role === 'parent' || role === 'editor' || role === 'doctor' || role === 'nurse' || role === 'caregiver';
   const canReports = role !== 'viewer';
-  const state = kind === 'edit' ? canEdit : kind === 'reports' ? canReports : true; // all can view
+  const state = kind === 'edit' ? canEdit : kind === 'reports' ? canReports : true;
   const Icon  = kind === 'edit' ? Edit3 : kind === 'reports' ? BarChart3 : Eye;
-  const title = kind === 'edit' ? 'Edit logs' : kind === 'reports' ? 'Reports' : 'View data';
+  const title = kind === 'edit' ? 'Can edit logs' : kind === 'reports' ? 'Can see reports' : 'Can view data';
   return (
     <span title={title}
       className={`h-7 w-7 rounded-lg grid place-items-center ${state ? 'bg-brand-50 text-brand-600' : 'bg-slate-50 text-slate-300'}`}>
@@ -245,7 +253,6 @@ function PermIcon({ role, kind }: { role: Role; kind: 'edit' | 'view' | 'reports
   );
 }
 
-/** Vertical pillar row in the "About caregiver access" sidebar. */
 function Pillar({ icon: Icon, tint, title, body }: {
   icon: React.ComponentType<{ className?: string }>;
   tint: 'mint' | 'lavender' | 'peach';

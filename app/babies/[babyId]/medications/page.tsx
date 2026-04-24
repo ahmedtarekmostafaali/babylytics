@@ -3,11 +3,12 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
+import { LogTypeFilter } from '@/components/LogTypeFilter';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
 } from '@/lib/dates';
 import {
-  Pill, Plus, Filter, Edit3, Trash2, Sparkles, ArrowRight, Clock, CheckCircle2,
+  Pill, Plus, Edit3, Trash2, Sparkles, ArrowRight, Clock, CheckCircle2,
   XCircle, AlertTriangle, Check,
 } from 'lucide-react';
 
@@ -33,27 +34,36 @@ const STATUS_META: Record<LogRow['status'], { icon: React.ComponentType<{ classN
   skipped: { icon: XCircle,        chip: 'bg-peach-100 text-peach-700',  label: 'Skipped' },
 };
 
+const MED_STATUSES = ['taken','missed','skipped'] as const;
+type MedStatus = typeof MED_STATUSES[number];
+
 export default async function MedicationsLog({
   params, searchParams,
 }: {
   params: { babyId: string };
-  searchParams: { range?: string; start?: string; end?: string; id?: string };
+  searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
   const range = parseRangeParam(searchParams);
+  const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  const activeStatuses = rawTypes.filter((t): t is MedStatus => (MED_STATUSES as readonly string[]).includes(t));
+  const typeFilter = activeStatuses.length > 0 && activeStatuses.length < MED_STATUSES.length;
+
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
+
+  let logsQuery = supabase.from('medication_logs')
+    .select('id,medication_id,medication_time,status,actual_dosage,notes,source,created_at')
+    .eq('baby_id', params.babyId).is('deleted_at', null)
+    .gte('medication_time', range.start).lte('medication_time', range.end);
+  if (typeFilter) logsQuery = logsQuery.in('status', activeStatuses);
 
   const [{ data: medsData }, { data: logsData }, { data: todayLogs }] = await Promise.all([
     supabase.from('medications')
       .select('id,name,dosage,route,frequency_hours,total_doses,starts_at,ends_at,prescribed_by')
       .eq('baby_id', params.babyId).is('deleted_at', null)
       .order('created_at', { ascending: false }),
-    supabase.from('medication_logs')
-      .select('id,medication_id,medication_time,status,actual_dosage,notes,source,created_at')
-      .eq('baby_id', params.babyId).is('deleted_at', null)
-      .gte('medication_time', range.start).lte('medication_time', range.end)
-      .order('medication_time', { ascending: false }).limit(500),
+    logsQuery.order('medication_time', { ascending: false }).limit(500),
     (async () => {
       const w = dayWindow(todayLocalDate());
       return supabase.from('medication_logs')
@@ -92,9 +102,6 @@ export default async function MedicationsLog({
         subtitle={`${activeMeds.length} active prescription${activeMeds.length === 1 ? '' : 's'} · ${logs.length} doses logged`}
         right={
           <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-              <Filter className="h-4 w-4" /> Filter
-            </button>
             <Link href={`/babies/${params.babyId}/medications/new`}
               className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-ink-strong text-sm font-semibold px-4 py-1.5 shadow-sm">
               <Plus className="h-4 w-4" /> Medication
@@ -134,7 +141,14 @@ export default async function MedicationsLog({
         </section>
       )}
 
-      <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+      <div className="flex items-center gap-3 flex-wrap">
+        <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+        <LogTypeFilter label="Status"
+          options={[{ key: 'taken', label: 'Taken' }, { key: 'missed', label: 'Missed' }, { key: 'skipped', label: 'Skipped' }]}
+          activeKeys={activeStatuses}
+          baseHref={`/babies/${params.babyId}/medications`}
+          extraParams={{ range: range.key }} />
+      </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
