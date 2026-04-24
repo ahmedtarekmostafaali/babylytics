@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { DayPicker } from '@/components/DayPicker';
-import { PrintButton } from '@/components/PrintButton';
+import { ExportButton } from '@/components/ExportButton';
 import { Wordmark } from '@/components/Wordmark';
 import { BabyAvatar } from '@/components/BabyAvatar';
 import { signAvatarUrl } from '@/lib/baby-avatar';
@@ -57,9 +57,9 @@ export default async function DailyReport({
   const todayMeasurement = (measurements.data ?? [])[0];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-5 print-compact">
-      {/* screen-only header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+      {/* Screen-only toolbar — marked no-export so the capture skips it. */}
+      <div className="flex items-center justify-between flex-wrap gap-3 no-export">
         <div>
           <Link href={`/babies/${babyId}/reports`} className="text-sm text-ink-muted hover:underline">← Reports</Link>
           <h1 className="text-xl font-semibold text-ink-strong mt-1">Daily report</h1>
@@ -67,27 +67,29 @@ export default async function DailyReport({
         </div>
         <div className="flex items-center gap-2">
           <DayPicker babyId={babyId} value={isoDate} />
-          <PrintButton />
+          <ExportButton filenameHint={`${baby.name} — daily ${fmtDate(isoDate)}`} />
         </div>
       </div>
 
-      {/* print-only branded header */}
-      <div className="hidden print:block">
-        <div className="flex items-center justify-between pb-2 border-b-2 border-brand-500">
-          <Wordmark size="md" />
-          <div className="text-right text-[10px] text-ink-muted">
-            Daily report<br />
-            Generated {fmtDateTime(new Date().toISOString())}
+      {/* Everything inside #report-capture is what the ExportButton snapshots. */}
+      <div id="report-capture" className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
+        {/* Branded header — now always visible, not print-only. */}
+        <div>
+          <div className="flex items-center justify-between pb-2 border-b-2 border-brand-500">
+            <Wordmark size="md" />
+            <div className="text-right text-[10px] text-ink-muted">
+              Daily report<br />
+              Generated {fmtDateTime(new Date().toISOString())}
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <BabyAvatar url={avatarUrl} size="md" />
+            <div>
+              <h1 className="text-xl font-bold text-ink-strong">{baby.name}</h1>
+              <p className="text-xs text-ink-muted">{fmtDate(isoDate)} · daily care summary</p>
+            </div>
           </div>
         </div>
-        <div className="mt-3 flex items-center gap-3">
-          <BabyAvatar url={avatarUrl} size="md" />
-          <div>
-            <h1 className="text-xl font-bold text-ink-strong">{baby.name}</h1>
-            <p className="text-xs text-ink-muted">{fmtDate(isoDate)} · daily care summary</p>
-          </div>
-        </div>
-      </div>
 
       {/* KPI grid — compact so it fits one page alongside the new temp tile */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -168,18 +170,20 @@ export default async function DailyReport({
           line: `${v.vaccine_name}${v.dose_number && v.total_doses ? ` · dose ${v.dose_number}/${v.total_doses}` : ''}`,
           sub: v.notes ?? undefined,
         }))} />
-      </div>
+        </div>
 
-      {/* Print-hidden comments thread for this day */}
-      <div className="print:hidden">
+        <footer className="pt-3 text-center text-[10px] text-ink-muted border-t border-slate-200">
+          Tracked today · nurtured tomorrow · <strong className="text-brand-600">Babylytics</strong>
+        </footer>
+      </div>
+      {/* end #report-capture */}
+
+      {/* Comments thread for this day — excluded from the export. */}
+      <div className="no-export">
         <Comments babyId={babyId} target="babies" targetId={babyId}
           scopeDate={isoDate}
           title={`Notes for ${fmtDate(isoDate)}`} />
       </div>
-
-      <footer className="hidden print:block pt-3 text-center text-[10px] text-ink-muted border-t border-slate-200">
-        Tracked today · nurtured tomorrow · <strong className="text-brand-600">Babylytics</strong>
-      </footer>
     </div>
   );
 }
