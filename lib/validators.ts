@@ -112,6 +112,76 @@ export const AppointmentSchema = z.object({
   notes:       z.string().max(2000).nullable().optional(),
 });
 
+// ----- Medical Profile schemas -----
+export const AdmissionSchema = z.object({
+  admitted_at: z.string().min(1),
+  hospital:    z.string().max(200).nullable().optional(),
+  department:  z.string().max(120).nullable().optional(),
+  reason:      z.string().max(2000).nullable().optional(),
+  diagnosis:   z.string().max(2000).nullable().optional(),
+  notes:       z.string().max(4000).nullable().optional(),
+  file_id:     z.string().uuid().nullable().optional(),
+});
+
+export const DischargeSchema = z.object({
+  discharged_at: z.string().min(1),
+  admission_id:  z.string().uuid().nullable().optional(),
+  hospital:      z.string().max(200).nullable().optional(),
+  diagnosis:     z.string().max(2000).nullable().optional(),
+  treatment:     z.string().max(4000).nullable().optional(),
+  follow_up:     z.string().max(2000).nullable().optional(),
+  notes:         z.string().max(4000).nullable().optional(),
+  file_id:       z.string().uuid().nullable().optional(),
+});
+
+export const LabPanelSchema = z.object({
+  panel_kind: z.enum(['blood','urine','stool','culture','imaging','genetic','other']),
+  panel_name: z.string().min(1).max(200),
+  sample_at:  z.string().nullable().optional(),
+  result_at:  z.string().min(1),
+  lab_name:   z.string().max(200).nullable().optional(),
+  summary:    z.string().max(2000).nullable().optional(),
+  abnormal:   z.boolean().optional(),
+  file_id:    z.string().uuid().nullable().optional(),
+  notes:      z.string().max(4000).nullable().optional(),
+});
+
+export const LabPanelItemSchema = z.object({
+  test_name:   z.string().min(1).max(200),
+  value:       z.string().max(200).nullable().optional(),
+  unit:        z.string().max(40).nullable().optional(),
+  reference:   z.string().max(120).nullable().optional(),
+  is_abnormal: z.boolean().optional(),
+  flag:        z.enum(['low','high','critical','positive','negative']).nullable().optional(),
+  notes:       z.string().max(400).nullable().optional(),
+});
+
+export const AllergySchema = z.object({
+  allergen:     z.string().min(1).max(200),
+  category:     z.enum(['food','drug','environmental','contact','latex','other']).nullable().optional(),
+  reaction:     z.string().max(1000).nullable().optional(),
+  severity:     z.enum(['mild','moderate','severe','life_threatening']),
+  diagnosed_at: z.string().nullable().optional(),
+  status:       z.enum(['active','resolved','suspected']),
+  notes:        z.string().max(2000).nullable().optional(),
+});
+
+export const MedicalConditionSchema = z.object({
+  name:         z.string().min(1).max(200),
+  icd_code:     z.string().max(40).nullable().optional(),
+  diagnosed_at: z.string().nullable().optional(),
+  status:       z.enum(['active','resolved','chronic','suspected']),
+  treatment:    z.string().max(2000).nullable().optional(),
+  notes:        z.string().max(2000).nullable().optional(),
+});
+
+export const CarePlanSchema = z.object({
+  medical_plan: z.string().max(4000).nullable().optional(),
+  feeding_plan: z.string().max(4000).nullable().optional(),
+  labs_needed:  z.string().max(2000).nullable().optional(),
+  blood_type:   z.string().max(10).nullable().optional(),
+});
+
 export const VaccinationSchema = z.object({
   vaccine_name: z.string().min(1).max(200),
   scheduled_at: z.string().nullable().optional(),

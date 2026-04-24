@@ -12,7 +12,7 @@ import { ageInDays } from '@/lib/dates';
 import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
-  Stethoscope, CalendarClock,
+  Stethoscope, CalendarClock, HeartPulse,
 } from 'lucide-react';
 
 type BabyRow = { id: string; name: string; dob: string; avatar_path: string | null };
@@ -182,6 +182,7 @@ export function Sidebar() {
             {canViewLogs && (
               <NavGroup label="TOOLS" collapsed={collapsed}>
                 <NavItem href={`/babies/${currentBabyId}/ocr`}     icon={FileText}  label="Smart Scan" active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />
+                <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label="Medical Profile" active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />
                 {canExport && <NavItem href={`/babies/${currentBabyId}/reports`} icon={BarChart3} label="Reports"    active={pathname?.startsWith(`/babies/${currentBabyId}/reports`) ?? false} collapsed={collapsed} tint="peach" />}
               </NavGroup>
             )}
