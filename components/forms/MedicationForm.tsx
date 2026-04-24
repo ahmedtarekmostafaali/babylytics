@@ -25,8 +25,15 @@ export type MedicationFormValue = {
   total_doses?: number | null;
   starts_at?: string | null;
   ends_at?: string | null;
+  doctor_id?: string | null;
   prescribed_by?: string | null;
   notes?: string | null;
+};
+
+export type DoctorOption = {
+  id: string;
+  name: string;
+  specialty: string | null;
 };
 
 // Common frequency presets in hours. "As needed" stores null.
@@ -39,7 +46,13 @@ const FREQ_PRESETS: { key: string; label: string; hours: number | null }[] = [
   { key: 'prn', label: 'As needed', hours: null },
 ];
 
-export function MedicationForm({ babyId, initial }: { babyId: string; initial?: MedicationFormValue }) {
+export function MedicationForm({
+  babyId, initial, doctors = [],
+}: {
+  babyId: string;
+  initial?: MedicationFormValue;
+  doctors?: DoctorOption[];
+}) {
   const router = useRouter();
   const [name, setName]     = useState(initial?.name ?? '');
   const [dosage, setDosage] = useState(initial?.dosage ?? '');
@@ -53,6 +66,12 @@ export function MedicationForm({ babyId, initial }: { babyId: string; initial?: 
   const [doses, setDoses]   = useState(initial?.total_doses?.toString() ?? '');
   const [starts, setStarts] = useState(initial?.starts_at ? isoToLocalInput(initial.starts_at) : nowLocalInput());
   const [ends,   setEnds]   = useState(initial?.ends_at ? isoToLocalInput(initial.ends_at) : '');
+  // Doctor picker: either a specific doctor from the list, or "other" for free-text.
+  type DoctorChoice = string | 'other' | 'none';
+  const initialDoctorChoice: DoctorChoice = initial?.doctor_id
+    ? initial.doctor_id
+    : initial?.prescribed_by ? 'other' : 'none';
+  const [doctorChoice, setDoctorChoice] = useState<DoctorChoice>(initialDoctorChoice);
   const [presc, setPresc]   = useState(initial?.prescribed_by ?? '');
   const [notes, setNotes]   = useState(initial?.notes ?? '');
   const [err, setErr] = useState<string | null>(null);
@@ -68,13 +87,27 @@ export function MedicationForm({ babyId, initial }: { babyId: string; initial?: 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    // Resolve doctor selection into the two columns we persist. We snapshot
+    // the doctor's name into `prescribed_by` too so deleting the doctor row
+    // later doesn't leave medications with no attribution.
+    let doctorId: string | null = null;
+    let prescribedBy: string | null = null;
+    if (doctorChoice === 'other')       { doctorId = null;          prescribedBy = presc || null; }
+    else if (doctorChoice === 'none')   { doctorId = null;          prescribedBy = null; }
+    else {
+      doctorId = doctorChoice;
+      const doc = doctors.find(d => d.id === doctorChoice);
+      prescribedBy = doc?.name ?? null;
+    }
+
     const parsed = MedicationSchema.safeParse({
       name, dosage: dosage || null, route,
       frequency_hours: resolvedFreqHours(),
       total_doses: doses || null,
       starts_at: localInputToIso(starts) ?? '',
       ends_at: localInputToIso(ends),
-      prescribed_by: presc || null,
+      doctor_id: doctorId,
+      prescribed_by: prescribedBy,
       notes: notes || null,
     });
     if (!parsed.success) { setErr(parsed.error.errors[0]?.message ?? 'invalid'); return; }
@@ -192,12 +225,97 @@ export function MedicationForm({ babyId, initial }: { babyId: string; initial?: 
 
       {/* 6. Prescribed by */}
       <Section n={6} title="Who prescribed it?" optional>
-        <div className="relative">
-          <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
-          <Input value={presc ?? ''} onChange={e => setPresc(e.target.value)}
-            placeholder="Dr. Sarah Ahmed"
-            className={cn('pl-10')} />
-        </div>
+        {doctors.length === 0 ? (
+          <div className="space-y-3">
+            <div className="relative">
+              <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
+              <Input value={presc ?? ''} onChange={e => {
+                setPresc(e.target.value);
+                setDoctorChoice(e.target.value ? 'other' : 'none');
+              }}
+                placeholder="Dr. Sarah Ahmed"
+                className={cn('pl-10')} />
+            </div>
+            <p className="text-xs text-ink-muted">
+              Tip: add your baby&apos;s doctors on the{' '}
+              <a href={`/babies/${babyId}/doctors`} className="text-lavender-700 font-semibold hover:underline">Doctors page</a>{' '}
+              so you can pick from a list next time.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {doctors.map(d => {
+                const active = doctorChoice === d.id;
+                return (
+                  <button type="button" key={d.id}
+                    onClick={() => setDoctorChoice(d.id)}
+                    className={cn(
+                      'flex items-center gap-3 rounded-2xl border p-3 text-left transition',
+                      active
+                        ? 'ring-2 ring-lavender-500 border-transparent bg-lavender-50'
+                        : 'border-slate-200 bg-white hover:bg-slate-50',
+                    )}>
+                    <span className={cn(
+                      'h-10 w-10 rounded-xl grid place-items-center shrink-0',
+                      active ? 'bg-lavender-500 text-white' : 'bg-lavender-100 text-lavender-600',
+                    )}>
+                      <Stethoscope className="h-4 w-4" />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-semibold text-ink-strong truncate">{d.name}</span>
+                      <span className="block text-xs text-ink-muted truncate">{d.specialty ?? 'doctor'}</span>
+                    </span>
+                  </button>
+                );
+              })}
+              <button type="button"
+                onClick={() => setDoctorChoice('other')}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl border p-3 text-left transition',
+                  doctorChoice === 'other'
+                    ? 'ring-2 ring-lavender-500 border-transparent bg-lavender-50'
+                    : 'border-slate-200 border-dashed bg-white hover:bg-slate-50',
+                )}>
+                <span className={cn(
+                  'h-10 w-10 rounded-xl grid place-items-center shrink-0',
+                  doctorChoice === 'other' ? 'bg-lavender-500 text-white' : 'bg-slate-100 text-ink-muted',
+                )}>
+                  <Stethoscope className="h-4 w-4" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-semibold text-ink-strong">Other</span>
+                  <span className="block text-xs text-ink-muted">type a name</span>
+                </span>
+              </button>
+              <button type="button"
+                onClick={() => { setDoctorChoice('none'); setPresc(''); }}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl border p-3 text-left transition',
+                  doctorChoice === 'none'
+                    ? 'ring-2 ring-slate-400 border-transparent bg-slate-100'
+                    : 'border-slate-200 bg-white hover:bg-slate-50',
+                )}>
+                <span className="h-10 w-10 rounded-xl bg-slate-100 text-ink-muted grid place-items-center shrink-0">
+                  ×
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-semibold text-ink-strong">Skip</span>
+                  <span className="block text-xs text-ink-muted">don&apos;t attribute</span>
+                </span>
+              </button>
+            </div>
+
+            {doctorChoice === 'other' && (
+              <div className="relative mt-1">
+                <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
+                <Input value={presc ?? ''} onChange={e => setPresc(e.target.value)}
+                  placeholder="Doctor name"
+                  className="pl-10" />
+              </div>
+            )}
+          </div>
+        )}
       </Section>
 
       {/* 7. Notes */}

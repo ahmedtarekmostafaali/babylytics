@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { SmartScanUploader } from '@/components/SmartScanUploader';
+import { FileDeleteButton } from '@/components/FileDeleteButton';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { ConfidenceBadge } from '@/components/ConfidenceBadge';
 import { fmtDateTime, fmtRelative } from '@/lib/dates';
@@ -232,9 +233,9 @@ export default async function SmartScan({
                   ? { label: 'Archive', tint: 'bg-slate-100 text-ink-muted' }
                   : { label: 'Not scanned', tint: 'bg-peach-100 text-peach-700' });
               return (
-                <li key={f.id}>
+                <li key={f.id} className={`flex items-center gap-1 px-2 transition ${active ? 'bg-lavender-50/60' : ''}`}>
                   <Link href={`/babies/${params.babyId}/ocr?tab=${tab}&file=${f.id}`}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition ${active ? 'bg-lavender-50/60' : ''}`}>
+                    className="flex items-center gap-3 flex-1 min-w-0 px-2 py-3 rounded-xl hover:bg-slate-50 transition">
                     <span className="h-12 w-12 rounded-xl bg-slate-100 grid place-items-center shrink-0 overflow-hidden">
                       <ImageIcon className="h-5 w-5 text-ink-muted" />
                     </span>
@@ -251,6 +252,11 @@ export default async function SmartScan({
                     </span>
                     <ArrowRight className="h-4 w-4 text-ink-muted shrink-0 ml-1" />
                   </Link>
+                  <FileDeleteButton
+                    fileId={f.id}
+                    storageBucket={f.storage_bucket}
+                    storagePath={f.storage_path}
+                    redirectTo={`/babies/${params.babyId}/ocr?tab=${tab}`} />
                 </li>
               );
             })}
@@ -470,6 +476,14 @@ function DetailPanel({
             Open file
           </Link>
         )}
+      </div>
+      <div className="pt-2 flex justify-end">
+        <FileDeleteButton
+          fileId={file.id}
+          storageBucket={file.storage_bucket}
+          storagePath={file.storage_path}
+          redirectTo={`/babies/${babyId}/ocr`}
+          variant="text" />
       </div>
     </div>
   );

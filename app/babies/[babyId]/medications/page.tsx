@@ -15,7 +15,7 @@ import {
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Medications' };
 
-type Med = { id: string; name: string; dosage: string | null; route: string; frequency_hours: number | null; total_doses: number | null; starts_at: string; ends_at: string | null; prescribed_by: string | null };
+type Med = { id: string; name: string; dosage: string | null; route: string; frequency_hours: number | null; total_doses: number | null; starts_at: string; ends_at: string | null; prescribed_by: string | null; doctor_id: string | null };
 type LogRow = { id: string; medication_id: string; medication_time: string; status: 'taken'|'missed'|'skipped'; actual_dosage: string | null; notes: string | null; source: string; created_at: string };
 
 function groupKey(iso: string) { return new Date(iso).toISOString().slice(0, 10); }
@@ -60,7 +60,7 @@ export default async function MedicationsLog({
 
   const [{ data: medsData }, { data: logsData }, { data: todayLogs }] = await Promise.all([
     supabase.from('medications')
-      .select('id,name,dosage,route,frequency_hours,total_doses,starts_at,ends_at,prescribed_by')
+      .select('id,name,dosage,route,frequency_hours,total_doses,starts_at,ends_at,prescribed_by,doctor_id')
       .eq('baby_id', params.babyId).is('deleted_at', null)
       .order('created_at', { ascending: false }),
     logsQuery.order('medication_time', { ascending: false }).limit(500),
@@ -129,7 +129,10 @@ export default async function MedicationsLog({
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-ink-strong truncate">{m.name}{m.dosage ? ` · ${m.dosage}` : ''}</div>
-                  <div className="text-xs text-ink-muted truncate">every {m.frequency_hours ?? '—'}h · {m.route}</div>
+                  <div className="text-xs text-ink-muted truncate">
+                    every {m.frequency_hours ?? '—'}h · {m.route}
+                    {m.prescribed_by ? ` · Rx by ${m.prescribed_by}` : ''}
+                  </div>
                 </div>
                 <Link href={`/babies/${params.babyId}/medications/log?m=${m.id}`}
                   className="rounded-full bg-lavender-500 text-white text-[11px] px-2.5 py-1 hover:bg-lavender-600">
@@ -249,6 +252,12 @@ export default async function MedicationsLog({
                       <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
                         <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Prescribed</div>
                         <div className="text-base font-bold text-ink-strong leading-tight">{med.dosage}</div>
+                      </div>
+                    )}
+                    {med?.prescribed_by && (
+                      <div className="rounded-xl bg-lavender-50 border border-lavender-100 px-3 py-2 col-span-2">
+                        <div className="text-[10px] uppercase tracking-wider text-lavender-700 font-semibold">Prescribed by</div>
+                        <div className="text-sm font-bold text-ink-strong leading-tight">{med.prescribed_by}</div>
                       </div>
                     )}
                   </div>

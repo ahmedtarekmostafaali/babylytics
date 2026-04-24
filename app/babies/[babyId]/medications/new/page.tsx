@@ -14,11 +14,17 @@ export default async function NewMedication({ params }: { params: { babyId: stri
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 
-  const { data: recent } = await supabase
-    .from('medications')
-    .select('id,name,dosage,route,frequency_hours,starts_at,ends_at')
-    .eq('baby_id', params.babyId).is('deleted_at', null)
-    .order('created_at', { ascending: false }).limit(5);
+  const [{ data: recent }, { data: docs }] = await Promise.all([
+    supabase.from('medications')
+      .select('id,name,dosage,route,frequency_hours,starts_at,ends_at')
+      .eq('baby_id', params.babyId).is('deleted_at', null)
+      .order('created_at', { ascending: false }).limit(5),
+    supabase.from('doctors')
+      .select('id,name,specialty')
+      .eq('baby_id', params.babyId).is('deleted_at', null)
+      .order('is_primary', { ascending: false })
+      .order('created_at', { ascending: false }),
+  ]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-6">
@@ -41,7 +47,8 @@ export default async function NewMedication({ params }: { params: { babyId: stri
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-6">
         <div className="rounded-3xl bg-white border border-slate-200 shadow-card p-6 sm:p-8">
-          <MedicationForm babyId={params.babyId} />
+          <MedicationForm babyId={params.babyId}
+            doctors={(docs ?? []) as { id: string; name: string; specialty: string | null }[]} />
         </div>
 
         <aside className="space-y-4">

@@ -45,6 +45,7 @@ export const MedicationSchema = z.object({
   total_doses: z.coerce.number().int().min(0).max(9999).nullable().optional(),
   starts_at: z.string().min(1),
   ends_at: z.string().nullable().optional(),
+  doctor_id: z.string().uuid().nullable().optional(),
   prescribed_by: z.string().max(200).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
