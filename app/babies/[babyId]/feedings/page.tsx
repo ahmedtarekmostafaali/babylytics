@@ -327,9 +327,9 @@ export default async function FeedingsLog({
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-peach-900">Insight</div>
               <div className="text-xs text-peach-900/90">
-                {todayBreasts.length === 0
-                  ? `No breastfeeding logged today yet.`
-                  : `Great job! You've breastfed ${todayBreasts.length} time${todayBreasts.length === 1 ? '' : 's'} today.`}
+                {summaryBreasts.length === 0
+                  ? `No breastfeeding logged in ${range.label.toLowerCase()}.`
+                  : `Great job! You've breastfed ${summaryBreasts.length} time${summaryBreasts.length === 1 ? '' : 's'} in ${range.label.toLowerCase()}.`}
               </div>
               <Link href={`/babies/${params.babyId}`}
                 className="mt-1 inline-flex items-center gap-1 text-xs text-peach-800 font-semibold hover:underline">
