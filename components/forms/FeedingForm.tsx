@@ -1,11 +1,13 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { FeedingSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
-import { Input, Label, Select, Textarea } from '@/components/ui/Input';
+import { Baby as BabyIcon, Milk, Utensils, Play, Square, Clock, Minus, Plus, Save, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
+
+type FeedMode = 'breast' | 'bottle' | 'solid';
 
 export type FeedingFormValue = {
   id?: string;
@@ -18,46 +20,127 @@ export type FeedingFormValue = {
   notes?: string | null;
 };
 
-export function FeedingForm({ babyId, initial, onDone }: { babyId: string; initial?: FeedingFormValue; onDone?: () => void }) {
+function modeFromMilkType(t?: FeedingFormValue['milk_type']): FeedMode {
+  if (t === 'breast' || t === 'mixed') return 'breast';
+  if (t === 'solid') return 'solid';
+  return 'bottle';
+}
+
+export function FeedingForm({ babyId, initial }: { babyId: string; initial?: FeedingFormValue }) {
   const router = useRouter();
-  const [time,     setTime]     = useState(initial?.feeding_time ? isoToLocalInput(initial.feeding_time) : nowLocalInput());
-  const [milk,     setMilk]     = useState<FeedingFormValue['milk_type']>(initial?.milk_type ?? 'formula');
-  const [ml,       setMl]       = useState(initial?.quantity_ml?.toString() ?? '');
-  const [kcal,     setKcal]     = useState(initial?.kcal?.toString() ?? '');
-  const [duration, setDuration] = useState(initial?.duration_min?.toString() ?? '');
-  const [notes,    setNotes]    = useState(initial?.notes ?? '');
-  const [err, setErr] = useState<string | null>(null);
+  const [mode, setMode] = useState<FeedMode>(modeFromMilkType(initial?.milk_type));
+
+  // Common
+  const [time, setTime]   = useState(initial?.feeding_time ? isoToLocalInput(initial.feeding_time) : nowLocalInput());
+  const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [err, setErr]     = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Breast — left + right minutes. Pre-populated from duration_min on edit (split evenly).
+  const initialHalf = initial?.duration_min ? Math.round(initial.duration_min / 2) : 0;
+  const [leftMin, setLeftMin]   = useState<number>(initialHalf);
+  const [rightMin, setRightMin] = useState<number>(initial?.duration_min ? (initial.duration_min - initialHalf) : 0);
+
+  // Timer
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerSide, setTimerSide] = useState<'L' | 'R'>('L');
+  const [elapsed, setElapsed] = useState(0); // seconds
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (timerRunning) {
+      tickRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
+    } else if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+  }, [timerRunning]);
+
+  function stopAndCommit() {
+    const extraMin = Math.round(elapsed / 60);
+    if (timerSide === 'L') setLeftMin(m => m + extraMin);
+    else                   setRightMin(m => m + extraMin);
+    setTimerRunning(false);
+    setElapsed(0);
+  }
+
+  // Bottle
+  const [ml, setMl] = useState<string>(initial?.quantity_ml?.toString() ?? '');
+  const [kcal, setKcal] = useState<string>(initial?.kcal?.toString() ?? '');
+  const [bottleKind, setBottleKind] = useState<'formula'|'mixed'|'other'>(
+    initial?.milk_type === 'mixed' ? 'mixed' : initial?.milk_type === 'other' ? 'other' : 'formula'
+  );
+
+  function setRelativeTime(minutesAgo: number) {
+    const d = new Date(Date.now() - minutesAgo * 60000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    setTime(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+  }
+
+  const isBottle = mode === 'bottle';
+  const isBreast = mode === 'breast';
+  const isSolid  = mode === 'solid';
+
+  const totalBreastMin = leftMin + rightMin;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    const parsed = FeedingSchema.safeParse({
-      feeding_time: localInputToIso(time) ?? '',
-      milk_type: milk,
-      quantity_ml: ml || null,
-      kcal: kcal || null,
-      duration_min: duration || null,
-      notes: notes || null,
-    });
-    if (!parsed.success) { setErr(parsed.error.errors[0]?.message ?? 'invalid'); return; }
+
+    const iso = localInputToIso(time);
+    if (!iso) { setErr('Pick a valid time.'); return; }
+
+    let payload: Partial<FeedingFormValue>;
+    if (isBreast) {
+      if (totalBreastMin <= 0) { setErr('Add minutes to at least one breast, or start the timer.'); return; }
+      payload = {
+        feeding_time: iso,
+        milk_type: 'breast',
+        quantity_ml: null,
+        kcal: null,
+        duration_min: totalBreastMin,
+        notes: [notes, `Left ${leftMin}m · Right ${rightMin}m`].filter(Boolean).join(' · ').trim() || null,
+      };
+    } else if (isBottle) {
+      const mlNum = ml ? Number(ml) : null;
+      if (mlNum == null || mlNum <= 0) { setErr('Enter the bottle amount in ml.'); return; }
+      payload = {
+        feeding_time: iso,
+        milk_type: bottleKind,
+        quantity_ml: mlNum,
+        kcal: kcal ? Number(kcal) : null,
+        duration_min: null,
+        notes: notes || null,
+      };
+    } else {
+      // solid
+      if (!notes.trim()) { setErr('Describe the solid food in notes.'); return; }
+      payload = {
+        feeding_time: iso,
+        milk_type: 'solid',
+        quantity_ml: null,
+        kcal: kcal ? Number(kcal) : null,
+        duration_min: null,
+        notes: notes.trim(),
+      };
+    }
+
     setSaving(true);
     const supabase = createClient();
-    const row = { baby_id: babyId, ...parsed.data };
     const op = initial?.id
-      ? supabase.from('feedings').update({ ...parsed.data }).eq('id', initial.id)
-      : supabase.from('feedings').insert({ ...row, created_by: (await supabase.auth.getUser()).data.user?.id });
+      ? supabase.from('feedings').update({ ...payload }).eq('id', initial.id)
+      : supabase.from('feedings').insert({ baby_id: babyId, ...payload, created_by: (await supabase.auth.getUser()).data.user?.id });
     const { error } = await op;
     setSaving(false);
     if (error) { setErr(error.message); return; }
-    onDone?.();
     router.push(`/babies/${babyId}`);
     router.refresh();
   }
 
   async function onDelete() {
     if (!initial?.id) return;
-    if (!confirm('Delete this feeding?')) return;
+    if (!window.confirm('Delete this feeding?')) return;
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.from('feedings').update({ deleted_at: new Date().toISOString() }).eq('id', initial.id);
@@ -68,44 +151,268 @@ export function FeedingForm({ babyId, initial, onDone }: { babyId: string; initi
   }
 
   return (
-    <form className="space-y-4" onSubmit={submit}>
-      <div>
-        <Label htmlFor="t">When</Label>
-        <Input id="t" type="datetime-local" required value={time} onChange={e => setTime(e.target.value)} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label htmlFor="m">Type</Label>
-          <Select id="m" value={milk} onChange={e => setMilk(e.target.value as 'formula')}>
-            <option value="formula">Formula</option>
-            <option value="breast">Breast</option>
-            <option value="mixed">Mixed</option>
-            <option value="solid">Solid</option>
-            <option value="other">Other</option>
-          </Select>
+    <form onSubmit={submit} className="space-y-8">
+      {/* 1. Type selector */}
+      <Section title="What type of feeding?" n={1}>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <TypeTile icon={BabyIcon} label="Breastfeeding" tint="coral"    active={isBreast} onClick={() => setMode('breast')} />
+          <TypeTile icon={Milk}     label="Bottle"         tint="brand"    active={isBottle} onClick={() => setMode('bottle')} />
+          <TypeTile icon={Utensils} label="Solid"          tint="peach"    active={isSolid}  onClick={() => setMode('solid')}  />
         </div>
-        <div>
-          <Label htmlFor="q">Quantity (ml)</Label>
-          <Input id="q" type="number" inputMode="decimal" step="1" min={0} max={2000} value={ml} onChange={e => setMl(e.target.value)} />
+      </Section>
+
+      {/* 2. Details — varies by mode */}
+      <Section title="Details" n={2}>
+        {isBreast && (
+          <div className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-3">
+              <BreastBox side="L" label="Left breast" minutes={leftMin} onChange={setLeftMin} />
+              <BreastBox side="R" label="Right breast" minutes={rightMin} onChange={setRightMin} />
+            </div>
+
+            {/* Timer */}
+            <div className="rounded-2xl border border-coral-200 bg-coral-50/50 p-3 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-coral-100 text-coral-600 grid place-items-center shrink-0">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-ink-strong">
+                    {timerRunning
+                      ? `Timing ${timerSide === 'L' ? 'left' : 'right'} — ${fmtDuration(elapsed)}`
+                      : 'Breast timer'}
+                  </div>
+                  <div className="text-xs text-ink-muted">Use when feeding live — we&apos;ll add the minutes when you stop.</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {!timerRunning && (
+                  <>
+                    <button type="button"
+                      onClick={() => { setTimerSide('L'); setTimerRunning(true); }}
+                      className="inline-flex items-center gap-1 rounded-full bg-coral-500 hover:bg-coral-600 text-white text-xs px-3 py-1.5">
+                      <Play className="h-3 w-3" /> Left
+                    </button>
+                    <button type="button"
+                      onClick={() => { setTimerSide('R'); setTimerRunning(true); }}
+                      className="inline-flex items-center gap-1 rounded-full bg-coral-500 hover:bg-coral-600 text-white text-xs px-3 py-1.5">
+                      <Play className="h-3 w-3" /> Right
+                    </button>
+                  </>
+                )}
+                {timerRunning && (
+                  <button type="button" onClick={stopAndCommit}
+                    className="inline-flex items-center gap-1 rounded-full bg-ink-strong text-white text-xs px-3 py-1.5">
+                    <Square className="h-3 w-3" /> Stop &amp; add
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="text-xs text-ink-muted">
+              Total {totalBreastMin} min
+            </div>
+          </div>
+        )}
+
+        {isBottle && (
+          <div className="space-y-3">
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Field label="Amount (ml)">
+                <input type="number" min={0} max={2000} step={1}
+                  value={ml} onChange={e => setMl(e.target.value)}
+                  placeholder="e.g. 120"
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+              </Field>
+              <Field label="Kcal (optional)">
+                <input type="number" min={0} max={5000} step={1}
+                  value={kcal} onChange={e => setKcal(e.target.value)}
+                  placeholder="e.g. 80"
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+              </Field>
+            </div>
+            <Field label="Contents">
+              <div className="inline-flex rounded-full border border-slate-200 bg-white overflow-hidden">
+                {(['formula','mixed','other'] as const).map(k => (
+                  <button key={k} type="button" onClick={() => setBottleKind(k)}
+                    className={cn('px-4 py-2 text-sm capitalize',
+                      bottleKind === k ? 'bg-brand-500 text-white' : 'text-ink hover:bg-slate-50')}>
+                    {k}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </div>
+        )}
+
+        {isSolid && (
+          <div>
+            <Field label="Kcal (optional)">
+              <input type="number" min={0} max={5000} step={1}
+                value={kcal} onChange={e => setKcal(e.target.value)}
+                placeholder="e.g. 120"
+                className="h-12 w-40 rounded-2xl border border-slate-200 bg-white px-4 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+            </Field>
+            <p className="mt-2 text-xs text-ink-muted">Describe the food in the notes field below — e.g. &ldquo;half a banana, yogurt&rdquo;.</p>
+          </div>
+        )}
+      </Section>
+
+      {/* 3. When */}
+      <Section title="When?" n={3}>
+        <div className="flex flex-wrap items-center gap-2">
+          <QuickPill active={isNowIsh(time)} onClick={() => setRelativeTime(0)} icon={<Check className="h-3.5 w-3.5" />}>Now</QuickPill>
+          <QuickPill onClick={() => setRelativeTime(15)}>−15 min</QuickPill>
+          <QuickPill onClick={() => setRelativeTime(30)}>−30 min</QuickPill>
+          <QuickPill onClick={() => setRelativeTime(60)}>−1 hr</QuickPill>
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
+            <Clock className="h-3.5 w-3.5 text-ink-muted" />
+            <input type="datetime-local" value={time} onChange={e => setTime(e.target.value)}
+              className="bg-transparent text-sm focus:outline-none" />
+          </div>
         </div>
-        <div>
-          <Label htmlFor="k">Kcal</Label>
-          <Input id="k" type="number" inputMode="decimal" step="1" min={0} max={5000} value={kcal} onChange={e => setKcal(e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="d">Duration (min)</Label>
-          <Input id="d" type="number" inputMode="numeric" step="1" min={0} max={600} value={duration} onChange={e => setDuration(e.target.value)} />
-        </div>
+      </Section>
+
+      {/* 4. Notes */}
+      <Section title="Add details" n={4} optional>
+        <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
+          placeholder={isSolid ? 'What did they eat? e.g. half a banana, yogurt' : 'Notes (e.g. mood, meds, anything important)'}
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+      </Section>
+
+      {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
+
+      <div className="flex items-center gap-2">
+        <Button type="submit" disabled={saving}
+          className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-coral-500 to-coral-600 hover:from-coral-600 hover:to-coral-700">
+          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save feeding'}
+        </Button>
+        {initial?.id && (
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">Delete</Button>
+        )}
       </div>
-      <div>
-        <Label htmlFor="n">Notes</Label>
-        <Textarea id="n" rows={2} value={notes ?? ''} onChange={e => setNotes(e.target.value)} />
-      </div>
-      {err && <p className="text-sm text-red-600">{err}</p>}
-      <div className="flex gap-2">
-        <Button type="submit" disabled={saving}>{saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save feeding'}</Button>
-        {initial?.id && <Button type="button" variant="danger" onClick={onDelete} disabled={saving}>Delete</Button>}
-      </div>
+      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
     </form>
+  );
+}
+
+// ---- Helpers --------------------------------------------------------------
+
+function isNowIsh(local: string): boolean {
+  const d = new Date(local);
+  const now = Date.now();
+  return Math.abs(d.getTime() - now) < 2 * 60 * 1000; // within 2 min
+}
+
+function fmtDuration(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// ---- Small UI pieces ------------------------------------------------------
+
+function Section({ n, title, optional, children }: { n: number; title: string; optional?: boolean; children: React.ReactNode }) {
+  return (
+    <section>
+      <h3 className="mb-3 text-lg font-bold text-ink-strong">
+        <span className="text-ink-muted font-medium">{n}. </span>
+        {title}
+        {optional && <span className="ml-1 text-ink-muted text-sm font-normal">(optional)</span>}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function TypeTile({ icon: Icon, label, tint, active, onClick }: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  tint: 'coral' | 'brand' | 'peach';
+  active: boolean;
+  onClick: () => void;
+}) {
+  const ring = {
+    coral: 'ring-coral-500 bg-coral-50',
+    brand: 'ring-brand-500 bg-brand-50',
+    peach: 'ring-peach-500 bg-peach-50',
+  }[tint];
+  const iconTone = {
+    coral: active ? 'bg-coral-500 text-white' : 'bg-coral-100 text-coral-500',
+    brand: active ? 'bg-brand-500 text-white' : 'bg-brand-100 text-brand-500',
+    peach: active ? 'bg-peach-500 text-white' : 'bg-peach-100 text-peach-500',
+  }[tint];
+  return (
+    <button type="button" onClick={onClick}
+      className={cn(
+        'flex flex-col items-center justify-center gap-2 rounded-2xl border p-5 transition',
+        active ? `ring-2 ${ring} border-transparent` : 'border-slate-200 bg-white hover:bg-slate-50'
+      )}
+    >
+      <div className={cn('h-12 w-12 rounded-2xl grid place-items-center', iconTone)}>
+        <Icon className="h-6 w-6" />
+      </div>
+      <span className={cn('font-semibold', active ? 'text-ink-strong' : 'text-ink')}>{label}</span>
+    </button>
+  );
+}
+
+function BreastBox({ side, label, minutes, onChange }: {
+  side: 'L' | 'R';
+  label: string;
+  minutes: number;
+  onChange: (m: number) => void;
+}) {
+  const badge = side === 'L' ? 'bg-coral-100 text-coral-700' : 'bg-lavender-100 text-lavender-700';
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-medium text-ink">{label}</div>
+        <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', badge)}>{side}</span>
+      </div>
+      <div className="mt-2 flex items-center justify-between">
+        <div className="text-3xl font-bold text-ink-strong">{minutes} <span className="text-sm font-medium text-ink-muted">min</span></div>
+        <div className="inline-flex items-center gap-1">
+          <button type="button" onClick={() => onChange(Math.max(0, minutes - 1))}
+            className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 grid place-items-center">
+            <Minus className="h-4 w-4 text-ink" />
+          </button>
+          <button type="button" onClick={() => onChange(minutes + 1)}
+            className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 grid place-items-center">
+            <Plus className="h-4 w-4 text-ink" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuickPill({ active, onClick, icon, children }: {
+  active?: boolean;
+  onClick: () => void;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button type="button" onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm transition',
+        active
+          ? 'bg-coral-500 border-coral-500 text-white shadow-sm'
+          : 'bg-white border-slate-200 text-ink hover:bg-slate-50'
+      )}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-ink-muted mb-1.5">{label}</label>
+      {children}
+    </div>
   );
 }

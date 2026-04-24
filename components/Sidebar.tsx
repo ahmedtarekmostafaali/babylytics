@@ -5,23 +5,27 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { BabyAvatar } from '@/components/BabyAvatar';
+import { Wordmark } from '@/components/Wordmark';
+import { signAvatarUrl } from '@/lib/baby-avatar';
+import { ageInDays } from '@/lib/dates';
 import {
-  LayoutDashboard, Baby, Milk, Droplet, Ruler, Pill, FileText, Users, Pencil, Upload, LogOut,
-  ChevronLeft, Menu, X, Plus, BarChart3,
+  LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
+  LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown,
 } from 'lucide-react';
 
-type BabySummary = { id: string; name: string };
+type BabyRow = { id: string; name: string; dob: string; avatar_path: string | null };
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Collapse state persists to localStorage on the client.
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
-  const [babies, setBabies] = useState<BabySummary[]>([]);
-  const [logoError, setLogoError] = useState(false);
+  const [babies, setBabies] = useState<BabyRow[]>([]);
+  const [avatars, setAvatars] = useState<Record<string, string | null>>({});
+  const [babySwitcherOpen, setBabySwitcherOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -30,38 +34,40 @@ export function Sidebar() {
     } catch { /* ignore */ }
 
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setEmail(data.user?.email ?? null);
-    });
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
     supabase.from('babies')
-      .select('id,name')
+      .select('id,name,dob,avatar_path')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
-      .then(({ data }) => setBabies((data ?? []) as BabySummary[]));
+      .then(async ({ data }) => {
+        const list = (data ?? []) as BabyRow[];
+        setBabies(list);
+        // Sign avatars client-side once loaded
+        const urls: Record<string, string | null> = {};
+        await Promise.all(list.map(async b => {
+          urls[b.id] = await signAvatarUrl(supabase, b.avatar_path);
+        }));
+        setAvatars(urls);
+      });
   }, [pathname]);
 
   useEffect(() => {
     try { localStorage.setItem('bx:sidebar-collapsed', collapsed ? '1' : '0'); }
     catch { /* ignore */ }
-    // Let the content area respond via CSS class on <body>.
     if (typeof document !== 'undefined') {
       document.body.classList.toggle('is-sidebar-collapsed', collapsed);
     }
   }, [collapsed]);
 
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
+  useEffect(() => { setMobileOpen(false); setBabySwitcherOpen(false); }, [pathname]);
 
-  // Extract current baby id from URL, if any.
   const currentBabyId = useMemo(() => {
     const m = pathname?.match(/^\/babies\/([0-9a-f-]{8,})/i);
     return m ? m[1] : null;
   }, [pathname]);
 
-  // Use whatever name we know (from the fetched babies), otherwise fall back
-  // to a generic label so the baby-specific nav renders immediately on direct
-  // URL navigation — not after the babies fetch completes.
   const currentBaby = currentBabyId
-    ? (babies.find(b => b.id === currentBabyId) ?? { id: currentBabyId, name: 'Baby' })
+    ? (babies.find(b => b.id === currentBabyId) ?? null)
     : null;
 
   async function logout() {
@@ -73,21 +79,9 @@ export function Sidebar() {
 
   const SidebarInner = (
     <div className="h-full flex flex-col relative">
-      {/* Header with logo */}
-      <div className={cn('flex items-center h-16 border-b border-slate-200', collapsed ? 'justify-center px-2' : 'px-4 gap-3')}>
-        <Link href="/dashboard" className={cn('flex items-center min-w-0', collapsed ? 'justify-center' : 'gap-2')} title="Babylytics">
-          {!logoError
-            ? // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src="/Logo.png"
-                alt="Babylytics"
-                className="h-9 w-9 shrink-0 rounded-md object-cover"
-                onError={() => setLogoError(true)}
-              />
-            : <div className="h-9 w-9 shrink-0 rounded-md bg-brand-500 text-white grid place-items-center text-sm font-bold">B</div>}
-          {!collapsed && <span className="font-semibold truncate text-ink-strong">Babylytics</span>}
-        </Link>
-        {/* Mobile close button (visible only when drawer is open on mobile) */}
+      {/* Wordmark header */}
+      <div className={cn('flex items-center h-16 border-b border-slate-200/70', collapsed ? 'justify-center px-2' : 'px-5')}>
+        <Link href="/dashboard"><Wordmark size={collapsed ? 'sm' : 'md'} showLogo={true} /></Link>
         <button
           className="ml-auto lg:hidden h-8 w-8 grid place-items-center rounded-md hover:bg-slate-100"
           onClick={() => setMobileOpen(false)}
@@ -97,85 +91,115 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Floating collapse toggle — hangs off the right edge, desktop only.
-          Sits exactly on the sidebar border so it never collides with content. */}
+      {/* Floating collapse toggle (desktop only) */}
       <button
         onClick={() => setCollapsed(c => !c)}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        title={collapsed ? 'Expand' : 'Collapse'}
         className="hidden lg:grid absolute top-5 -right-3 z-40 h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white text-ink-muted hover:text-brand-600 hover:border-brand-300 shadow-sm"
       >
         <ChevronLeft className={cn('h-3.5 w-3.5 transition-transform', collapsed && 'rotate-180')} />
       </button>
 
+      {/* Baby profile card */}
+      {currentBaby && !collapsed && (
+        <div className="px-4 pt-4">
+          <button
+            onClick={() => setBabySwitcherOpen(o => !o)}
+            className="w-full flex items-center gap-3 rounded-2xl bg-white border border-slate-200/80 shadow-sm p-3 hover:bg-slate-50 transition"
+          >
+            <BabyAvatar url={avatars[currentBaby.id] ?? null} size="md" />
+            <div className="flex-1 min-w-0 text-left">
+              <div className="font-semibold text-ink-strong truncate">{currentBaby.name}</div>
+              <div className="text-xs text-ink-muted">{prettyAge(currentBaby.dob)}</div>
+            </div>
+            <ChevronsUpDown className="h-4 w-4 text-ink-muted shrink-0" />
+          </button>
+
+          {babySwitcherOpen && (
+            <div className="mt-2 rounded-2xl bg-white border border-slate-200/80 shadow-panel p-2 space-y-1">
+              {babies.filter(b => b.id !== currentBabyId).map(b => (
+                <Link key={b.id} href={`/babies/${b.id}`}
+                  className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-50">
+                  <BabyAvatar url={avatars[b.id] ?? null} size="sm" />
+                  <div className="text-sm truncate">{b.name}</div>
+                </Link>
+              ))}
+              <Link href="/babies/new"
+                className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-coral-50 text-coral-600 text-sm font-medium">
+                <span className="h-8 w-8 rounded-lg bg-coral-100 grid place-items-center"><Plus className="h-4 w-4" /></span>
+                Add baby
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Nav sections */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
-        <Section collapsed={collapsed} label="Home">
-          <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} collapsed={collapsed} />
-        </Section>
+      <nav className={cn('flex-1 overflow-y-auto space-y-5', collapsed ? 'px-2 py-3' : 'px-3 py-4')}>
+        <NavGroup label="HOME" collapsed={collapsed}>
+          <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} collapsed={collapsed} tint="brand" />
+        </NavGroup>
 
-        {currentBaby && currentBabyId && (
+        {currentBabyId && (
           <>
-            <Section collapsed={collapsed} label={currentBaby.name.toUpperCase()}>
-              <NavItem href={`/babies/${currentBabyId}`}               icon={Baby}     label="Overview"     active={pathname === `/babies/${currentBabyId}`}               collapsed={collapsed} />
-              <NavItem href={`/babies/${currentBabyId}/feedings`}      icon={Milk}     label="Feedings"     active={pathname?.startsWith(`/babies/${currentBabyId}/feedings`)} collapsed={collapsed} tint="peach" />
-              <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}  label="Stool"        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`)}    collapsed={collapsed} tint="mint" />
-              <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}    label="Measurements" active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`)} collapsed={collapsed} />
-              <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}     label="Medications"  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`)}  collapsed={collapsed} tint="lavender" />
-              <NavItem href={`/babies/${currentBabyId}/ocr`}           icon={FileText} label="Smart Scan"   active={pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)} collapsed={collapsed} tint="coral" />
-              <NavItem href={`/babies/${currentBabyId}/reports`}       icon={BarChart3} label="Reports"     active={pathname?.startsWith(`/babies/${currentBabyId}/reports`)}      collapsed={collapsed} tint="brand" />
-              <NavItem href={`/babies/${currentBabyId}/caregivers`}    icon={Users}    label="Caregivers"   active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`)}   collapsed={collapsed} />
-              <NavItem href={`/babies/${currentBabyId}/edit`}          icon={Pencil}   label="Edit profile" active={pathname?.startsWith(`/babies/${currentBabyId}/edit`)}         collapsed={collapsed} />
-            </Section>
+            <NavGroup label="TRACK" collapsed={collapsed}>
+              <NavItem href={`/babies/${currentBabyId}`}               icon={Clock}     label="Overview"     active={pathname === `/babies/${currentBabyId}`}                       collapsed={collapsed} tint="brand" />
+              <NavItem href={`/babies/${currentBabyId}/feedings`}      icon={Milk}      label="Feedings"     active={pathname?.startsWith(`/babies/${currentBabyId}/feedings`) ?? false} collapsed={collapsed} tint="coral" />
+              <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}   label="Stool"        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />
+              <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}      label="Medications"  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="lavender" />
+              <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}     label="Measurements" active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />
+            </NavGroup>
 
-            <Section collapsed={collapsed} label="Quick log">
-              <QuickAction href={`/babies/${currentBabyId}/feedings/new`}     icon={Milk}    label="Log feed"        tint="peach"    collapsed={collapsed} />
-              <QuickAction href={`/babies/${currentBabyId}/stool/new`}        icon={Droplet} label="Log stool"       tint="mint"     collapsed={collapsed} />
-              <QuickAction href={`/babies/${currentBabyId}/medications/log`}  icon={Pill}    label="Log dose"        tint="lavender" collapsed={collapsed} />
-              <QuickAction href={`/babies/${currentBabyId}/measurements/new`} icon={Ruler}   label="Log measurement" tint="brand"    collapsed={collapsed} />
-              <QuickAction href={`/babies/${currentBabyId}/upload`}           icon={Upload}  label="Upload file"     tint="coral"    collapsed={collapsed} />
-            </Section>
+            <NavGroup label="TOOLS" collapsed={collapsed}>
+              <NavItem href={`/babies/${currentBabyId}/ocr`}     icon={FileText}  label="Smart Scan" active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />
+              <NavItem href={`/babies/${currentBabyId}/reports`} icon={BarChart3} label="Reports"    active={pathname?.startsWith(`/babies/${currentBabyId}/reports`) ?? false} collapsed={collapsed} tint="peach" />
+            </NavGroup>
+
+            <NavGroup label="SETTINGS" collapsed={collapsed}>
+              <NavItem href={`/babies/${currentBabyId}/caregivers`} icon={Users}   label="Caregivers"    active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`) ?? false} collapsed={collapsed} tint="mint" />
+              <NavItem href={`/babies/${currentBabyId}/edit`}       icon={UserCog} label="Profile"       active={pathname?.startsWith(`/babies/${currentBabyId}/edit`) ?? false}       collapsed={collapsed} tint="brand" />
+            </NavGroup>
           </>
-        )}
-
-        {babies.length > 0 && (
-          <Section collapsed={collapsed} label="Babies">
-            {babies.map(b => (
-              <NavItem
-                key={b.id}
-                href={`/babies/${b.id}`}
-                icon={Baby}
-                label={b.name}
-                active={currentBabyId === b.id}
-                collapsed={collapsed}
-              />
-            ))}
-            <NavItem href="/babies/new" icon={Plus} label="Add baby" active={pathname === '/babies/new'} collapsed={collapsed} />
-          </Section>
         )}
       </nav>
 
-      {/* Footer */}
-      <div className={cn('border-t border-slate-200', collapsed ? 'p-2' : 'p-3')}>
-        {!collapsed && email && <div className="text-xs text-ink-muted truncate mb-2 px-1">{email}</div>}
-        {collapsed ? (
-          <div className="flex justify-center">
-            <button
-              onClick={logout}
-              className="grid place-items-center h-10 w-10 rounded-lg hover:bg-slate-100 text-ink"
-              title="Log out"
-              aria-label="Log out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+      {/* Quick Log promo card */}
+      {currentBabyId && !collapsed && (
+        <div className="px-4 pb-3">
+          <Link href={`/babies/${currentBabyId}/feedings/new`}
+            className="relative overflow-hidden flex items-center gap-3 rounded-2xl bg-gradient-to-r from-coral-100 to-peach-100 border border-coral-200 p-3 hover:shadow-panel transition">
+            <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full bg-coral-200 opacity-60 blur-2xl" />
+            <div className="relative h-10 w-10 rounded-xl bg-white/90 shadow-sm grid place-items-center shrink-0">
+              <Sparkles className="h-5 w-5 text-coral-500" />
+            </div>
+            <div className="relative flex-1 min-w-0">
+              <div className="font-semibold text-coral-700 text-sm">Quick Log</div>
+              <div className="text-xs text-ink-muted">Log in one tap</div>
+            </div>
+            <div className="relative h-8 w-8 rounded-full bg-coral-500 text-white grid place-items-center shrink-0 shadow-sm">
+              <Plus className="h-4 w-4" />
+            </div>
+          </Link>
+        </div>
+      )}
+
+      {/* User footer */}
+      <div className={cn('border-t border-slate-200/80 bg-white/60', collapsed ? 'p-2' : 'p-3')}>
+        {!collapsed ? (
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-700 grid place-items-center shrink-0 text-xs font-bold">
+              {(email ?? 'U').charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-ink truncate">{email ?? 'Signed in'}</div>
+              <button onClick={logout} className="text-xs text-ink-muted hover:text-coral-600 inline-flex items-center gap-1">
+                <LogOut className="h-3 w-3" /> Log out
+              </button>
+            </div>
           </div>
         ) : (
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm w-full hover:bg-slate-100 text-ink"
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            <span>Log out</span>
+          <button onClick={logout} className="w-full grid place-items-center h-10 rounded-lg hover:bg-slate-100 text-ink-muted" title="Log out">
+            <LogOut className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -193,25 +217,12 @@ export function Sidebar() {
         >
           <Menu className="h-5 w-5 text-ink" />
         </button>
-        <Link href="/dashboard" className="flex items-center gap-2">
-          {!logoError
-            ? // eslint-disable-next-line @next/next/no-img-element
-              <img src="/Logo.png" alt="" className="h-7 w-7 rounded-md object-cover" onError={() => setLogoError(true)} />
-            : <div className="h-7 w-7 rounded-md bg-brand-500 text-white grid place-items-center text-sm font-bold">B</div>}
-          <span className="font-extrabold tracking-tight flex items-baseline">
-            {['b','a','b','y','l','y','t','i','c','s'].map((l, i) => (
-              <span key={i} className={['text-brand-500','text-mint-500','text-peach-500','text-coral-500','text-lavender-500','text-brand-500','text-mint-500','text-peach-500','text-coral-500','text-lavender-500'][i]}>{l}</span>
-            ))}
-          </span>
-        </Link>
+        <Link href="/dashboard"><Wordmark size="sm" /></Link>
       </div>
 
       {/* Mobile drawer */}
       <div
-        className={cn(
-          'lg:hidden fixed inset-0 z-40',
-          mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'
-        )}
+        className={cn('lg:hidden fixed inset-0 z-40', mobileOpen ? 'pointer-events-auto' : 'pointer-events-none')}
       >
         <div
           className={cn('absolute inset-0 bg-black/40 sidebar-transition', mobileOpen ? 'opacity-100' : 'opacity-0')}
@@ -219,7 +230,7 @@ export function Sidebar() {
         />
         <aside
           className={cn(
-            'absolute left-0 top-0 h-full w-72 bg-gradient-to-b from-white via-brand-50/70 to-coral-50/60 border-r border-slate-200/70 sidebar-transition',
+            'absolute left-0 top-0 h-full w-72 bg-white border-r border-slate-200/70 sidebar-transition',
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           )}
         >
@@ -230,7 +241,7 @@ export function Sidebar() {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'hidden lg:flex fixed inset-y-0 left-0 bg-gradient-to-b from-white via-brand-50/70 to-coral-50/40 border-r border-slate-200/70 sidebar-transition z-30',
+          'hidden lg:flex fixed inset-y-0 left-0 bg-white border-r border-slate-200/70 sidebar-transition z-30',
           collapsed ? 'w-[72px]' : 'w-64'
         )}
       >
@@ -240,37 +251,54 @@ export function Sidebar() {
   );
 }
 
+function prettyAge(dobIso: string): string {
+  const days = ageInDays(dobIso);
+  if (days < 60) return `${days} days old`;
+  const months = Math.floor(days / 30);
+  const remainingDays = days - months * 30;
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'}, ${remainingDays} day${remainingDays === 1 ? '' : 's'}`;
+  const years = Math.floor(months / 12);
+  const remMonths = months - years * 12;
+  return `${years} year${years === 1 ? '' : 's'}${remMonths ? `, ${remMonths} mo` : ''}`;
+}
+
 // ---- Subcomponents --------------------------------------------------------
 
-function Section({ label, children, collapsed }: { label: string; children: React.ReactNode; collapsed: boolean }) {
+function NavGroup({ label, children, collapsed }: { label: string; children: React.ReactNode; collapsed: boolean }) {
   return (
     <div>
       {collapsed ? (
         <div className="mx-auto my-2 h-px w-8 bg-slate-200" aria-hidden />
       ) : (
-        <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{label}</div>
+        <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">{label}</div>
       )}
       <div className={cn(collapsed ? 'space-y-1' : 'space-y-0.5')}>{children}</div>
     </div>
   );
 }
 
-type Tint = 'brand' | 'mint' | 'coral' | 'lavender' | 'peach';
+type Tint = 'brand' | 'mint' | 'coral' | 'peach' | 'lavender';
 
-const tintActive: Record<Tint, string> = {
-  brand:    'bg-brand-50 text-brand-700',
-  mint:     'bg-mint-50 text-mint-700',
-  coral:    'bg-coral-50 text-coral-700',
-  lavender: 'bg-lavender-50 text-lavender-700',
-  peach:    'bg-peach-50 text-peach-700',
+const ACTIVE_BAR: Record<Tint, string> = {
+  brand: 'bg-brand-500',
+  mint: 'bg-mint-500',
+  coral: 'bg-coral-500',
+  peach: 'bg-peach-500',
+  lavender: 'bg-lavender-500',
 };
-
-const tintIcon: Record<Tint, string> = {
-  brand:    'text-brand-500',
-  mint:     'text-mint-600',
-  coral:    'text-coral-600',
+const ACTIVE_BG: Record<Tint, string> = {
+  brand: 'bg-brand-50 text-brand-700',
+  mint: 'bg-mint-50 text-mint-700',
+  coral: 'bg-coral-50 text-coral-700',
+  peach: 'bg-peach-50 text-peach-700',
+  lavender: 'bg-lavender-50 text-lavender-700',
+};
+const ACTIVE_ICON: Record<Tint, string> = {
+  brand: 'text-brand-600',
+  mint: 'text-mint-600',
+  coral: 'text-coral-600',
+  peach: 'text-peach-600',
   lavender: 'text-lavender-600',
-  peach:    'text-peach-600',
 };
 
 function NavItem({
@@ -281,89 +309,35 @@ function NavItem({
   label: string;
   active?: boolean;
   collapsed: boolean;
-  tint?: Tint;
-}) {
-  const effectiveTint: Tint = tint ?? 'brand';
-
-  if (collapsed) {
-    return (
-      <div className="flex justify-center">
-        <Link
-          href={href}
-          title={label}
-          aria-label={label}
-          className={cn(
-            'grid place-items-center h-10 w-10 rounded-lg transition-colors',
-            active ? tintActive[effectiveTint] : 'text-ink hover:bg-slate-100',
-          )}
-        >
-          <Icon className={cn('h-4 w-4', active ? tintIcon[effectiveTint] : 'text-ink-muted')} />
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <Link
-      href={href}
-      className={cn(
-        'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-        active ? tintActive[effectiveTint] : 'text-ink hover:bg-slate-100',
-      )}
-    >
-      <Icon className={cn('h-4 w-4 shrink-0', active ? tintIcon[effectiveTint] : 'text-ink-muted')} />
-      <span className="truncate">{label}</span>
-    </Link>
-  );
-}
-
-function QuickAction({
-  href, icon: Icon, label, collapsed, tint,
-}: {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  collapsed: boolean;
   tint: Tint;
 }) {
-  const bgMap: Record<Tint, string> = {
-    brand:    'bg-brand-500 hover:bg-brand-600',
-    mint:     'bg-mint-500 hover:bg-mint-600',
-    coral:    'bg-coral-500 hover:bg-coral-600',
-    lavender: 'bg-lavender-500 hover:bg-lavender-600',
-    peach:    'bg-peach-500 hover:bg-peach-600',
-  };
-
   if (collapsed) {
     return (
       <div className="flex justify-center">
         <Link
           href={href}
-          title={label}
-          aria-label={label}
+          title={label} aria-label={label}
           className={cn(
-            'grid place-items-center h-10 w-10 rounded-lg text-white shadow-sm transition-colors',
-            bgMap[tint],
+            'grid place-items-center h-10 w-10 rounded-lg transition-colors',
+            active ? ACTIVE_BG[tint] : 'text-ink hover:bg-slate-100',
           )}
         >
-          <Icon className="h-4 w-4" />
+          <Icon className={cn('h-4 w-4', active ? ACTIVE_ICON[tint] : 'text-ink-muted')} />
         </Link>
       </div>
     );
   }
-
   return (
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white shadow-sm transition-colors',
-        bgMap[tint],
+        'relative flex items-center gap-3 rounded-xl pl-4 pr-3 py-2.5 text-sm transition-colors',
+        active ? ACTIVE_BG[tint] : 'text-ink hover:bg-slate-100',
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" />
-      <span className="truncate">{label}</span>
+      {active && <span className={cn('absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full', ACTIVE_BAR[tint])} />}
+      <Icon className={cn('h-4 w-4 shrink-0', active ? ACTIVE_ICON[tint] : 'text-ink-muted')} />
+      <span className="truncate font-medium">{label}</span>
     </Link>
   );
 }
-
-// Small helper for ink-muted if not present in Tailwind — we rely on arbitrary values via config tokens below.
