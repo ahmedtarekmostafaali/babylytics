@@ -1,19 +1,9 @@
-import { Card, CardContent } from '@/components/ui/Card';
-import { UploadForm } from '@/components/forms/UploadForm';
-import { PageShell, PageHeader } from '@/components/PageHeader';
+import { redirect } from 'next/navigation';
 
-export default function UploadPage({ params }: { params: { babyId: string } }) {
-  return (
-    <PageShell max="3xl">
-      <PageHeader
-        backHref={`/babies/${params.babyId}/ocr`}
-        backLabel="Smart Scan"
-        eyebrow="Smart Scan"
-        eyebrowTint="coral"
-        title="Upload a medical file"
-        subtitle="Daily notes · prescriptions · reports · stool images. Handwritten notes get OCR'd automatically."
-      />
-      <Card><CardContent className="py-6"><UploadForm babyId={params.babyId} /></CardContent></Card>
-    </PageShell>
-  );
+/**
+ * Legacy upload page — Smart Scan at /ocr now owns both OCR and archive uploads
+ * via its two hero drop-zones.
+ */
+export default function UploadRedirect({ params }: { params: { babyId: string } }) {
+  redirect(`/babies/${params.babyId}/ocr`);
 }

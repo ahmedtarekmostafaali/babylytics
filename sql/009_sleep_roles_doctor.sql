@@ -156,6 +156,87 @@ create or replace function public.sleep_kpis(
 $$;
 grant execute on function public.sleep_kpis(uuid, timestamptz, timestamptz) to authenticated;
 
+-- ---------------------------------------------------------------------------
+-- profiles: allow caregivers to see each other's name/email for any baby they
+-- share. Uses a SECURITY DEFINER helper to bypass the usual self-only policy.
+-- ---------------------------------------------------------------------------
+create or replace function public.shares_baby_with(u uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1
+      from public.baby_users my
+      join public.baby_users other
+        on other.baby_id = my.baby_id and other.user_id = u
+     where my.user_id = auth.uid()
+  );
+$$;
+grant execute on function public.shares_baby_with(uuid) to authenticated;
+
+drop policy if exists profiles_coshare_select on public.profiles;
+create policy profiles_coshare_select on public.profiles
+  for select using (id = auth.uid() or public.shares_baby_with(id));
+
+-- ---------------------------------------------------------------------------
+-- invite_caregiver/revoke_caregiver — refreshed for the new role vocabulary
+-- ---------------------------------------------------------------------------
+create or replace function public.invite_caregiver(p_baby uuid, p_email text, p_role text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_user uuid; v_actor uuid := auth.uid();
+begin
+  if not public.is_baby_parent(p_baby) then
+    raise exception 'only a parent or owner may invite caregivers';
+  end if;
+  if p_role not in ('owner','parent','doctor','nurse','caregiver','viewer') then
+    raise exception 'invalid role %', p_role;
+  end if;
+  if p_role = 'owner' and not public.is_baby_owner(p_baby) then
+    raise exception 'only the current owner can transfer ownership';
+  end if;
+  select id into v_user from auth.users where lower(email) = lower(p_email) limit 1;
+  if v_user is null then raise exception 'no user with email %', p_email; end if;
+
+  insert into public.baby_users(baby_id, user_id, role, invited_by)
+    values (p_baby, v_user, p_role, v_actor)
+    on conflict (baby_id, user_id) do update set role = excluded.role;
+end; $$;
+grant execute on function public.invite_caregiver(uuid,text,text) to authenticated;
+
+create or replace function public.revoke_caregiver(p_baby uuid, p_user uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_actor uuid := auth.uid();
+begin
+  if not public.is_baby_parent(p_baby) then
+    raise exception 'only a parent or owner may revoke caregivers';
+  end if;
+  if p_user = v_actor then
+    raise exception 'you cannot remove yourself from the baby';
+  end if;
+  -- You may not remove the last owner
+  if exists (select 1 from public.baby_users where baby_id = p_baby and user_id = p_user and role = 'owner')
+     and (select count(*) from public.baby_users where baby_id = p_baby and role = 'owner') <= 1 then
+    raise exception 'cannot remove the last owner';
+  end if;
+  delete from public.baby_users where baby_id = p_baby and user_id = p_user;
+end; $$;
+grant execute on function public.revoke_caregiver(uuid,uuid) to authenticated;
+
+-- Update a caregiver's role (parent/owner only)
+create or replace function public.set_caregiver_role(p_baby uuid, p_user uuid, p_role text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_baby_parent(p_baby) then
+    raise exception 'only a parent or owner may change caregiver roles';
+  end if;
+  if p_role not in ('owner','parent','doctor','nurse','caregiver','viewer') then
+    raise exception 'invalid role %', p_role;
+  end if;
+  if p_role = 'owner' and not public.is_baby_owner(p_baby) then
+    raise exception 'only the current owner can transfer ownership';
+  end if;
+  update public.baby_users set role = p_role where baby_id = p_baby and user_id = p_user;
+end; $$;
+grant execute on function public.set_caregiver_role(uuid,uuid,text) to authenticated;
+
 -- Daily sleep series for the overview insight chart
 create or replace function public.daily_sleep_series(
   p_baby uuid,
