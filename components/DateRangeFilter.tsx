@@ -16,7 +16,7 @@ export function DateRangeFilter({ currentKey }: { currentKey: RangeKey }) {
   const router = useRouter();
   const pathname = usePathname() ?? '';
   const searchParams = useSearchParams();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(currentKey === 'custom');
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal]     = useState('');
 
@@ -39,8 +39,10 @@ export function DateRangeFilter({ currentKey }: { currentKey: RangeKey }) {
     p.set('start', new Date(startLocal).toISOString());
     p.set('end',   new Date(endLocal).toISOString());
     go(p);
-    setOpen(false);
+    // keep panel open so user knows custom is active
   }
+
+  const customActive = currentKey === 'custom' || open;
 
   return (
     <div className="inline-flex flex-wrap items-center gap-2">
@@ -61,7 +63,7 @@ export function DateRangeFilter({ currentKey }: { currentKey: RangeKey }) {
           onClick={() => setOpen(o => !o)}
           className={cn(
             'px-3 py-1.5 text-sm transition border-l border-slate-200',
-            currentKey === 'custom' ? 'bg-brand-500 text-white' : 'text-ink hover:bg-slate-50'
+            customActive ? 'bg-brand-500 text-white' : 'text-ink hover:bg-slate-50'
           )}
         >
           Custom

@@ -6,6 +6,8 @@ import { signAvatarUrl } from '@/lib/baby-avatar';
 import { BabyAvatar } from '@/components/BabyAvatar';
 import { Bell, Plus, Heart, Sparkles, ArrowRight } from 'lucide-react';
 
+import type { Metadata } from 'next';
+export const metadata: Metadata = { title: 'Your babies' };
 export const dynamic = 'force-dynamic';
 
 function greetingFor(hour: number): string {

@@ -11,11 +11,12 @@ export default function NewMedLog({
   return (
     <PageShell max="3xl">
       <PageHeader
-        backHref={`/babies/${params.babyId}`}
-        backLabel="dashboard"
+        backHref={`/babies/${params.babyId}/medications`}
+        backLabel="medications"
         eyebrow="Medications"
         eyebrowTint="lavender"
         title="Log a dose"
+        subtitle="Record each administered dose to keep adherence accurate."
       />
       <Card><CardContent className="py-6">
         <MedicationLogForm babyId={params.babyId} defaultMedId={searchParams.m} />

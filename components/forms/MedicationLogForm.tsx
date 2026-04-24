@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MedicationLogSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
@@ -20,10 +21,17 @@ export type MedLogFormValue = {
   notes?: string | null;
 };
 
-export function MedicationLogForm({ babyId, initial, defaultMedId }: { babyId: string; initial?: MedLogFormValue; defaultMedId?: string }) {
+export function MedicationLogForm({
+  babyId, initial, defaultMedId,
+}: {
+  babyId: string;
+  initial?: MedLogFormValue;
+  defaultMedId?: string;
+}) {
   const router = useRouter();
   const supabase = createClient();
   const [meds, setMeds] = useState<Med[]>([]);
+  const [medsLoading, setMedsLoading] = useState(true);
   const [medId, setMedId]   = useState(initial?.medication_id ?? defaultMedId ?? '');
   const [time, setTime]     = useState(initial?.medication_time ? isoToLocalInput(initial.medication_time) : nowLocalInput());
   const [status, setStatus] = useState<Status>(initial?.status ?? 'taken');
@@ -33,6 +41,7 @@ export function MedicationLogForm({ babyId, initial, defaultMedId }: { babyId: s
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    setMedsLoading(true);
     supabase.from('medications')
       .select('id,name')
       .eq('baby_id', babyId)
@@ -41,6 +50,8 @@ export function MedicationLogForm({ babyId, initial, defaultMedId }: { babyId: s
       .then(({ data }) => {
         const list = (data ?? []) as Med[];
         setMeds(list);
+        setMedsLoading(false);
+        // Only auto-pick if nothing explicit was passed in (initial/defaultMedId)
         if (!medId && list[0]) setMedId(list[0].id);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -49,7 +60,7 @@ export function MedicationLogForm({ babyId, initial, defaultMedId }: { babyId: s
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (!medId) { setErr('Pick a medication first (add one if this is the first dose).'); return; }
+    if (!medId) { setErr('Pick a medication first.'); return; }
     const parsed = MedicationLogSchema.safeParse({
       medication_id: medId,
       medication_time: localInputToIso(time) ?? '',
@@ -73,11 +84,24 @@ export function MedicationLogForm({ babyId, initial, defaultMedId }: { babyId: s
     <form className="space-y-4" onSubmit={submit}>
       <div>
         <Label htmlFor="m">Medication</Label>
-        <Select id="m" value={medId} onChange={e => setMedId(e.target.value)}>
-          <option value="">—</option>
-          {meds.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-        </Select>
-        {meds.length === 0 && <p className="text-xs text-slate-500 mt-1">No medications yet. Add one first.</p>}
+        {medsLoading ? (
+          <div className="h-10 rounded-md border border-slate-300 bg-white px-3 grid place-items-center text-sm text-ink-muted">
+            Loading medications…
+          </div>
+        ) : meds.length === 0 ? (
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            No medications yet.{' '}
+            <Link href={`/babies/${babyId}/medications/new`} className="font-semibold underline">
+              Add one first
+            </Link>
+            , then come back to log a dose.
+          </div>
+        ) : (
+          <Select id="m" value={medId} onChange={e => setMedId(e.target.value)}>
+            <option value="">— pick one —</option>
+            {meds.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </Select>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -102,7 +126,9 @@ export function MedicationLogForm({ babyId, initial, defaultMedId }: { babyId: s
         <Textarea id="n" rows={2} value={notes ?? ''} onChange={e => setNotes(e.target.value)} />
       </div>
       {err && <p className="text-sm text-red-600">{err}</p>}
-      <Button type="submit" disabled={saving}>{saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log dose'}</Button>
+      <Button type="submit" disabled={saving || medsLoading || (meds.length === 0 && !medId)}>
+        {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log dose'}
+      </Button>
     </form>
   );
 }

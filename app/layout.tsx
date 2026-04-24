@@ -3,7 +3,10 @@ import './globals.css';
 import { AppShell } from '@/components/AppShell';
 
 export const metadata: Metadata = {
-  title: 'Babylytics — baby health tracking',
+  title: {
+    default: 'Babylytics — baby health tracking',
+    template: '%s · Babylytics',
+  },
   description: 'Track feedings, stools, medications, growth and medical records with built-in OCR review.',
   icons: {
     icon: [

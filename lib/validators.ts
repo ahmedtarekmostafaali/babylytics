@@ -7,7 +7,14 @@ export const FeedingSchema = z.object({
   kcal: z.coerce.number().min(0).max(5000).nullable().optional(),
   duration_min: z.coerce.number().min(0).max(600).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
-});
+}).refine(
+  // Every feeding must carry either a quantity (ml) or a duration (min) or a
+  // note. Reject empty-shell entries that pollute analytics.
+  v => (v.quantity_ml != null && v.quantity_ml > 0)
+    || (v.duration_min != null && v.duration_min > 0)
+    || (v.notes && v.notes.trim().length > 0),
+  { message: 'Enter a quantity in ml, a duration in minutes, or a note.' }
+);
 
 export const StoolSchema = z.object({
   stool_time: z.string().min(1),

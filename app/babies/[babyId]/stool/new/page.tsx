@@ -6,11 +6,12 @@ export default function NewStool({ params }: { params: { babyId: string } }) {
   return (
     <PageShell max="3xl">
       <PageHeader
-        backHref={`/babies/${params.babyId}`}
-        backLabel="dashboard"
+        backHref={`/babies/${params.babyId}/stool`}
+        backLabel="stool logs"
         eyebrow="Stool & diaper"
         eyebrowTint="mint"
-        title="Log a stool"
+        title="Log a diaper"
+        subtitle="Size, color, consistency, rash — anything you notice helps spot patterns."
       />
       <Card><CardContent className="py-6"><StoolForm babyId={params.babyId} /></CardContent></Card>
     </PageShell>

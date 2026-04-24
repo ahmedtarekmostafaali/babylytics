@@ -6,8 +6,8 @@ export default function UploadPage({ params }: { params: { babyId: string } }) {
   return (
     <PageShell max="3xl">
       <PageHeader
-        backHref={`/babies/${params.babyId}`}
-        backLabel="dashboard"
+        backHref={`/babies/${params.babyId}/ocr`}
+        backLabel="Smart Scan"
         eyebrow="Smart Scan"
         eyebrowTint="coral"
         title="Upload a medical file"

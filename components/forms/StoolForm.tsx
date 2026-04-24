@@ -76,9 +76,9 @@ export function StoolForm({ babyId, initial }: { babyId: string; initial?: Stool
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label htmlFor="c">Category</Label>
+          <Label htmlFor="c">Size</Label>
           <Select id="c" value={cat ?? ''} onChange={e => setCat((e.target.value || null) as StoolFormValue['quantity_category'])}>
-            <option value="">—</option>
+            <option value="">Pick a size…</option>
             <option value="small">Small</option>
             <option value="medium">Medium</option>
             <option value="large">Large</option>

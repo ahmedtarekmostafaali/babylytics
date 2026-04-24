@@ -22,7 +22,7 @@ export default async function EditFeeding({ params }: { params: { babyId: string
         eyebrow="Edit feeding"
         eyebrowTint="peach"
         title="Adjust this feeding"
-        subtitle="Any change is recorded in the audit log."
+        subtitle="Edit any value — we keep a quiet history of the change behind the scenes."
       />
       <Card><CardContent className="py-6">
         <FeedingForm babyId={params.babyId} initial={{

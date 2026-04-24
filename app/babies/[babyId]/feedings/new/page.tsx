@@ -6,8 +6,8 @@ export default function NewFeeding({ params }: { params: { babyId: string } }) {
   return (
     <PageShell max="3xl">
       <PageHeader
-        backHref={`/babies/${params.babyId}`}
-        backLabel="dashboard"
+        backHref={`/babies/${params.babyId}/feedings`}
+        backLabel="feedings"
         eyebrow="Feedings"
         eyebrowTint="peach"
         title="Log a feeding"

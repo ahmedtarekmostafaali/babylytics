@@ -6,12 +6,12 @@ export default function NewMeasurement({ params }: { params: { babyId: string } 
   return (
     <PageShell max="3xl">
       <PageHeader
-        backHref={`/babies/${params.babyId}`}
-        backLabel="dashboard"
+        backHref={`/babies/${params.babyId}/measurements`}
+        backLabel="measurements"
         eyebrow="Growth"
         eyebrowTint="brand"
         title="Log a measurement"
-        subtitle="Keeping growth data current refines feeding recommendations."
+        subtitle="Keeping growth data current refines feeding recommendations (all in metric: kg, cm)."
       />
       <Card><CardContent className="py-6"><MeasurementForm babyId={params.babyId} /></CardContent></Card>
     </PageShell>

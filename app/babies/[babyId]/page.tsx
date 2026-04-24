@@ -16,6 +16,12 @@ import { Milk, Target, TrendingDown, Percent, Droplet, Droplets, Pill, Scale, Mo
 
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata({ params }: { params: { babyId: string } }) {
+  const supabase = createClient();
+  const { data } = await supabase.from('babies').select('name').eq('id', params.babyId).single();
+  return { title: data?.name ? `${data.name} · Overview` : 'Baby overview' };
+}
+
 export default async function BabyPage({
   params, searchParams,
 }: {
@@ -135,7 +141,7 @@ export default async function BabyPage({
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Today at a glance</h2>
-          <span className="text-xs text-ink-muted">tap any card to log more</span>
+          <span className="text-xs text-ink-muted hidden sm:inline">tap any card to add a new entry</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ActivityTile
@@ -177,7 +183,6 @@ export default async function BabyPage({
             <div className="text-lg font-semibold text-ink-strong">{range.label}</div>
           </div>
           <DateRangeFilter currentKey={range.key} />
-        </div>
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
           <KpiCard tint="peach" icon={Milk}   label="Total feed"
             value={fmtMl(f.total_feed_ml)} sub={`${f.feed_count ?? 0} feeds · avg ${fmtMl(f.avg_feed_ml)}`}
@@ -190,11 +195,12 @@ export default async function BabyPage({
           <KpiCard tint="peach" icon={Percent} label="Feeding %"
             value={`${windowPct}%`}
             tone={windowPct >= 90 ? 'positive' : windowPct >= 70 ? 'neutral' : 'warning'}
-            trend={windowPct >= 90 ? 'up' : windowPct >= 70 ? 'flat' : 'down'}
-            trendLabel={windowPct >= 90 ? 'on target' : windowPct >= 70 ? 'close' : 'below target'} />
+            trend={windowPct >= 90 ? 'up' : windowPct < 70 ? 'down' : undefined}
+            trendLabel={windowPct >= 90 ? 'on target' : windowPct < 70 ? 'below target' : undefined} />
 
           <KpiCard tint="mint" icon={Droplet} label="Stool count"
-            value={s.stool_count ?? 0} sub={`S:${s.small_count ?? 0} · M:${s.medium_count ?? 0} · L:${s.large_count ?? 0}`}
+            value={s.stool_count ?? 0}
+            sub={`Small ${s.small_count ?? 0} · Medium ${s.medium_count ?? 0} · Large ${s.large_count ?? 0}`}
             spark={stoolSparkData} />
           <KpiCard tint="mint" icon={Droplets} label="Stool quantity"
             value={fmtMl(s.total_ml)} sub={s.last_stool_at ? `last ${fmtRelative(s.last_stool_at)}` : 'nothing yet'} />

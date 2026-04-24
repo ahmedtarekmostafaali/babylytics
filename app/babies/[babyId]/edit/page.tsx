@@ -35,7 +35,7 @@ export default async function EditBabyPage({ params }: { params: { babyId: strin
     <PageShell max="3xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
         eyebrow="Profile" eyebrowTint="brand" title="Edit baby profile"
-        subtitle="Photo, name, date of birth, birth stats, and feeding factor." />
+        subtitle="Photo, name, date of birth, birth stats, feeding factor, notes." />
       <Card><CardContent className="py-6">
         <BabyEditForm
           baby={baby as BabyEditValue}

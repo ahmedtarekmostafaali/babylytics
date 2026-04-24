@@ -62,6 +62,21 @@ export function MedicationForm({ babyId, initial }: { babyId: string; initial?: 
     router.refresh();
   }
 
+  async function onDelete() {
+    if (!initial?.id) return;
+    if (!window.confirm(`Remove ${initial.name ?? 'this medication'}? Dose logs already recorded are kept in the database.`)) return;
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('medications')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', initial.id);
+    setSaving(false);
+    if (error) { setErr(error.message); return; }
+    router.push(`/babies/${babyId}/medications`);
+    router.refresh();
+  }
+
   return (
     <form className="space-y-4" onSubmit={submit}>
       <div>
@@ -70,8 +85,9 @@ export function MedicationForm({ babyId, initial }: { babyId: string; initial?: 
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label htmlFor="d">Dosage</Label>
-          <Input id="d" placeholder="5 ml / 1 drop" value={dosage} onChange={e => setDosage(e.target.value)} />
+          <Label htmlFor="d">Dosage &amp; unit</Label>
+          <Input id="d" placeholder="e.g. 5 mg, 1 drop, 2 ml" value={dosage} onChange={e => setDosage(e.target.value)} />
+          <p className="text-xs text-ink-muted mt-1">Include the unit so caregivers aren&apos;t guessing.</p>
         </div>
         <div>
           <Label htmlFor="r">Route</Label>
@@ -104,14 +120,21 @@ export function MedicationForm({ babyId, initial }: { babyId: string; initial?: 
       </div>
       <div>
         <Label htmlFor="p">Prescribed by</Label>
-        <Input id="p" value={presc} onChange={e => setPresc(e.target.value)} />
+        <Input id="p" placeholder="Pediatrician name (optional)" value={presc} onChange={e => setPresc(e.target.value)} />
       </div>
       <div>
         <Label htmlFor="no">Notes</Label>
         <Textarea id="no" rows={2} value={notes ?? ''} onChange={e => setNotes(e.target.value)} />
       </div>
       {err && <p className="text-sm text-red-600">{err}</p>}
-      <Button type="submit" disabled={saving}>{saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Add medication'}</Button>
+      <div className="flex items-center justify-between gap-2">
+        <Button type="submit" disabled={saving}>{saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Add medication'}</Button>
+        {initial?.id && (
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving}>
+            Delete medication
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

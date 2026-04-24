@@ -57,7 +57,12 @@ export function Sidebar() {
     return m ? m[1] : null;
   }, [pathname]);
 
-  const currentBaby = babies.find(b => b.id === currentBabyId);
+  // Use whatever name we know (from the fetched babies), otherwise fall back
+  // to a generic label so the baby-specific nav renders immediately on direct
+  // URL navigation — not after the babies fetch completes.
+  const currentBaby = currentBabyId
+    ? (babies.find(b => b.id === currentBabyId) ?? { id: currentBabyId, name: 'Baby' })
+    : null;
 
   async function logout() {
     const supabase = createClient();
@@ -117,7 +122,7 @@ export function Sidebar() {
               <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}  label="Stool"        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`)}    collapsed={collapsed} tint="mint" />
               <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}    label="Measurements" active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`)} collapsed={collapsed} />
               <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}     label="Medications"  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`)}  collapsed={collapsed} tint="lavender" />
-              <NavItem href={`/babies/${currentBabyId}/ocr`}           icon={FileText} label="OCR inbox"    active={pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`)} collapsed={collapsed} />
+              <NavItem href={`/babies/${currentBabyId}/ocr`}           icon={FileText} label="Smart Scan"   active={pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)} collapsed={collapsed} tint="coral" />
               <NavItem href={`/babies/${currentBabyId}/reports`}       icon={BarChart3} label="Reports"     active={pathname?.startsWith(`/babies/${currentBabyId}/reports`)}      collapsed={collapsed} tint="brand" />
               <NavItem href={`/babies/${currentBabyId}/caregivers`}    icon={Users}    label="Caregivers"   active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`)}   collapsed={collapsed} />
               <NavItem href={`/babies/${currentBabyId}/edit`}          icon={Pencil}   label="Edit profile" active={pathname?.startsWith(`/babies/${currentBabyId}/edit`)}         collapsed={collapsed} />
