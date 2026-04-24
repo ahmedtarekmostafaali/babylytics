@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { TemperatureForm } from '@/components/forms/TemperatureForm';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -12,6 +13,7 @@ export const metadata = { title: 'Log temperature' };
 
 export default async function NewTemperature({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 

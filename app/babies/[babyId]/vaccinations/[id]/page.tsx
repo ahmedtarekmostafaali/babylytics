@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { Card, CardContent } from '@/components/ui/Card';
 import { VaccinationForm } from '@/components/forms/VaccinationForm';
 import { Comments } from '@/components/Comments';
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditVaccination({ params }: { params: { babyId: string; id: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const { data } = await supabase
     .from('vaccinations')
     .select('id,baby_id,vaccine_name,scheduled_at,administered_at,dose_number,total_doses,batch_number,provider,notes,status')

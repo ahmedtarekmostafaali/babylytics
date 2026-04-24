@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { OcrReview } from '@/components/OcrReview';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import type { StructuredOcr } from '@/lib/types';
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function OcrReviewPage({ params }: { params: { babyId: string; extractedId: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
 
   const { data: extracted } = await supabase
     .from('extracted_text')

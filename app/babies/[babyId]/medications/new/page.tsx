@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { MedicationForm } from '@/components/forms/MedicationForm';
 import { Card, CardContent } from '@/components/ui/Card';
 import { fmtDate, fmtDateTime } from '@/lib/dates';
@@ -11,6 +12,7 @@ export const metadata = { title: 'Add medication' };
 
 export default async function NewMedication({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 

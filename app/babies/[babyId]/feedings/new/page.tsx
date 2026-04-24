@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { FeedingForm } from '@/components/forms/FeedingForm';
 import { SummaryDonut } from '@/components/SummaryDonut';
 import { dayWindow, fmtRelative, todayLocalDate, fmtDateTime } from '@/lib/dates';
@@ -34,6 +35,7 @@ function tintFor(milk: string | null): 'coral' | 'brand' | 'peach' {
 
 export default async function NewFeeding({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 

@@ -6,6 +6,7 @@ import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { assertRole } from '@/lib/role-guard';
 import { Sparkline } from '@/components/Sparkline';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
@@ -71,6 +72,8 @@ export default async function SleepLog({
   const activeQualities = rawTypes.filter((t): t is SleepQuality => (SLEEP_QUALITIES as readonly string[]).includes(t));
   const typeFilter = activeQualities.length > 0 && activeQualities.length < SLEEP_QUALITIES.length;
 
+  const perms = await assertRole(params.babyId, { requireLogs: true });
+
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 
@@ -131,14 +134,18 @@ export default async function SleepLog({
         title="Sleep Log"
         subtitle={`All sleep sessions for ${baby.name}.`}
         right={
-          <div className="flex items-center gap-2">
-            <BulkDelete babyId={params.babyId} table="sleep_logs" timeColumn="start_at"
-              visibleIds={rows.map(r => r.id)} kindLabel="sleep sessions" />
-            <Link href={`/babies/${params.babyId}/sleep/new`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Log sleep
-            </Link>
-          </div>
+          perms.canWriteLogs ? (
+            <div className="flex items-center gap-2">
+              <BulkDelete babyId={params.babyId} table="sleep_logs" timeColumn="start_at"
+                visibleIds={rows.map(r => r.id)} kindLabel="sleep sessions" />
+              <Link href={`/babies/${params.babyId}/sleep/new`}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+                <Plus className="h-4 w-4" /> Log sleep
+              </Link>
+            </div>
+          ) : (
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+          )
         } />
 
       {running && (
@@ -229,7 +236,7 @@ export default async function SleepLog({
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-ink-strong">Sleep details</h3>
-              {selected && (
+              {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/sleep/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">

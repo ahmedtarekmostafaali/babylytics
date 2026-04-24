@@ -4,16 +4,15 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Mail, Shield, Stethoscope, Heart, Eye, Users, Check } from 'lucide-react';
+import { Mail, Shield, Stethoscope, Heart, Eye, Check } from 'lucide-react';
 
-export type CaregiverRole = 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer';
+export type CaregiverRole = 'parent' | 'doctor' | 'nurse' | 'viewer';
 
 const ROLE_OPTIONS: { value: CaregiverRole; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; tint: string }[] = [
-  { value: 'parent',    label: 'Parent / Guardian', desc: 'Full access to all data and settings.',         icon: Shield,      tint: 'bg-brand-100 text-brand-700' },
-  { value: 'doctor',    label: 'Doctor',            desc: 'View medical data, add notes and write logs.',  icon: Stethoscope, tint: 'bg-lavender-100 text-lavender-700' },
-  { value: 'nurse',     label: 'Nurse',             desc: 'View logs, add measurements and notes.',        icon: Heart,       tint: 'bg-coral-100 text-coral-700' },
-  { value: 'caregiver', label: 'Caregiver',         desc: 'View logs and basic data.',                     icon: Users,       tint: 'bg-mint-100 text-mint-700' },
-  { value: 'viewer',    label: 'Viewer',            desc: 'Read-only access to logs and reports.',         icon: Eye,         tint: 'bg-slate-100 text-ink' },
+  { value: 'parent', label: 'Parent / Guardian', desc: 'Full access — write every log, upload files, invite caregivers.', icon: Shield,      tint: 'bg-brand-100 text-brand-700' },
+  { value: 'doctor', label: 'Doctor',            desc: 'Read logs, add comments, export reports. No write access.',        icon: Stethoscope, tint: 'bg-lavender-100 text-lavender-700' },
+  { value: 'nurse',  label: 'Nurse',             desc: 'Read-only access to logs. Cannot add, edit, or comment.',         icon: Heart,       tint: 'bg-coral-100 text-coral-700' },
+  { value: 'viewer', label: 'Viewer',            desc: 'Overview page only. No access to logs or reports.',               icon: Eye,         tint: 'bg-slate-100 text-ink' },
 ];
 
 export function InviteForm({ babyId }: { babyId: string }) {

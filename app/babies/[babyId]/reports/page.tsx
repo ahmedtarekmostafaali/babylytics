@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { CalendarDays, FileSpreadsheet, ArrowRight } from 'lucide-react';
 
@@ -9,6 +10,7 @@ export const metadata = { title: 'Reports' };
 
 export default async function ReportsIndex({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireExport: true });
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 

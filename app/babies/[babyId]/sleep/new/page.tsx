@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { SleepForm } from '@/components/forms/SleepForm';
 import { Card, CardContent } from '@/components/ui/Card';
 import { fmtDateTime } from '@/lib/dates';
@@ -18,6 +19,7 @@ function fmtDuration(min: number | null | undefined) {
 
 export default async function NewSleep({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 

@@ -27,6 +27,7 @@ export function Sidebar() {
   const [babies, setBabies] = useState<BabyRow[]>([]);
   const [avatars, setAvatars] = useState<Record<string, string | null>>({});
   const [babySwitcherOpen, setBabySwitcherOpen] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -66,6 +67,20 @@ export function Sidebar() {
     const m = pathname?.match(/^\/babies\/([0-9a-f-]{8,})/i);
     return m ? m[1] : null;
   }, [pathname]);
+
+  // Fetch the caller's role for the current baby so we can hide nav items
+  // that they can't access. Re-runs whenever the baby in the URL changes.
+  useEffect(() => {
+    if (!currentBabyId) { setRole(null); return; }
+    const supabase = createClient();
+    supabase.rpc('my_baby_role', { b: currentBabyId })
+      .then(({ data }) => setRole((data as string | null) ?? null));
+  }, [currentBabyId]);
+
+  const isViewer = role === 'viewer';
+  const isParent = role === 'owner' || role === 'parent' || role === 'editor';
+  const canViewLogs = !!role && !isViewer;
+  const canExport = isParent || role === 'doctor';
 
   const currentBaby = currentBabyId
     ? (babies.find(b => b.id === currentBabyId) ?? null)
@@ -152,31 +167,37 @@ export function Sidebar() {
           <>
             <NavGroup label="TRACK" collapsed={collapsed}>
               <NavItem href={`/babies/${currentBabyId}`}               icon={Clock}     label="Overview"     active={pathname === `/babies/${currentBabyId}`}                       collapsed={collapsed} tint="brand" />
-              <NavItem href={`/babies/${currentBabyId}/feedings`}      icon={Milk}      label="Feedings"     active={pathname?.startsWith(`/babies/${currentBabyId}/feedings`) ?? false} collapsed={collapsed} tint="coral" />
-              <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}   label="Stool"        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />
-              <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}      label="Medications"  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="lavender" />
-              <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}     label="Measurements" active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />
-              <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label="Temperature"  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />
-              <NavItem href={`/babies/${currentBabyId}/sleep`}         icon={Moon}      label="Sleep"        active={pathname?.startsWith(`/babies/${currentBabyId}/sleep`) ?? false} collapsed={collapsed} tint="lavender" />
-              <NavItem href={`/babies/${currentBabyId}/vaccinations`}  icon={Syringe}   label="Vaccinations" active={pathname?.startsWith(`/babies/${currentBabyId}/vaccinations`) ?? false} collapsed={collapsed} tint="lavender" />
+              {canViewLogs && <>
+                <NavItem href={`/babies/${currentBabyId}/feedings`}      icon={Milk}      label="Feedings"     active={pathname?.startsWith(`/babies/${currentBabyId}/feedings`) ?? false} collapsed={collapsed} tint="coral" />
+                <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}   label="Stool"        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />
+                <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}      label="Medications"  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="lavender" />
+                <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}     label="Measurements" active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />
+                <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label="Temperature"  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />
+                <NavItem href={`/babies/${currentBabyId}/sleep`}         icon={Moon}      label="Sleep"        active={pathname?.startsWith(`/babies/${currentBabyId}/sleep`) ?? false} collapsed={collapsed} tint="lavender" />
+                <NavItem href={`/babies/${currentBabyId}/vaccinations`}  icon={Syringe}   label="Vaccinations" active={pathname?.startsWith(`/babies/${currentBabyId}/vaccinations`) ?? false} collapsed={collapsed} tint="lavender" />
+              </>}
             </NavGroup>
 
-            <NavGroup label="TOOLS" collapsed={collapsed}>
-              <NavItem href={`/babies/${currentBabyId}/ocr`}     icon={FileText}  label="Smart Scan" active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />
-              <NavItem href={`/babies/${currentBabyId}/reports`} icon={BarChart3} label="Reports"    active={pathname?.startsWith(`/babies/${currentBabyId}/reports`) ?? false} collapsed={collapsed} tint="peach" />
-            </NavGroup>
+            {canViewLogs && (
+              <NavGroup label="TOOLS" collapsed={collapsed}>
+                <NavItem href={`/babies/${currentBabyId}/ocr`}     icon={FileText}  label="Smart Scan" active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />
+                {canExport && <NavItem href={`/babies/${currentBabyId}/reports`} icon={BarChart3} label="Reports"    active={pathname?.startsWith(`/babies/${currentBabyId}/reports`) ?? false} collapsed={collapsed} tint="peach" />}
+              </NavGroup>
+            )}
 
-            <NavGroup label="SETTINGS" collapsed={collapsed}>
-              <NavItem href={`/babies/${currentBabyId}/doctors`}    icon={Stethoscope} label="Doctors"     active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false}    collapsed={collapsed} tint="lavender" />
-              <NavItem href={`/babies/${currentBabyId}/caregivers`} icon={Users}       label="Caregivers"  active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`) ?? false} collapsed={collapsed} tint="mint" />
-              <NavItem href={`/babies/${currentBabyId}/edit`}       icon={UserCog}     label="Profile"     active={pathname?.startsWith(`/babies/${currentBabyId}/edit`) ?? false}       collapsed={collapsed} tint="brand" />
-            </NavGroup>
+            {isParent && (
+              <NavGroup label="SETTINGS" collapsed={collapsed}>
+                <NavItem href={`/babies/${currentBabyId}/doctors`}    icon={Stethoscope} label="Doctors"     active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false}    collapsed={collapsed} tint="lavender" />
+                <NavItem href={`/babies/${currentBabyId}/caregivers`} icon={Users}       label="Caregivers"  active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`) ?? false} collapsed={collapsed} tint="mint" />
+                <NavItem href={`/babies/${currentBabyId}/edit`}       icon={UserCog}     label="Profile"     active={pathname?.startsWith(`/babies/${currentBabyId}/edit`) ?? false}       collapsed={collapsed} tint="brand" />
+              </NavGroup>
+            )}
           </>
         )}
       </nav>
 
-      {/* Quick Log promo card */}
-      {currentBabyId && !collapsed && (
+      {/* Quick Log promo card — only for roles that can actually write logs. */}
+      {currentBabyId && !collapsed && isParent && (
         <div className="px-4 pb-3">
           <Link href={`/babies/${currentBabyId}/feedings/new`}
             className="relative overflow-hidden flex items-center gap-3 rounded-2xl bg-gradient-to-r from-coral-100 to-peach-100 border border-coral-200 p-3 hover:shadow-panel transition">

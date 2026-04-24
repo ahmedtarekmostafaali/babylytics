@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { Card, CardContent } from '@/components/ui/Card';
 import { MedicationLogForm } from '@/components/forms/MedicationLogForm';
 import { PageShell, PageHeader } from '@/components/PageHeader';
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditMedLog({ params }: { params: { babyId: string; id: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const { data } = await supabase
     .from('medication_logs')
     .select('id,baby_id,medication_id,medication_time,status,actual_dosage,notes')

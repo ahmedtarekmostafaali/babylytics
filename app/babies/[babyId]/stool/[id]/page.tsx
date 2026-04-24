@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { Card, CardContent } from '@/components/ui/Card';
 import { StoolForm } from '@/components/forms/StoolForm';
 import { Comments } from '@/components/Comments';
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditStool({ params }: { params: { babyId: string; id: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const { data } = await supabase
     .from('stool_logs')
     .select('id,baby_id,stool_time,quantity_category,quantity_ml,color,consistency,has_diaper_rash,notes')

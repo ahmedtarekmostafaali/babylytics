@@ -6,6 +6,7 @@ import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { assertRole } from '@/lib/role-guard';
 import { Sparkline } from '@/components/Sparkline';
 import {
   parseRangeParam, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
@@ -54,6 +55,8 @@ export default async function MeasurementsLog({
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const activeKinds = rawTypes.filter((t): t is MeasKind => (MEAS_KINDS as readonly string[]).includes(t));
   const typeFilter = activeKinds.length > 0 && activeKinds.length < MEAS_KINDS.length;
+  const perms = await assertRole(params.babyId, { requireLogs: true });
+
   const { data: baby } = await supabase.from('babies').select('id,name,birth_weight_kg,birth_height_cm').eq('id', params.babyId).single();
   if (!baby) notFound();
 
@@ -109,14 +112,18 @@ export default async function MeasurementsLog({
         title="Measurements"
         subtitle={`Weight, height and head circumference for ${baby.name}.`}
         right={
-          <div className="flex items-center gap-2">
-            <BulkDelete babyId={params.babyId} table="measurements" timeColumn="measured_at"
-              visibleIds={rows.map(r => r.id)} kindLabel="measurements" />
-            <Link href={`/babies/${params.babyId}/measurements/new`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Log measurement
-            </Link>
-          </div>
+          perms.canWriteLogs ? (
+            <div className="flex items-center gap-2">
+              <BulkDelete babyId={params.babyId} table="measurements" timeColumn="measured_at"
+                visibleIds={rows.map(r => r.id)} kindLabel="measurements" />
+              <Link href={`/babies/${params.babyId}/measurements/new`}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+                <Plus className="h-4 w-4" /> Log measurement
+              </Link>
+            </div>
+          ) : (
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+          )
         } />
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -183,7 +190,7 @@ export default async function MeasurementsLog({
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-ink-strong">Measurement details</h3>
-              {selected && (
+              {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/measurements/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { Card, CardContent } from '@/components/ui/Card';
 import { TemperatureForm } from '@/components/forms/TemperatureForm';
 import { Comments } from '@/components/Comments';
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditTemperature({ params }: { params: { babyId: string; id: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const { data } = await supabase
     .from('temperature_logs')
     .select('id,baby_id,measured_at,temperature_c,method,notes')

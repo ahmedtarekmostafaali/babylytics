@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { Card, CardContent } from '@/components/ui/Card';
 import { MeasurementForm } from '@/components/forms/MeasurementForm';
 import { Comments } from '@/components/Comments';
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditMeasurement({ params }: { params: { babyId: string; id: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const { data } = await supabase
     .from('measurements')
     .select('id,baby_id,measured_at,weight_kg,height_cm,head_circ_cm,notes')

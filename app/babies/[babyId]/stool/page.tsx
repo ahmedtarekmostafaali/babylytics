@@ -6,6 +6,7 @@ import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { assertRole } from '@/lib/role-guard';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
 } from '@/lib/dates';
@@ -61,6 +62,8 @@ export default async function StoolLog({
   const activeSizes = rawTypes.filter((t): t is StoolSize => (STOOL_SIZES as readonly string[]).includes(t));
   const typeFilter = activeSizes.length > 0 && activeSizes.length < STOOL_SIZES.length;
 
+  const perms = await assertRole(params.babyId, { requireLogs: true });
+
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 
@@ -104,14 +107,18 @@ export default async function StoolLog({
         title="Stool Log"
         subtitle={`All recorded diaper changes for ${baby.name}.`}
         right={
-          <div className="flex items-center gap-2">
-            <BulkDelete babyId={params.babyId} table="stool_logs" timeColumn="stool_time"
-              visibleIds={rows.map(r => r.id)} kindLabel="stool logs" />
-            <Link href={`/babies/${params.babyId}/stool/new`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-mint-500 to-mint-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Log stool
-            </Link>
-          </div>
+          perms.canWriteLogs ? (
+            <div className="flex items-center gap-2">
+              <BulkDelete babyId={params.babyId} table="stool_logs" timeColumn="stool_time"
+                visibleIds={rows.map(r => r.id)} kindLabel="stool logs" />
+              <Link href={`/babies/${params.babyId}/stool/new`}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-mint-500 to-mint-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+                <Plus className="h-4 w-4" /> Log stool
+              </Link>
+            </div>
+          ) : (
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+          )
         } />
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -173,7 +180,7 @@ export default async function StoolLog({
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-ink-strong">Stool Details</h3>
-              {selected && (
+              {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/stool/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">

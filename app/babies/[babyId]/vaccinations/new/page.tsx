@@ -1,10 +1,12 @@
 import { Card, CardContent } from '@/components/ui/Card';
 import { VaccinationForm } from '@/components/forms/VaccinationForm';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { assertRole } from '@/lib/role-guard';
 
 export const metadata = { title: 'Add vaccination' };
 
-export default function NewVaccination({ params }: { params: { babyId: string } }) {
+export default async function NewVaccination({ params }: { params: { babyId: string } }) {
+  await assertRole(params.babyId, { requireWrite: true });
   return (
     <PageShell max="3xl">
       <PageHeader backHref={`/babies/${params.babyId}/vaccinations`} backLabel="vaccinations"

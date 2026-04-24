@@ -8,13 +8,12 @@ import { MoreHorizontal, Trash2, ChevronRight, Loader2 } from 'lucide-react';
 
 type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor';
 
-const ROLES: { value: Exclude<Role, 'editor'>; label: string }[] = [
-  { value: 'owner',     label: 'Owner' },
-  { value: 'parent',    label: 'Parent / Guardian' },
-  { value: 'doctor',    label: 'Doctor' },
-  { value: 'nurse',     label: 'Nurse' },
-  { value: 'caregiver', label: 'Caregiver' },
-  { value: 'viewer',    label: 'Viewer' },
+const ROLES: { value: Exclude<Role, 'editor' | 'caregiver'>; label: string }[] = [
+  { value: 'owner',   label: 'Owner' },
+  { value: 'parent',  label: 'Parent / Guardian' },
+  { value: 'doctor',  label: 'Doctor' },
+  { value: 'nurse',   label: 'Nurse' },
+  { value: 'viewer',  label: 'Viewer' },
 ];
 
 /**

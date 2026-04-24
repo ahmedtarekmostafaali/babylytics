@@ -6,6 +6,7 @@ import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { assertRole } from '@/lib/role-guard';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
 } from '@/lib/dates';
@@ -50,6 +51,8 @@ export default async function MedicationsLog({
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const activeStatuses = rawTypes.filter((t): t is MedStatus => (MED_STATUSES as readonly string[]).includes(t));
   const typeFilter = activeStatuses.length > 0 && activeStatuses.length < MED_STATUSES.length;
+
+  const perms = await assertRole(params.babyId, { requireLogs: true });
 
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
@@ -147,18 +150,22 @@ export default async function MedicationsLog({
         title="Medications"
         subtitle={`${activeMeds.length} active prescription${activeMeds.length === 1 ? '' : 's'} · ${logs.length} doses logged`}
         right={
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <BulkDelete babyId={params.babyId} table="medication_logs" timeColumn="medication_time"
-              visibleIds={logs.map(r => r.id)} kindLabel="dose logs" />
-            <Link href={`/babies/${params.babyId}/medications/new`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-ink-strong text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Medication
-            </Link>
-            <Link href={`/babies/${params.babyId}/medications/log`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Log dose
-            </Link>
-          </div>
+          perms.canWriteLogs ? (
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <BulkDelete babyId={params.babyId} table="medication_logs" timeColumn="medication_time"
+                visibleIds={logs.map(r => r.id)} kindLabel="dose logs" />
+              <Link href={`/babies/${params.babyId}/medications/new`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-ink-strong text-sm font-semibold px-4 py-1.5 shadow-sm">
+                <Plus className="h-4 w-4" /> Medication
+              </Link>
+              <Link href={`/babies/${params.babyId}/medications/log`}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+                <Plus className="h-4 w-4" /> Log dose
+              </Link>
+            </div>
+          ) : (
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+          )
         } />
 
       {/* Active prescriptions strip */}
@@ -277,7 +284,7 @@ export default async function MedicationsLog({
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-ink-strong">Dose details</h3>
-              {selected && (
+              {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/medications/log/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">

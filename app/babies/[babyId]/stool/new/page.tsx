@@ -1,8 +1,10 @@
 import { Card, CardContent } from '@/components/ui/Card';
 import { StoolForm } from '@/components/forms/StoolForm';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { assertRole } from '@/lib/role-guard';
 
-export default function NewStool({ params }: { params: { babyId: string } }) {
+export default async function NewStool({ params }: { params: { babyId: string } }) {
+  await assertRole(params.babyId, { requireWrite: true });
   return (
     <PageShell max="3xl">
       <PageHeader

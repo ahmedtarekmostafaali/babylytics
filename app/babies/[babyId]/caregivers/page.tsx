@@ -21,16 +21,15 @@ const ROLE_META: Record<Role, { label: string; tint: string; icon: React.Compone
   editor:    { label: 'Parent',    tint: 'bg-mint-100     text-mint-700',     icon: Shield }, // legacy
   doctor:    { label: 'Doctor',    tint: 'bg-lavender-100 text-lavender-700', icon: Stethoscope },
   nurse:     { label: 'Nurse',     tint: 'bg-coral-100    text-coral-700',    icon: Heart },
-  caregiver: { label: 'Caregiver', tint: 'bg-peach-100    text-peach-700',    icon: Users },
+  caregiver: { label: 'Nurse',     tint: 'bg-coral-100    text-coral-700',    icon: Heart }, // legacy → nurse
   viewer:    { label: 'Viewer',    tint: 'bg-slate-100    text-ink',          icon: Eye },
 };
 
 const ROLE_DEFS: { role: Role; title: string; perms: string }[] = [
-  { role: 'parent',    title: 'Parent / Guardian', perms: 'Full access to all data and settings.' },
-  { role: 'doctor',    title: 'Doctor',            perms: 'View medical data, add notes, write logs.' },
-  { role: 'nurse',     title: 'Nurse',             perms: 'View logs, add measurements and notes.' },
-  { role: 'caregiver', title: 'Caregiver',         perms: 'View logs and basic data.' },
-  { role: 'viewer',    title: 'Viewer',            perms: 'Read-only access to logs and reports.' },
+  { role: 'parent', title: 'Parent / Guardian', perms: 'Full access — write logs, upload files, invite caregivers.' },
+  { role: 'doctor', title: 'Doctor',            perms: 'Read logs, add comments, export reports.' },
+  { role: 'nurse',  title: 'Nurse',             perms: 'Read-only — view logs, no adds or edits.' },
+  { role: 'viewer', title: 'Viewer',            perms: 'Overview page only.' },
 ];
 
 function initials(s: string) {
@@ -240,11 +239,15 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
 }
 
 function PermIcon({ role, kind }: { role: Role; kind: 'edit' | 'view' | 'reports' }) {
-  const canEdit    = role === 'owner' || role === 'parent' || role === 'editor' || role === 'doctor' || role === 'nurse' || role === 'caregiver';
-  const canReports = role !== 'viewer';
+  // Align with lib/permissions.ts:
+  //   edit    → owner/parent only (writes, uploads)
+  //   reports → owner/parent/doctor (export + comments)
+  //   view    → everyone except (nothing — even viewer sees overview)
+  const canEdit    = role === 'owner' || role === 'parent' || role === 'editor';
+  const canReports = canEdit || role === 'doctor';
   const state = kind === 'edit' ? canEdit : kind === 'reports' ? canReports : true;
   const Icon  = kind === 'edit' ? Edit3 : kind === 'reports' ? BarChart3 : Eye;
-  const title = kind === 'edit' ? 'Can edit logs' : kind === 'reports' ? 'Can see reports' : 'Can view data';
+  const title = kind === 'edit' ? 'Can edit logs' : kind === 'reports' ? 'Can comment + export' : 'Can view data';
   return (
     <span title={title}
       className={`h-7 w-7 rounded-lg grid place-items-center ${state ? 'bg-brand-50 text-brand-600' : 'bg-slate-50 text-slate-300'}`}>

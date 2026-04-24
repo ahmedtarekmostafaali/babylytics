@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { Card, CardContent } from '@/components/ui/Card';
 import { MedicationForm } from '@/components/forms/MedicationForm';
 import { Comments } from '@/components/Comments';
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditMedication({ params }: { params: { babyId: string; id: string } }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireWrite: true });
   const [{ data }, { data: docs }] = await Promise.all([
     supabase.from('medications')
       .select('id,baby_id,name,dosage,route,frequency_hours,total_doses,starts_at,ends_at,doctor_id,prescribed_by,notes')

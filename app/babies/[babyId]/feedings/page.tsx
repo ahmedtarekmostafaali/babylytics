@@ -6,6 +6,7 @@ import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { assertRole } from '@/lib/role-guard';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime,
   lastNDaysWindow, todayLocalDate,
@@ -84,6 +85,9 @@ export default async function FeedingsLog({
   const activeTypes: MilkType[] = rawTypes.filter((t): t is MilkType => MILK_TYPES.includes(t));
   const typeFilterActive = activeTypes.length > 0 && activeTypes.length < MILK_TYPES.length;
 
+  // Viewers are bounced to the overview — they don't have access to logs.
+  const perms = await assertRole(params.babyId, { requireLogs: true });
+
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 
@@ -131,14 +135,18 @@ export default async function FeedingsLog({
         title="Feeding Log"
         subtitle={`All recorded feedings for ${baby.name}.`}
         right={
-          <div className="flex items-center gap-2">
-            <BulkDelete babyId={params.babyId} table="feedings" timeColumn="feeding_time"
-              visibleIds={rows.map(r => r.id)} kindLabel="feedings" />
-            <Link href={`/babies/${params.babyId}/feedings/new`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-peach-500 to-coral-500 hover:brightness-105 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Log feed
-            </Link>
-          </div>
+          perms.canWriteLogs ? (
+            <div className="flex items-center gap-2">
+              <BulkDelete babyId={params.babyId} table="feedings" timeColumn="feeding_time"
+                visibleIds={rows.map(r => r.id)} kindLabel="feedings" />
+              <Link href={`/babies/${params.babyId}/feedings/new`}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-peach-500 to-coral-500 hover:brightness-105 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+                <Plus className="h-4 w-4" /> Log feed
+              </Link>
+            </div>
+          ) : (
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+          )
         } />
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -230,7 +238,7 @@ export default async function FeedingsLog({
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-ink-strong">Feeding Details</h3>
-              {selected && (
+              {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/feedings/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">

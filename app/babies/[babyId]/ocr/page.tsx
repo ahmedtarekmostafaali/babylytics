@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { SmartScanUploader } from '@/components/SmartScanUploader';
 import { FileDeleteButton } from '@/components/FileDeleteButton';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { assertRole } from '@/lib/role-guard';
 import { ConfidenceBadge } from '@/components/ConfidenceBadge';
 import { fmtDateTime, fmtRelative } from '@/lib/dates';
 import type { StructuredOcr } from '@/lib/types';
@@ -78,6 +79,7 @@ export default async function SmartScan({
   searchParams: { tab?: Tab; file?: string };
 }) {
   const supabase = createClient();
+  const perms = await assertRole(params.babyId, { requireLogs: true });
   const tab: Tab = (searchParams.tab ?? 'inbox') as Tab;
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
@@ -157,11 +159,19 @@ export default async function SmartScan({
           </Link>
         } />
 
-      {/* Two upload cards */}
-      <section className="grid gap-4 md:grid-cols-2">
-        <SmartScanUploader babyId={params.babyId} mode="ocr" />
-        <SmartScanUploader babyId={params.babyId} mode="archive" />
-      </section>
+      {/* Two upload cards — parents/owners only can upload. Others see the
+          inbox and extraction results but not the upload entry points. */}
+      {perms.canUpload && (
+        <section className="grid gap-4 md:grid-cols-2">
+          <SmartScanUploader babyId={params.babyId} mode="ocr" />
+          <SmartScanUploader babyId={params.babyId} mode="archive" />
+        </section>
+      )}
+      {!perms.canUpload && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-ink-muted">
+          Uploads are restricted to owners and parents. Ask a parent to add new files.
+        </div>
+      )}
 
       {/* Quick links row */}
       <div className="flex flex-wrap items-center gap-2 pb-1">
@@ -252,11 +262,13 @@ export default async function SmartScan({
                     </span>
                     <ArrowRight className="h-4 w-4 text-ink-muted shrink-0 ml-1" />
                   </Link>
-                  <FileDeleteButton
-                    fileId={f.id}
-                    storageBucket={f.storage_bucket}
-                    storagePath={f.storage_path}
-                    redirectTo={`/babies/${params.babyId}/ocr?tab=${tab}`} />
+                  {perms.canUpload && (
+                    <FileDeleteButton
+                      fileId={f.id}
+                      storageBucket={f.storage_bucket}
+                      storagePath={f.storage_path}
+                      redirectTo={`/babies/${params.babyId}/ocr?tab=${tab}`} />
+                  )}
                 </li>
               );
             })}
@@ -279,6 +291,7 @@ export default async function SmartScan({
                 file={selectedFile}
                 ext={selectedExt}
                 previewUrl={previewUrl}
+                canUpload={perms.canUpload}
               />
             )}
           </div>
@@ -310,12 +323,13 @@ export default async function SmartScan({
 /* ──────────────────────────────────────────────────────────────────── */
 
 function DetailPanel({
-  babyId, file, ext, previewUrl,
+  babyId, file, ext, previewUrl, canUpload,
 }: {
   babyId: string;
   file: FileRow;
   ext: ExtractedRow | null;
   previewUrl: string | null;
+  canUpload: boolean;
 }) {
   const conf = ext?.confidence_score != null ? Math.round(Number(ext.confidence_score) * 100) : null;
 
@@ -477,14 +491,14 @@ function DetailPanel({
           </Link>
         )}
       </div>
-      <div className="pt-2 flex justify-end">
+      {canUpload && <div className="pt-2 flex justify-end">
         <FileDeleteButton
           fileId={file.id}
           storageBucket={file.storage_bucket}
           storagePath={file.storage_path}
           redirectTo={`/babies/${babyId}/ocr`}
           variant="text" />
-      </div>
+      </div>}
     </div>
   );
 }

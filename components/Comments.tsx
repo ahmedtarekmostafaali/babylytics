@@ -26,7 +26,7 @@ type Row = {
  * New comments inherit the same scope_date automatically.
  */
 export function Comments({
-  babyId, target, targetId, title = 'Comments', scopeDate,
+  babyId, target, targetId, title = 'Comments', scopeDate, canPost = true,
 }: {
   babyId: string;
   target: TargetTable;
@@ -34,6 +34,8 @@ export function Comments({
   title?: string;
   /** YYYY-MM-DD — if set, reads + writes are filtered/tagged with this date. */
   scopeDate?: string;
+  /** If false, hides the compose form (viewer/nurse). Server RLS enforces too. */
+  canPost?: boolean;
 }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,26 +132,32 @@ export function Comments({
           );
         })}
 
-        <form onSubmit={submit} className="flex items-start gap-2 pt-2">
-          <span className="h-8 w-8 rounded-full bg-coral-100 text-coral-700 grid place-items-center text-xs font-bold shrink-0">
-            {(me?.email ?? 'Y').charAt(0).toUpperCase()}
-          </span>
-          <textarea
-            value={body}
-            onChange={e => setBody(e.target.value)}
-            placeholder="Leave a note for other caregivers…"
-            rows={2}
-            className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
-          />
-          <button
-            type="submit"
-            disabled={posting || !body.trim()}
-            className="inline-flex items-center gap-1 rounded-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white px-3 py-2 text-sm font-semibold"
-          >
-            <Send className="h-4 w-4" />
-            Post
-          </button>
-        </form>
+        {canPost ? (
+          <form onSubmit={submit} className="flex items-start gap-2 pt-2">
+            <span className="h-8 w-8 rounded-full bg-coral-100 text-coral-700 grid place-items-center text-xs font-bold shrink-0">
+              {(me?.email ?? 'Y').charAt(0).toUpperCase()}
+            </span>
+            <textarea
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              placeholder="Leave a note for other caregivers…"
+              rows={2}
+              className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
+            />
+            <button
+              type="submit"
+              disabled={posting || !body.trim()}
+              className="inline-flex items-center gap-1 rounded-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white px-3 py-2 text-sm font-semibold"
+            >
+              <Send className="h-4 w-4" />
+              Post
+            </button>
+          </form>
+        ) : (
+          <div className="pt-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-ink-muted">
+            Read-only — only owners, parents, and doctors can post comments.
+          </div>
+        )}
         {err && <p className="text-xs text-coral-600">{err}</p>}
       </div>
     </div>

@@ -818,7 +818,8 @@ export default async function BabyOverview({
       {/* ═══ CAREGIVER NOTES ═══ */}
       <Comments babyId={babyId} target="babies" targetId={babyId}
         scopeDate={focusDate}
-        title={`Caregiver notes · ${fmtDate(day.start)}`} />
+        title={`Caregiver notes · ${fmtDate(day.start)}`}
+        canPost={((myRole?.data as string | null) === 'owner') || ((myRole?.data as string | null) === 'parent') || ((myRole?.data as string | null) === 'editor') || ((myRole?.data as string | null) === 'doctor')} />
     </div>
   );
 }

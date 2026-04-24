@@ -1,13 +1,15 @@
 import { Card, CardContent } from '@/components/ui/Card';
 import { MedicationLogForm } from '@/components/forms/MedicationLogForm';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { assertRole } from '@/lib/role-guard';
 
-export default function NewMedLog({
+export default async function NewMedLog({
   params, searchParams,
 }: {
   params: { babyId: string };
   searchParams: { m?: string };
 }) {
+  await assertRole(params.babyId, { requireWrite: true });
   return (
     <PageShell max="3xl">
       <PageHeader

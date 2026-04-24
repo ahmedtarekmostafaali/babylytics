@@ -5,6 +5,7 @@ import { PageShell, PageHeader } from '@/components/PageHeader';
 import { SeedScheduleButton } from '@/components/SeedScheduleButton';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { assertRole } from '@/lib/role-guard';
 import { fmtDate, fmtDateTime, fmtRelative } from '@/lib/dates';
 import {
   Syringe, Plus, Edit3, Sparkles, ArrowRight, Clock,
@@ -51,6 +52,8 @@ export default async function VaccinationsLog({
   searchParams: { tab?: Tab; id?: string };
 }) {
   const supabase = createClient();
+  const perms = await assertRole(params.babyId, { requireLogs: true });
+
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
   const tab: Tab = searchParams.tab ?? 'all';
@@ -84,17 +87,21 @@ export default async function VaccinationsLog({
         title="Vaccinations"
         subtitle={`${rows.length} entries · ${done.length} administered · ${overdue.length} overdue`}
         right={
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            {rows.length === 0 && <SeedScheduleButton babyId={params.babyId} />}
-            {rows.length > 0 && (
-              <BulkDelete babyId={params.babyId} table="vaccinations" timeColumn="scheduled_at"
-                visibleIds={rows.map(r => r.id)} kindLabel="vaccination entries" />
-            )}
-            <Link href={`/babies/${params.babyId}/vaccinations/new`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Add
-            </Link>
-          </div>
+          perms.canWriteLogs ? (
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {rows.length === 0 && <SeedScheduleButton babyId={params.babyId} />}
+              {rows.length > 0 && (
+                <BulkDelete babyId={params.babyId} table="vaccinations" timeColumn="scheduled_at"
+                  visibleIds={rows.map(r => r.id)} kindLabel="vaccination entries" />
+              )}
+              <Link href={`/babies/${params.babyId}/vaccinations/new`}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+                <Plus className="h-4 w-4" /> Add
+              </Link>
+            </div>
+          ) : (
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+          )
         } />
 
       {rows.length === 0 && (
@@ -194,7 +201,7 @@ export default async function VaccinationsLog({
               <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
                   <h3 className="text-sm font-bold text-ink-strong">Vaccination details</h3>
-                  {selected && (
+                  {selected && perms.canWriteLogs && (
                     <div className="flex items-center gap-1.5">
                       <Link href={`/babies/${params.babyId}/vaccinations/${selected.id}`}
                         className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">

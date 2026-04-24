@@ -1,8 +1,10 @@
 import { Card, CardContent } from '@/components/ui/Card';
 import { MeasurementForm } from '@/components/forms/MeasurementForm';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { assertRole } from '@/lib/role-guard';
 
-export default function NewMeasurement({ params }: { params: { babyId: string } }) {
+export default async function NewMeasurement({ params }: { params: { babyId: string } }) {
+  await assertRole(params.babyId, { requireWrite: true });
   return (
     <PageShell max="3xl">
       <PageHeader

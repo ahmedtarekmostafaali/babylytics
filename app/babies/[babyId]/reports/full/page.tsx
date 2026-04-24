@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { assertRole } from '@/lib/role-guard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { KpiCard } from '@/components/KpiCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
@@ -20,6 +21,7 @@ export default async function FullReport({
   searchParams: { range?: string; start?: string; end?: string };
 }) {
   const supabase = createClient();
+  await assertRole(params.babyId, { requireExport: true });
   const babyId = params.babyId;
   const range = parseRangeParam(searchParams);
 
