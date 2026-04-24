@@ -9,7 +9,7 @@ import { BulkDelete } from '@/components/BulkDelete';
 import { assertRole } from '@/lib/role-guard';
 import {
   parseRangeParam, fmtDate, fmtTime, fmtDateTime,
-  lastNDaysWindow, todayLocalDate,
+  lastNDaysWindow, todayLocalDate, yesterdayLocalDate, localDayKey,
 } from '@/lib/dates';
 import { fmtMl } from '@/lib/units';
 import {
@@ -40,15 +40,10 @@ const ICON_FOR: Record<Row['milk_type'], { icon: React.ComponentType<{ className
   other:   { icon: Milk,     tint: 'bg-lavender-100 text-lavender-600', label: 'Other',       dotBg: 'bg-lavender-500', chipTint: 'bg-lavender-50 text-lavender-700' },
 };
 
-function groupKey(iso: string): string {
-  // YYYY-MM-DD in local day for bucket headers
-  return new Date(iso).toISOString().slice(0, 10);
-}
-
 function groupHeading(iso: string): string {
   const today = todayLocalDate();
-  const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const k = groupKey(iso);
+  const y = yesterdayLocalDate();
+  const k = localDayKey(iso);
   if (k === today) return `Today, ${fmtDate(iso)}`;
   if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
   return fmtDate(iso);
@@ -109,7 +104,7 @@ export default async function FeedingsLog({
   // Group rows by day
   const buckets = new Map<string, Row[]>();
   for (const r of rows) {
-    const k = groupKey(r.feeding_time);
+    const k = localDayKey(r.feeding_time);
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }

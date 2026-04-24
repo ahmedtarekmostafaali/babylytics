@@ -8,7 +8,7 @@ import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
 import { assertRole } from '@/lib/role-guard';
 import {
-  parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
+  parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate, yesterdayLocalDate, localDayKey,
 } from '@/lib/dates';
 import {
   Pill, Plus, Edit3, Sparkles, ArrowRight, Clock, CheckCircle2,
@@ -21,11 +21,10 @@ export const metadata = { title: 'Medications' };
 type Med = { id: string; name: string; dosage: string | null; route: string; frequency_hours: number | null; total_doses: number | null; starts_at: string; ends_at: string | null; prescribed_by: string | null; doctor_id: string | null };
 type LogRow = { id: string; medication_id: string; medication_time: string; status: 'taken'|'missed'|'skipped'; actual_dosage: string | null; notes: string | null; source: string; created_at: string };
 
-function groupKey(iso: string) { return new Date(iso).toISOString().slice(0, 10); }
 function groupHeading(iso: string): string {
   const today = todayLocalDate();
-  const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const k = groupKey(iso);
+  const y = yesterdayLocalDate();
+  const k = localDayKey(iso);
   if (k === today) return `Today, ${fmtDate(iso)}`;
   if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
   return fmtDate(iso);
@@ -126,7 +125,7 @@ export default async function MedicationsLog({
 
   const buckets = new Map<string, LogRow[]>();
   for (const r of logs) {
-    const k = groupKey(r.medication_time);
+    const k = localDayKey(r.medication_time);
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }

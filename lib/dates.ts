@@ -146,9 +146,39 @@ export function todayLocalDate(): string {
   return `${n.y}-${pad(n.m)}-${pad(n.day)}`;
 }
 
-export function ageInDays(dob: string) {
-  const ms = Date.now() - new Date(dob).getTime();
-  return Math.floor(ms / 86400000);
+/** "YYYY-MM-DD" for yesterday in the configured timezone. */
+export function yesterdayLocalDate(): string {
+  const today = todayLocalDate();
+  const [y, m, d] = today.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, (m ?? 1) - 1, (d ?? 1) - 1));
+  const pad = (x: number) => String(x).padStart(2, '0');
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+}
+
+/**
+ * "YYYY-MM-DD" of the given ISO string in the configured timezone. Use this
+ * for bucketing log entries by the day they happened, NOT
+ * `iso.slice(0,10)` — that gives UTC and breaks for entries near midnight.
+ */
+export function localDayKey(iso: string): string {
+  const p = partsIn(TIMEZONE, new Date(iso));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${p.y}-${pad(p.m)}-${pad(p.day)}`;
+}
+
+/**
+ * Whole calendar days between dob and today, both expressed in the configured
+ * timezone. Was previously `floor(ms / 86400000)`, which is a 24-hour window
+ * count and therefore returned the wrong number when the baby was born late
+ * in the day or when DST shifted by an hour.
+ */
+export function ageInDays(dob: string): number {
+  const dobP = partsIn(TIMEZONE, new Date(dob));
+  const nowP = nowInTz();
+  // Count days from dob's local-midnight to today's local-midnight.
+  const dobMidnightUtc = Date.UTC(dobP.y, dobP.m - 1, dobP.day);
+  const todayMidnightUtc = Date.UTC(nowP.y, nowP.m - 1, nowP.day);
+  return Math.max(0, Math.round((todayMidnightUtc - dobMidnightUtc) / 86400000));
 }
 
 /** Convert a `<input type="datetime-local">` value (user typed it in TIMEZONE)

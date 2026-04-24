@@ -68,10 +68,11 @@ export default async function EditAppointment({
         <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
           <Stethoscope className="h-4 w-4 text-lavender-600" />
           <h3 className="text-sm font-bold text-ink-strong">Visit attachments</h3>
-          <span className="text-[11px] text-ink-muted">prescriptions, reports, hand-written notes</span>
+          <span className="text-[11px] text-ink-muted">prescriptions, reports, scans</span>
         </div>
-        <div className="p-4">
+        <div className="p-4 grid gap-4 md:grid-cols-2">
           <SmartScanUploader babyId={params.babyId} mode="ocr" />
+          <SmartScanUploader babyId={params.babyId} mode="archive" />
         </div>
 
         {recentFiles && recentFiles.length > 0 && (

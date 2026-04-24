@@ -9,7 +9,7 @@ import { BulkDelete } from '@/components/BulkDelete';
 import { assertRole } from '@/lib/role-guard';
 import { Sparkline } from '@/components/Sparkline';
 import {
-  parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
+  parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate, yesterdayLocalDate, localDayKey,
 } from '@/lib/dates';
 import {
   Thermometer, Plus, Edit3, Sparkles, ArrowRight, Clock,
@@ -36,11 +36,10 @@ function statusOf(c: number): { label: string; chip: string; tint: 'mint'|'peach
   return { label: 'Normal', chip: 'bg-mint-100 text-mint-700', tint: 'mint' };
 }
 
-function groupKey(iso: string) { return new Date(iso).toISOString().slice(0, 10); }
 function groupHeading(iso: string): string {
   const today = todayLocalDate();
-  const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const k = groupKey(iso);
+  const y = yesterdayLocalDate();
+  const k = localDayKey(iso);
   if (k === today) return `Today, ${fmtDate(iso)}`;
   if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
   return fmtDate(iso);
@@ -93,7 +92,7 @@ export default async function TemperatureLog({
 
   const buckets = new Map<string, Row[]>();
   for (const r of rows) {
-    const k = groupKey(r.measured_at);
+    const k = localDayKey(r.measured_at);
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }

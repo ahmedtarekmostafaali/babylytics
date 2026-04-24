@@ -9,7 +9,7 @@ import { BulkDelete } from '@/components/BulkDelete';
 import { assertRole } from '@/lib/role-guard';
 import { Sparkline } from '@/components/Sparkline';
 import {
-  parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
+  parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate, yesterdayLocalDate, localDayKey,
 } from '@/lib/dates';
 import {
   Moon, Bed, Car, Home, Armchair, Baby as BabyIcon, HelpCircle, Plus,
@@ -38,11 +38,10 @@ const QUALITY_META: Record<NonNullable<Row['quality']>, { icon: React.ComponentT
   unknown:    { icon: HelpCircle, chip: 'bg-slate-100 text-ink',         label: 'Unknown' },
 };
 
-function groupKey(iso: string) { return new Date(iso).toISOString().slice(0, 10); }
 function groupHeading(iso: string): string {
   const today = todayLocalDate();
-  const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const k = groupKey(iso);
+  const y = yesterdayLocalDate();
+  const k = localDayKey(iso);
   if (k === today) return `Today, ${fmtDate(iso)}`;
   if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
   return fmtDate(iso);
@@ -120,7 +119,7 @@ export default async function SleepLog({
 
   const buckets = new Map<string, Row[]>();
   for (const r of rows) {
-    const k = groupKey(r.start_at);
+    const k = localDayKey(r.start_at);
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }

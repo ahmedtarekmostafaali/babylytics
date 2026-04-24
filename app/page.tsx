@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { Wordmark } from '@/components/Wordmark';
 import { HeroOrbit } from '@/components/HeroOrbit';
 import {
   Milk, Moon, Baby, Check, Star, ArrowRight,
   BarChart3, Brain, Clipboard, Sparkles, Apple, Smartphone,
+  LayoutDashboard,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,10 @@ export const dynamic = 'force-dynamic';
 export default async function Landing() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect('/dashboard');
+  // Logged-in visitors keep access to the marketing page so they can revisit
+  // the product story / share the link. The header swaps in a "Dashboard"
+  // CTA in place of Log in / Get started free for these visitors.
+  const isAuthed = !!user;
 
   return (
     <div className="bg-gradient-to-b from-white to-brand-50 min-h-screen">
@@ -28,8 +31,17 @@ export default async function Landing() {
             <a href="#testimonials" className="hover:text-ink-strong">Parents</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link href="/login"    className="hidden sm:inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50">Log in</Link>
-            <Link href="/register" className="inline-flex items-center rounded-md bg-coral-500 px-4 py-2 text-sm font-medium text-white hover:bg-coral-600 shadow-sm">Get started free</Link>
+            {isAuthed ? (
+              <Link href="/dashboard"
+                className="inline-flex items-center gap-2 rounded-md bg-coral-500 px-4 py-2 text-sm font-medium text-white hover:bg-coral-600 shadow-sm">
+                <LayoutDashboard className="h-4 w-4" /> Open dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login"    className="hidden sm:inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50">Log in</Link>
+                <Link href="/register" className="inline-flex items-center rounded-md bg-coral-500 px-4 py-2 text-sm font-medium text-white hover:bg-coral-600 shadow-sm">Get started free</Link>
+              </>
+            )}
           </div>
         </div>
       </header>
