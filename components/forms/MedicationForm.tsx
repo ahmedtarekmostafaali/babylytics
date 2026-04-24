@@ -4,8 +4,14 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MedicationSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
-import { Input, Label, Select, Textarea } from '@/components/ui/Input';
+import { Input } from '@/components/ui/Input';
+import { Section, TypeTile, QuickPill } from '@/components/forms/FormKit';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
+import {
+  Save, Trash2, Pill, Droplet, Wind, SprayCan, Syringe, Circle, Stethoscope,
+  Clock,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type Route = 'oral'|'topical'|'inhaled'|'nasal'|'rectal'|'injection'|'other';
 
@@ -23,12 +29,27 @@ export type MedicationFormValue = {
   notes?: string | null;
 };
 
+// Common frequency presets in hours. "As needed" stores null.
+const FREQ_PRESETS: { key: string; label: string; hours: number | null }[] = [
+  { key: '4',  label: 'Every 4 h',  hours: 4 },
+  { key: '6',  label: 'Every 6 h',  hours: 6 },
+  { key: '8',  label: 'Every 8 h',  hours: 8 },
+  { key: '12', label: 'Every 12 h', hours: 12 },
+  { key: '24', label: 'Once daily', hours: 24 },
+  { key: 'prn', label: 'As needed', hours: null },
+];
+
 export function MedicationForm({ babyId, initial }: { babyId: string; initial?: MedicationFormValue }) {
   const router = useRouter();
   const [name, setName]     = useState(initial?.name ?? '');
   const [dosage, setDosage] = useState(initial?.dosage ?? '');
   const [route, setRoute]   = useState<Route>(initial?.route ?? 'oral');
-  const [freq, setFreq]     = useState(initial?.frequency_hours?.toString() ?? '8');
+  const initialFreq = initial?.frequency_hours;
+  const matchedPreset = FREQ_PRESETS.find(p => p.hours === (initialFreq ?? null));
+  const [freqPreset, setFreqPreset] = useState<string | 'custom'>(matchedPreset?.key ?? (initialFreq == null ? 'prn' : 'custom'));
+  const [freqCustom, setFreqCustom] = useState(
+    (initialFreq != null && !matchedPreset) ? String(initialFreq) : '',
+  );
   const [doses, setDoses]   = useState(initial?.total_doses?.toString() ?? '');
   const [starts, setStarts] = useState(initial?.starts_at ? isoToLocalInput(initial.starts_at) : nowLocalInput());
   const [ends,   setEnds]   = useState(initial?.ends_at ? isoToLocalInput(initial.ends_at) : '');
@@ -37,12 +58,19 @@ export function MedicationForm({ babyId, initial }: { babyId: string; initial?: 
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  function resolvedFreqHours(): number | null {
+    if (freqPreset === 'prn')    return null;
+    if (freqPreset === 'custom') return freqCustom ? Number(freqCustom) : null;
+    const p = FREQ_PRESETS.find(x => x.key === freqPreset);
+    return p?.hours ?? null;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     const parsed = MedicationSchema.safeParse({
       name, dosage: dosage || null, route,
-      frequency_hours: freq || null,
+      frequency_hours: resolvedFreqHours(),
       total_doses: doses || null,
       starts_at: localInputToIso(starts) ?? '',
       ends_at: localInputToIso(ends),
@@ -67,8 +95,7 @@ export function MedicationForm({ babyId, initial }: { babyId: string; initial?: 
     if (!window.confirm(`Remove ${initial.name ?? 'this medication'}? Dose logs already recorded are kept in the database.`)) return;
     setSaving(true);
     const supabase = createClient();
-    const { error } = await supabase
-      .from('medications')
+    const { error } = await supabase.from('medications')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', initial.id);
     setSaving(false);
@@ -78,60 +105,119 @@ export function MedicationForm({ babyId, initial }: { babyId: string; initial?: 
   }
 
   return (
-    <form className="space-y-4" onSubmit={submit}>
-      <div>
-        <Label htmlFor="n">Medication name</Label>
-        <Input id="n" required value={name} onChange={e => setName(e.target.value)} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label htmlFor="d">Dosage &amp; unit</Label>
-          <Input id="d" placeholder="e.g. 5 mg, 1 drop, 2 ml" value={dosage} onChange={e => setDosage(e.target.value)} />
-          <p className="text-xs text-ink-muted mt-1">Include the unit so caregivers aren&apos;t guessing.</p>
+    <form onSubmit={submit} className="space-y-8">
+      {/* 1. Name */}
+      <Section n={1} title="Medication name">
+        <div className="relative">
+          <Pill className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-lavender-500 pointer-events-none" />
+          <Input required value={name} onChange={e => setName(e.target.value)}
+            placeholder="e.g. Amoxicillin, Paracetamol"
+            className="h-14 pl-11 text-base" />
         </div>
-        <div>
-          <Label htmlFor="r">Route</Label>
-          <Select id="r" value={route} onChange={e => setRoute(e.target.value as Route)}>
-            <option value="oral">Oral</option>
-            <option value="topical">Topical</option>
-            <option value="inhaled">Inhaled</option>
-            <option value="nasal">Nasal</option>
-            <option value="rectal">Rectal</option>
-            <option value="injection">Injection</option>
-            <option value="other">Other</option>
-          </Select>
+      </Section>
+
+      {/* 2. Dosage */}
+      <Section n={2} title="Dosage per dose">
+        <Input value={dosage ?? ''} onChange={e => setDosage(e.target.value)}
+          placeholder="e.g. 5 ml, 2.5 mg, 1 drop"
+          className="h-12 text-base" />
+        <p className="mt-2 text-xs text-ink-muted">Include the unit so every caregiver is on the same page.</p>
+      </Section>
+
+      {/* 3. Route */}
+      <Section n={3} title="How is it given?">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <TypeTile icon={Droplet}    label="Oral"      tint="lavender" active={route === 'oral'}      onClick={() => setRoute('oral')} sub="by mouth" />
+          <TypeTile icon={Circle}     label="Topical"   tint="mint"     active={route === 'topical'}   onClick={() => setRoute('topical')} sub="on skin" />
+          <TypeTile icon={Wind}       label="Inhaled"   tint="brand"    active={route === 'inhaled'}   onClick={() => setRoute('inhaled')} sub="breath" />
+          <TypeTile icon={SprayCan}   label="Nasal"     tint="peach"    active={route === 'nasal'}     onClick={() => setRoute('nasal')} sub="spray" />
+          <TypeTile icon={Circle}     label="Rectal"    tint="coral"    active={route === 'rectal'}    onClick={() => setRoute('rectal')} sub="suppository" />
+          <TypeTile icon={Syringe}    label="Injection" tint="lavender" active={route === 'injection'} onClick={() => setRoute('injection')} sub="shot" />
+          <TypeTile icon={Circle}     label="Other"     tint="mint"     active={route === 'other'}     onClick={() => setRoute('other')} sub="" />
         </div>
-        <div>
-          <Label htmlFor="f">Frequency (hours)</Label>
-          <Input id="f" type="number" inputMode="decimal" step="0.25" min={0.25} max={168} value={freq} onChange={e => setFreq(e.target.value)} />
+      </Section>
+
+      {/* 4. Frequency */}
+      <Section n={4} title="How often?">
+        <div className="flex items-center gap-2 flex-wrap">
+          {FREQ_PRESETS.map(p => (
+            <QuickPill key={p.key}
+              active={freqPreset === p.key}
+              onClick={() => setFreqPreset(p.key)}
+              icon={<Clock className="h-3.5 w-3.5" />}
+              tint="lavender">
+              {p.label}
+            </QuickPill>
+          ))}
+          <QuickPill
+            active={freqPreset === 'custom'}
+            onClick={() => setFreqPreset('custom')}
+            icon={<Clock className="h-3.5 w-3.5" />}
+            tint="lavender">
+            Custom
+          </QuickPill>
         </div>
-        <div>
-          <Label htmlFor="td">Total doses (optional)</Label>
-          <Input id="td" type="number" inputMode="numeric" step="1" min={0} max={9999} value={doses} onChange={e => setDoses(e.target.value)} />
+        {freqPreset === 'custom' && (
+          <div className="mt-3 flex items-center gap-2">
+            <Input type="number" step="0.25" min={0.25} max={168}
+              value={freqCustom} onChange={e => setFreqCustom(e.target.value)}
+              placeholder="e.g. 10"
+              className="h-12 max-w-[160px]" />
+            <span className="text-sm text-ink-muted">hours between doses</span>
+          </div>
+        )}
+      </Section>
+
+      {/* 5. Duration */}
+      <Section n={5} title="When does it start — and stop?">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">Starts</div>
+            <Input type="datetime-local" required value={starts} onChange={e => setStarts(e.target.value)} />
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">Ends <span className="text-ink-muted/70 font-normal">(optional)</span></div>
+            <Input type="datetime-local" value={ends} onChange={e => setEnds(e.target.value)} />
+          </div>
         </div>
-        <div>
-          <Label htmlFor="s">Starts at</Label>
-          <Input id="s" type="datetime-local" required value={starts} onChange={e => setStarts(e.target.value)} />
+        <div className="mt-3">
+          <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">Total doses <span className="text-ink-muted/70 font-normal">(optional)</span></div>
+          <Input type="number" step="1" min={0} max={9999}
+            value={doses} onChange={e => setDoses(e.target.value)}
+            placeholder="e.g. 21"
+            className="max-w-[160px]" />
+          <p className="mt-1 text-xs text-ink-muted">Stops reminders once you&apos;ve logged this many doses.</p>
         </div>
-        <div>
-          <Label htmlFor="e">Ends at</Label>
-          <Input id="e" type="datetime-local" value={ends} onChange={e => setEnds(e.target.value)} />
+      </Section>
+
+      {/* 6. Prescribed by */}
+      <Section n={6} title="Who prescribed it?" optional>
+        <div className="relative">
+          <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
+          <Input value={presc ?? ''} onChange={e => setPresc(e.target.value)}
+            placeholder="Dr. Sarah Ahmed"
+            className={cn('pl-10')} />
         </div>
-      </div>
-      <div>
-        <Label htmlFor="p">Prescribed by</Label>
-        <Input id="p" placeholder="Pediatrician name (optional)" value={presc} onChange={e => setPresc(e.target.value)} />
-      </div>
-      <div>
-        <Label htmlFor="no">Notes</Label>
-        <Textarea id="no" rows={2} value={notes ?? ''} onChange={e => setNotes(e.target.value)} />
-      </div>
-      {err && <p className="text-sm text-red-600">{err}</p>}
-      <div className="flex items-center justify-between gap-2">
-        <Button type="submit" disabled={saving}>{saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Add medication'}</Button>
+      </Section>
+
+      {/* 7. Notes */}
+      <Section n={7} title="Add details" optional>
+        <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
+          placeholder="Instructions, reactions, storage tips…"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+      </Section>
+
+      {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
+
+      <div className="flex items-center gap-2">
+        <Button type="submit" disabled={saving}
+          className="flex-1 h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-lavender-500 to-brand-500">
+          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Add medication'}
+        </Button>
         {initial?.id && (
-          <Button type="button" variant="danger" onClick={onDelete} disabled={saving}>
-            Delete medication
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving}
+            className="h-14 rounded-2xl">
+            <Trash2 className="h-4 w-4" />
           </Button>
         )}
       </div>

@@ -31,7 +31,7 @@ type FileRow = {
   storage_path: string;
   mime_type: string | null;
   size_bytes: number | null;
-  created_at: string;
+  uploaded_at: string;
   ocr_status: string | null;
   is_handwritten: boolean | null;
 };
@@ -84,9 +84,9 @@ export default async function SmartScan({
   // Fetch everything in parallel for counts + each tab's list.
   const [{ data: files }, { data: extractions }] = await Promise.all([
     supabase.from('medical_files')
-      .select('id,baby_id,kind,storage_bucket,storage_path,mime_type,size_bytes,created_at,ocr_status,is_handwritten')
+      .select('id,baby_id,kind,storage_bucket,storage_path,mime_type,size_bytes,uploaded_at,ocr_status,is_handwritten')
       .eq('baby_id', params.babyId).is('deleted_at', null)
-      .order('created_at', { ascending: false }).limit(200),
+      .order('uploaded_at', { ascending: false }).limit(200),
     supabase.from('extracted_text')
       .select('id,file_id,status,confidence_score,flag_low_confidence,structured_data,created_at')
       .eq('baby_id', params.babyId)
@@ -243,7 +243,7 @@ export default async function SmartScan({
                         {friendlyKind(f.kind)}
                       </div>
                       <div className="text-xs text-ink-muted truncate">
-                        Uploaded {fmtRelative(f.created_at)} · {fmtBytes(f.size_bytes)}
+                        Uploaded {fmtRelative(f.uploaded_at)} · {fmtBytes(f.size_bytes)}
                       </div>
                     </div>
                     <span className={`rounded-full text-[10px] font-semibold px-2 py-0.5 whitespace-nowrap ${status.tint}`}>
@@ -377,7 +377,7 @@ function DetailPanel({
         <div className="min-w-0">
           <div className="text-sm font-bold text-ink-strong truncate">{friendlyKind(file.kind)}</div>
           <div className="text-[11px] text-ink-muted">
-            Uploaded {fmtDateTime(file.created_at)}
+            Uploaded {fmtDateTime(file.uploaded_at)}
           </div>
         </div>
         {ext ? (

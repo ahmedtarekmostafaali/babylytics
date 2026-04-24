@@ -38,8 +38,9 @@ export function fmtRelative(iso: string | null | undefined) {
   if (!iso) return '—';
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '—';
-  // Strict format, e.g. "2 hours" instead of "about 2 hours"
-  return `${formatDistanceToNowStrict(d)} ago`;
+  // addSuffix picks "in 2 hours" vs "2 hours ago" automatically based on whether
+  // the given date is in the future or the past.
+  return formatDistanceToNowStrict(d, { addSuffix: true });
 }
 
 /** Components of a date in the configured timezone, regardless of caller's TZ. */
