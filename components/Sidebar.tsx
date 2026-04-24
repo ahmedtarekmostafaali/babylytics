@@ -12,7 +12,7 @@ import { ageInDays } from '@/lib/dates';
 import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
-  Stethoscope,
+  Stethoscope, CalendarClock,
 } from 'lucide-react';
 
 type BabyRow = { id: string; name: string; dob: string; avatar_path: string | null };
@@ -175,6 +175,7 @@ export function Sidebar() {
                 <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label="Temperature"  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />
                 <NavItem href={`/babies/${currentBabyId}/sleep`}         icon={Moon}      label="Sleep"        active={pathname?.startsWith(`/babies/${currentBabyId}/sleep`) ?? false} collapsed={collapsed} tint="lavender" />
                 <NavItem href={`/babies/${currentBabyId}/vaccinations`}  icon={Syringe}   label="Vaccinations" active={pathname?.startsWith(`/babies/${currentBabyId}/vaccinations`) ?? false} collapsed={collapsed} tint="lavender" />
+                {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`} icon={CalendarClock} label="Appointments" active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
               </>}
             </NavGroup>
 

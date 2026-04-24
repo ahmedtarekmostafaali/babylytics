@@ -4,7 +4,9 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { FileUp, FolderArchive, Loader2 } from 'lucide-react';
+import {
+  FileUp, FolderArchive, Loader2, FileText, Pill, Stethoscope, Droplet, Files,
+} from 'lucide-react';
 import type { FileKind } from '@/lib/types';
 
 const BUCKET = 'medical-files';
@@ -23,12 +25,24 @@ function randomToken() {
 
 type Mode = 'ocr' | 'archive';
 
+const KIND_OPTIONS: { value: FileKind; label: string; sub: string; icon: React.ComponentType<{ className?: string }>; ocrable: boolean }[] = [
+  { value: 'daily_note',   label: 'Handwritten note',  sub: 'OCR-able',  icon: FileText,    ocrable: true },
+  { value: 'prescription', label: 'Prescription',      sub: 'OCR-able',  icon: Pill,        ocrable: true },
+  { value: 'report',       label: 'Medical report',    sub: 'OCR-able',  icon: Stethoscope, ocrable: true },
+  { value: 'stool_image',  label: 'Stool image',       sub: 'reference', icon: Droplet,     ocrable: false },
+  { value: 'other',        label: 'Other document',    sub: 'reference', icon: Files,       ocrable: false },
+];
+
 /**
  * The two hero drop-zones at the top of Smart Scan. Each one takes over the
  * upload flow in a different mode:
  *   - "ocr" mode uploads + invokes the `ocr-extract` edge function, then sends
  *     the user to the review screen.
  *   - "archive" mode is a pure upload (no OCR) for reference documents.
+ *
+ * Before uploading, the user picks a "kind" (Handwritten note, Prescription,
+ * Medical report, Stool image, Other) so the file lands in the correct bucket
+ * and surfaces in the right Smart Scan tab.
  */
 export function SmartScanUploader({ babyId, mode }: { babyId: string; mode: Mode }) {
   const router = useRouter();
@@ -36,9 +50,18 @@ export function SmartScanUploader({ babyId, mode }: { babyId: string; mode: Mode
   const [dragOver, setDragOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Default kind by mode — OCR mode defaults to "Handwritten note", archive
+  // mode to "Other". User can change before clicking the dropzone.
+  const [kind, setKind] = useState<FileKind>(mode === 'ocr' ? 'daily_note' : 'other');
 
   const accept = mode === 'ocr' ? 'image/*,application/pdf' : '*/*';
   const maxMb  = mode === 'ocr' ? 10 : 20;
+  // OCR mode only shows OCR-able kinds (note/prescription/report). Archive
+  // mode shows everything since you might want to archive a prescription
+  // without running OCR.
+  const visibleKinds = mode === 'ocr'
+    ? KIND_OPTIONS.filter(o => o.ocrable)
+    : KIND_OPTIONS;
 
   async function upload(file: File) {
     if (file.size > maxMb * 1024 * 1024) { setErr(`File too large (limit ${maxMb} MB).`); return; }
@@ -47,7 +70,6 @@ export function SmartScanUploader({ babyId, mode }: { babyId: string; mode: Mode
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) { setBusy(false); setErr('Not signed in.'); return; }
 
-    const kind: FileKind = mode === 'ocr' ? 'daily_note' : 'other';
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '_');
     const storagePath = `babies/${babyId}/${KIND_DIR[kind]}/${randomToken()}_${safeName}`;
 
@@ -123,6 +145,39 @@ export function SmartScanUploader({ babyId, mode }: { babyId: string; mode: Mode
           </div>
           <p className="text-xs text-ink-muted">{scheme.subtitle}</p>
           <p className="text-xs text-ink-muted">{scheme.helper}</p>
+        </div>
+      </div>
+
+      {/* Kind picker — choose what type of document this is so it lands in
+          the right Smart Scan tab (and gets OCR'd correctly). */}
+      <div className="mb-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted mb-2">
+          Document type
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {visibleKinds.map(o => {
+            const active = kind === o.value;
+            const Icon = o.icon;
+            return (
+              <button type="button" key={o.value}
+                onClick={() => setKind(o.value)}
+                disabled={busy}
+                className={cn(
+                  'flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition disabled:opacity-60',
+                  active
+                    ? cn('ring-2 border-transparent', isOcr ? 'ring-lavender-500 bg-lavender-50' : 'ring-mint-500 bg-mint-50')
+                    : 'border-slate-200 bg-white hover:bg-slate-50',
+                )}>
+                <span className={cn('h-7 w-7 rounded-lg grid place-items-center shrink-0', scheme.icon)}>
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-xs font-semibold text-ink-strong truncate">{o.label}</span>
+                  <span className="block text-[10px] text-ink-muted truncate">{o.sub}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -165,6 +165,17 @@ export default async function BabyOverview({
     subtitle?: string;
     href: string;
   };
+  // Today's totals — surfaced as their own cards beside "Last feeding" / "Last stool".
+  const todayFeedRows = (todayFeeds.data ?? []) as { quantity_ml: number | string | null; duration_min: number | string | null; milk_type: string }[];
+  const todayFeedCount  = todayFeedRows.length;
+  const todayFeedVolume = todayFeedRows.reduce((a, r) => a + Number(r.quantity_ml || 0), 0);
+  const todayBreasts    = todayFeedRows.filter(r => r.milk_type === 'breast').length;
+  const todayStoolRows  = (todayStool.data ?? []) as { quantity_category: string | null }[];
+  const todayStoolCount = todayStoolRows.length;
+  const todayStoolSmall  = todayStoolRows.filter(r => r.quantity_category === 'small').length;
+  const todayStoolMedium = todayStoolRows.filter(r => r.quantity_category === 'medium').length;
+  const todayStoolLarge  = todayStoolRows.filter(r => r.quantity_category === 'large').length;
+
   const tl: TimelineItem[] = [];
   for (const r of (todayFeeds.data ?? [])) {
     const bits: string[] = [];
@@ -446,7 +457,7 @@ export default async function BabyOverview({
       )}
 
       {/* ═══ ROW: Last X cards ═══ */}
-      <section className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <section className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         <LastCard
           tint="coral" icon={Milk}
           label="Last feeding"
@@ -454,6 +465,17 @@ export default async function BabyOverview({
           sub={lastFeed.data ? lastFeedBits.slice(1).join(' · ') : 'tap to log'}
           time={lastFeed.data?.feeding_time ?? null}
           href={`/babies/${babyId}/feedings`}
+        />
+        <LastCard
+          tint="peach" icon={Milk}
+          label="Today's feedings"
+          value={todayFeedCount === 0 ? 'No data' : `${todayFeedCount} feed${todayFeedCount === 1 ? '' : 's'}`}
+          sub={todayFeedCount === 0
+            ? 'log your first feed'
+            : `${fmtMl(todayFeedVolume)}${todayBreasts > 0 ? ` · ${todayBreasts} breast` : ''}`}
+          time={null}
+          href={`/babies/${babyId}/feedings`}
+          badge={todayFeedCount > 0 ? 'today' : undefined}
         />
         <LastCard
           tint="lavender" icon={Moon}
@@ -477,6 +499,17 @@ export default async function BabyOverview({
           sub={lastStool.data?.color ?? 'tap to log'}
           time={lastStool.data?.stool_time ?? null}
           href={`/babies/${babyId}/stool`}
+        />
+        <LastCard
+          tint="mint" icon={Droplet}
+          label="Today's stool"
+          value={todayStoolCount === 0 ? 'No data' : `${todayStoolCount} change${todayStoolCount === 1 ? '' : 's'}`}
+          sub={todayStoolCount === 0
+            ? 'log a diaper'
+            : `S ${todayStoolSmall} · M ${todayStoolMedium} · L ${todayStoolLarge}`}
+          time={null}
+          href={`/babies/${babyId}/stool`}
+          badge={todayStoolCount > 0 ? 'today' : undefined}
         />
         <LastCard
           tint={nextDose?.isOverdue ? 'coral' : 'peach'} icon={Pill}

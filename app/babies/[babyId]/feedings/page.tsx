@@ -8,7 +8,7 @@ import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
 import { assertRole } from '@/lib/role-guard';
 import {
-  parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime,
+  parseRangeParam, fmtDate, fmtTime, fmtDateTime,
   lastNDaysWindow, todayLocalDate,
 } from '@/lib/dates';
 import { fmtMl } from '@/lib/units';
@@ -97,24 +97,14 @@ export default async function FeedingsLog({
     .gte('feeding_time', range.start).lte('feeding_time', range.end);
   if (typeFilterActive) feedQuery = feedQuery.in('milk_type', activeTypes);
 
-  const [{ data: rowsData }, { data: todayData }] = await Promise.all([
-    feedQuery.order('feeding_time', { ascending: false }).limit(500),
-    (async () => {
-      const w = dayWindow(todayLocalDate());
-      return supabase.from('feedings')
-        .select('id,milk_type,quantity_ml,duration_min')
-        .eq('baby_id', params.babyId).is('deleted_at', null)
-        .gte('feeding_time', w.start).lt('feeding_time', w.end);
-    })(),
-  ]);
-
+  const { data: rowsData } = await feedQuery.order('feeding_time', { ascending: false }).limit(500);
   const rows = (rowsData ?? []) as Row[];
-  const todays = (todayData ?? []) as { milk_type: string; quantity_ml: number | null; duration_min: number | null }[];
 
-  // Today summary
-  const todayBreasts = todays.filter(r => r.milk_type === 'breast');
-  const todayTotalVolume = todays.reduce((a, r) => a + Number(r.quantity_ml || 0), 0);
-  const todayBreastMin   = todayBreasts.reduce((a, r) => a + Number(r.duration_min || 0), 0);
+  // Range summary — drives the "Summary" card on the right rail. Updates
+  // whenever the user changes the range tabs or picks a custom date range.
+  const summaryBreasts     = rows.filter(r => r.milk_type === 'breast');
+  const summaryTotalVolume = rows.reduce((a, r) => a + Number(r.quantity_ml || 0), 0);
+  const summaryBreastMin   = summaryBreasts.reduce((a, r) => a + Number(r.duration_min || 0), 0);
 
   // Group rows by day
   const buckets = new Map<string, Row[]>();
@@ -198,9 +188,6 @@ export default async function FeedingsLog({
                         <div className="text-right">
                           <div className="text-sm font-bold text-ink-strong leading-tight">
                             {fmtTime(r.feeding_time)}
-                          </div>
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">
-                            24h
                           </div>
                         </div>
                         {/* Icon */}
@@ -354,12 +341,12 @@ export default async function FeedingsLog({
           {/* Summary */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-ink-strong">Summary (Today)</h3>
+              <h3 className="text-sm font-bold text-ink-strong">Summary · {range.label}</h3>
             </div>
             <ul className="space-y-2 text-sm">
-              <SummaryRow icon={Milk}     tint="lavender" label="Total feedings" value={todays.length} />
-              <SummaryRow icon={Milk}     tint="mint"     label="Total volume"   value={fmtMl(todayTotalVolume)} />
-              <SummaryRow icon={BabyIcon} tint="coral"    label="Breastfeeding time" value={`${todayBreastMin} min`} />
+              <SummaryRow icon={Milk}     tint="lavender" label="Total feedings" value={rows.length} />
+              <SummaryRow icon={Milk}     tint="mint"     label="Total volume"   value={fmtMl(summaryTotalVolume)} />
+              <SummaryRow icon={BabyIcon} tint="coral"    label="Breastfeeding time" value={`${summaryBreastMin} min`} />
             </ul>
           </section>
 

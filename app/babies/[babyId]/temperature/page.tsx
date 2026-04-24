@@ -72,30 +72,21 @@ export default async function TemperatureLog({
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
 
-  const [{ data: rowsData }, { data: todayData }] = await Promise.all([
-    supabase.from('temperature_logs')
-      .select('id,measured_at,temperature_c,method,notes,source,created_at')
-      .eq('baby_id', params.babyId).is('deleted_at', null)
-      .gte('measured_at', range.start).lte('measured_at', range.end)
-      .order('measured_at', { ascending: false }).limit(500),
-    (async () => {
-      const w = dayWindow(todayLocalDate());
-      return supabase.from('temperature_logs')
-        .select('id,temperature_c')
-        .eq('baby_id', params.babyId).is('deleted_at', null)
-        .gte('measured_at', w.start).lt('measured_at', w.end);
-    })(),
-  ]);
+  const { data: rowsData } = await supabase.from('temperature_logs')
+    .select('id,measured_at,temperature_c,method,notes,source,created_at')
+    .eq('baby_id', params.babyId).is('deleted_at', null)
+    .gte('measured_at', range.start).lte('measured_at', range.end)
+    .order('measured_at', { ascending: false }).limit(500);
 
   const rowsAll = (rowsData ?? []) as Row[];
   const rows = typeFilter
     ? rowsAll.filter(r => activeStatuses.includes(statusKey(Number(r.temperature_c))))
     : rowsAll;
-  const todays = (todayData ?? []) as { temperature_c: number | string }[];
-  const values = todays.map(r => Number(r.temperature_c)).filter(Number.isFinite);
+  // Range summary — peak/avg/fever computed across the active window.
+  const values    = rows.map(r => Number(r.temperature_c)).filter(Number.isFinite);
   const todayPeak = values.length ? Math.max(...values) : null;
-  const todayAvg  = values.length ? values.reduce((a,b)=>a+b,0) / values.length : null;
-  const hasFever = values.some(v => v >= 38);
+  const todayAvg  = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+  const hasFever  = values.some(v => v >= 38);
 
   // Sparkline for the last window
   const sparkValues = rows.slice(0, 30).reverse().map(r => Number(r.temperature_c)).filter(Number.isFinite);
@@ -165,7 +156,6 @@ export default async function TemperatureLog({
                         className={`grid grid-cols-[76px_44px_1fr_auto] items-center gap-3 px-4 py-3 hover:bg-slate-50 transition ${active ? 'bg-coral-50/60' : ''}`}>
                         <div className="text-right">
                           <div className="text-sm font-bold text-ink-strong leading-tight">{fmtTime(r.measured_at)}</div>
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">24h</div>
                         </div>
                         <span className="h-10 w-10 rounded-xl bg-coral-100 text-coral-600 grid place-items-center shrink-0">
                           <Thermometer className="h-5 w-5" />
@@ -260,10 +250,10 @@ export default async function TemperatureLog({
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-ink-strong">Summary (Today)</h3>
+              <h3 className="text-sm font-bold text-ink-strong">Summary · {range.label}</h3>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <MiniStat label="Readings" value={todays.length} />
+              <MiniStat label="Readings" value={rows.length} />
               <MiniStat label="Avg" value={todayAvg != null ? `${todayAvg.toFixed(1)} °C` : '—'} />
               <MiniStat label="Peak" value={todayPeak != null ? `${todayPeak.toFixed(1)} °C` : '—'} />
             </div>

@@ -73,23 +73,14 @@ export default async function StoolLog({
     .gte('stool_time', range.start).lte('stool_time', range.end);
   if (typeFilter) q = q.in('quantity_category', activeSizes);
 
-  const [{ data: rowsData }, { data: todayData }] = await Promise.all([
-    q.order('stool_time', { ascending: false }).limit(500),
-    (async () => {
-      const w = dayWindow(todayLocalDate());
-      return supabase.from('stool_logs')
-        .select('id,quantity_category,has_diaper_rash')
-        .eq('baby_id', params.babyId).is('deleted_at', null)
-        .gte('stool_time', w.start).lt('stool_time', w.end);
-    })(),
-  ]);
-
+  const { data: rowsData } = await q.order('stool_time', { ascending: false }).limit(500);
   const rows = (rowsData ?? []) as Row[];
-  const todays = (todayData ?? []) as { quantity_category: string | null; has_diaper_rash: boolean | null }[];
-  const todaySmall = todays.filter(r => r.quantity_category === 'small').length;
-  const todayMedium = todays.filter(r => r.quantity_category === 'medium').length;
-  const todayLarge  = todays.filter(r => r.quantity_category === 'large').length;
-  const todayRash = todays.filter(r => r.has_diaper_rash).length;
+  // Range summary — counts/breakdown for whatever window is active.
+  const todays      = rows;
+  const todaySmall  = rows.filter(r => r.quantity_category === 'small').length;
+  const todayMedium = rows.filter(r => r.quantity_category === 'medium').length;
+  const todayLarge  = rows.filter(r => r.quantity_category === 'large').length;
+  const todayRash   = rows.filter(r => r.has_diaper_rash).length;
 
   const buckets = new Map<string, Row[]>();
   for (const r of rows) {
@@ -152,7 +143,6 @@ export default async function StoolLog({
                         className={`grid grid-cols-[76px_44px_1fr_auto] items-center gap-3 px-4 py-3 hover:bg-slate-50 transition ${active ? 'bg-mint-50/60' : ''}`}>
                         <div className="text-right">
                           <div className="text-sm font-bold text-ink-strong leading-tight">{fmtTime(r.stool_time)}</div>
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">24h</div>
                         </div>
                         <span className="h-10 w-10 rounded-xl grid place-items-center shrink-0 bg-mint-100 text-mint-600">
                           <Droplet className="h-5 w-5" />
@@ -239,15 +229,15 @@ export default async function StoolLog({
               <div className="text-sm font-bold text-peach-900">Insight</div>
               <div className="text-xs text-peach-900/90">
                 {todays.length === 0
-                  ? `No diaper changes logged today yet.`
-                  : `You've logged ${todays.length} diaper${todays.length === 1 ? '' : 's'} today — keep the rhythm.`}
+                  ? `No diaper changes in this window.`
+                  : `You've logged ${todays.length} diaper${todays.length === 1 ? '' : 's'} in ${range.label.toLowerCase()}.`}
                 {todayRash > 0 && ` ${todayRash} with rash noted.`}
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
-            <h3 className="text-sm font-bold text-ink-strong mb-3">Summary (Today)</h3>
+            <h3 className="text-sm font-bold text-ink-strong mb-3">Summary · {range.label}</h3>
             <ul className="space-y-2 text-sm">
               <SumRow label="Total diapers" value={todays.length} tint="mint" />
               <SumRow label="Small" value={todaySmall} tint="mint" />

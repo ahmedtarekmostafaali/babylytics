@@ -20,9 +20,9 @@ function fmt(iso: string | null | undefined, opts: Intl.DateTimeFormatOptions): 
 
 export function fmtDateTime(iso: string | null | undefined) {
   if (!iso) return '—';
-  // Output: "Apr 24, 2026 · 14:30" in Cairo time
+  // Output: "Apr 24, 2026 · 2:30 PM" in Cairo time
   const date = fmt(iso, { month: 'short', day: 'numeric', year: 'numeric' });
-  const time = fmt(iso, { hour: '2-digit', minute: '2-digit', hour12: false });
+  const time = fmt(iso, { hour: 'numeric', minute: '2-digit', hour12: true });
   return `${date} · ${time}`;
 }
 
@@ -31,7 +31,7 @@ export function fmtDate(iso: string | null | undefined) {
 }
 
 export function fmtTime(iso: string | null | undefined) {
-  return fmt(iso, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return fmt(iso, { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 export function fmtRelative(iso: string | null | undefined) {

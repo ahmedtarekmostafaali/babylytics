@@ -83,6 +83,12 @@ export default async function MedicationsLog({
   const todays = (todayLogs ?? []) as { status: LogRow['status'] }[];
   const medById = new Map(meds.map(m => [m.id, m]));
 
+  // Range-aware counts (driven by the active range, not "today"). The "due
+  // today" denominator below stays calendar-specific because that's what
+  // adherence means medically.
+  const rangeTaken   = logs.filter(t => t.status === 'taken').length;
+  const rangeMissed  = logs.filter(t => t.status === 'missed').length;
+  const rangeSkipped = logs.filter(t => t.status === 'skipped').length;
   const todayTaken   = todays.filter(t => t.status === 'taken').length;
   const todayMissed  = todays.filter(t => t.status === 'missed').length;
   const todaySkipped = todays.filter(t => t.status === 'skipped').length;
@@ -250,7 +256,6 @@ export default async function MedicationsLog({
                         className={`grid grid-cols-[76px_44px_1fr_auto] items-center gap-3 px-4 py-3 hover:bg-slate-50 transition ${active ? 'bg-lavender-50/60' : ''}`}>
                         <div className="text-right">
                           <div className="text-sm font-bold text-ink-strong leading-tight">{fmtTime(r.medication_time)}</div>
-                          <div className="text-[10px] text-ink-muted uppercase tracking-wider">24h</div>
                         </div>
                         <span className="h-10 w-10 rounded-xl bg-lavender-100 text-lavender-600 grid place-items-center shrink-0">
                           <Pill className="h-5 w-5" />
@@ -383,20 +388,20 @@ export default async function MedicationsLog({
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-ink-strong">Summary (Today)</h3>
+              <h3 className="text-sm font-bold text-ink-strong">Summary · {range.label}</h3>
               {todayDueTotal > 0 && (
                 <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
-                  {todayLogged} / {todayDueTotal} logged
+                  {todayLogged} / {todayDueTotal} today
                 </span>
               )}
             </div>
             <ul className="space-y-2 text-sm">
-              <AdhRow icon={CheckCircle2}    tint="mint"     label="Taken"      value={todayTaken} />
-              <AdhRow icon={AlertTriangle}   tint="coral"    label="Missed"     value={todayMissed} />
-              <AdhRow icon={XCircle}         tint="peach"    label="Skipped"    value={todaySkipped} />
+              <AdhRow icon={CheckCircle2}    tint="mint"     label="Taken"      value={rangeTaken} />
+              <AdhRow icon={AlertTriangle}   tint="coral"    label="Missed"     value={rangeMissed} />
+              <AdhRow icon={XCircle}         tint="peach"    label="Skipped"    value={rangeSkipped} />
               <AdhRow icon={Pill}            tint="lavender" label="Due today"  value={todayDueTotal} />
               {todayPending > 0 && (
-                <AdhRow icon={AlertTriangle} tint="coral"    label="Still to log" value={todayPending} />
+                <AdhRow icon={AlertTriangle} tint="coral"    label="Still to log today" value={todayPending} />
               )}
             </ul>
             {todayDueTotal > 0 && (
