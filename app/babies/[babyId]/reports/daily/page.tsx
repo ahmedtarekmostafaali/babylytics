@@ -184,7 +184,7 @@ export default async function DailyReport({
 
 /** Compact KPI tile that prints well */
 function MiniKpi({ tint, icon: Icon, label, value, sub }: {
-  tint: 'peach' | 'mint' | 'lavender' | 'brand';
+  tint: 'peach' | 'mint' | 'lavender' | 'brand' | 'coral';
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: React.ReactNode;
@@ -195,6 +195,7 @@ function MiniKpi({ tint, icon: Icon, label, value, sub }: {
     mint:     { bg: 'bg-gradient-to-br from-mint-50 to-white border-mint-200',         iconBg: 'bg-mint-500',     val: 'text-ink-strong' },
     lavender: { bg: 'bg-gradient-to-br from-lavender-50 to-white border-lavender-200', iconBg: 'bg-lavender-500', val: 'text-ink-strong' },
     brand:    { bg: 'bg-gradient-to-br from-brand-50 to-white border-brand-200',       iconBg: 'bg-brand-500',    val: 'text-ink-strong' },
+    coral:    { bg: 'bg-gradient-to-br from-coral-50 to-white border-coral-200',       iconBg: 'bg-coral-500',    val: 'text-ink-strong' },
   }[tint];
   return (
     <div className={`rounded-2xl border ${tintCss.bg} p-3`}>
