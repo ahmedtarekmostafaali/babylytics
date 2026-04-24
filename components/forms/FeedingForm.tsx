@@ -161,8 +161,8 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
         {isBreast && (
           <div className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-3">
-              <BreastBox side="L" label="Left breast" minutes={leftMin} onChange={setLeftMin} />
-              <BreastBox side="R" label="Right breast" minutes={rightMin} onChange={setRightMin} />
+              <Stepper label="Left breast"  value={leftMin}  onChange={setLeftMin}  unit="min" badge={{ text: 'L', tint: 'coral' }} />
+              <Stepper label="Right breast" value={rightMin} onChange={setRightMin} unit="min" badge={{ text: 'R', tint: 'lavender' }} />
             </div>
 
             {/* Timer */}
@@ -287,37 +287,5 @@ function fmtDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-// ---- Small UI pieces ------------------------------------------------------
-
-function BreastBox({ side, label, minutes, onChange }: {
-  side: 'L' | 'R';
-  label: string;
-  minutes: number;
-  onChange: (m: number) => void;
-}) {
-  const badge = side === 'L' ? 'bg-coral-100 text-coral-700' : 'bg-lavender-100 text-lavender-700';
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-medium text-ink">{label}</div>
-        <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold', badge)}>{side}</span>
-      </div>
-      <div className="mt-2 flex items-center justify-between">
-        <div className="text-3xl font-bold text-ink-strong">{minutes} <span className="text-sm font-medium text-ink-muted">min</span></div>
-        <div className="inline-flex items-center gap-1">
-          <button type="button" onClick={() => onChange(Math.max(0, minutes - 1))}
-            className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 grid place-items-center">
-            <Minus className="h-4 w-4 text-ink" />
-          </button>
-          <button type="button" onClick={() => onChange(minutes + 1)}
-            className="h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 grid place-items-center">
-            <Plus className="h-4 w-4 text-ink" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 

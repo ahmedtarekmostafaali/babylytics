@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MedicationLogSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
-import { Input, Label } from '@/components/ui/Input';
+import { Input } from '@/components/ui/Input';
 import { Section, TypeTile, WhenPicker } from '@/components/forms/FormKit';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
-import { Pill, Save, Check, XCircle, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Pill, Save, Check, XCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Status = 'taken'|'missed'|'skipped';
