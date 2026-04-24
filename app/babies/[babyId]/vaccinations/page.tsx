@@ -3,9 +3,11 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { SeedScheduleButton } from '@/components/SeedScheduleButton';
+import { LogRowDelete } from '@/components/LogRowDelete';
+import { BulkDelete } from '@/components/BulkDelete';
 import { fmtDate, fmtDateTime, fmtRelative } from '@/lib/dates';
 import {
-  Syringe, Plus, Edit3, Trash2, Sparkles, ArrowRight, Clock,
+  Syringe, Plus, Edit3, Sparkles, ArrowRight, Clock,
   AlertTriangle, CheckCircle2, XCircle, CalendarClock,
 } from 'lucide-react';
 
@@ -82,8 +84,12 @@ export default async function VaccinationsLog({
         title="Vaccinations"
         subtitle={`${rows.length} entries · ${done.length} administered · ${overdue.length} overdue`}
         right={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {rows.length === 0 && <SeedScheduleButton babyId={params.babyId} />}
+            {rows.length > 0 && (
+              <BulkDelete babyId={params.babyId} table="vaccinations" timeColumn="scheduled_at"
+                visibleIds={rows.map(r => r.id)} kindLabel="vaccination entries" />
+            )}
             <Link href={`/babies/${params.babyId}/vaccinations/new`}
               className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
               <Plus className="h-4 w-4" /> Add
@@ -194,9 +200,7 @@ export default async function VaccinationsLog({
                         className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
                         <Edit3 className="h-3 w-3" /> Edit
                       </Link>
-                      <span className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-coral-600" aria-hidden>
-                        <Trash2 className="h-3 w-3" />
-                      </span>
+                      <LogRowDelete table="vaccinations" id={selected.id} />
                     </div>
                   )}
                 </div>

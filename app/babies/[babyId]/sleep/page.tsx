@@ -4,13 +4,15 @@ import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
+import { LogRowDelete } from '@/components/LogRowDelete';
+import { BulkDelete } from '@/components/BulkDelete';
 import { Sparkline } from '@/components/Sparkline';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
 } from '@/lib/dates';
 import {
   Moon, Bed, Car, Home, Armchair, Baby as BabyIcon, HelpCircle, Plus,
-  Edit3, Trash2, Sparkles, ArrowRight, Clock, Smile, Meh, Frown,
+  Edit3, Sparkles, ArrowRight, Clock, Smile, Meh, Frown,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -129,10 +131,14 @@ export default async function SleepLog({
         title="Sleep Log"
         subtitle={`All sleep sessions for ${baby.name}.`}
         right={
-          <Link href={`/babies/${params.babyId}/sleep/new`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-            <Plus className="h-4 w-4" /> Log sleep
-          </Link>
+          <div className="flex items-center gap-2">
+            <BulkDelete babyId={params.babyId} table="sleep_logs" timeColumn="start_at"
+              visibleIds={rows.map(r => r.id)} kindLabel="sleep sessions" />
+            <Link href={`/babies/${params.babyId}/sleep/new`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+              <Plus className="h-4 w-4" /> Log sleep
+            </Link>
+          </div>
         } />
 
       {running && (
@@ -229,9 +235,7 @@ export default async function SleepLog({
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
                     <Edit3 className="h-3 w-3" /> Edit
                   </Link>
-                  <span className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-coral-600" aria-hidden>
-                    <Trash2 className="h-3 w-3" />
-                  </span>
+                  <LogRowDelete table="sleep_logs" id={selected.id} />
                 </div>
               )}
             </div>

@@ -4,12 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
+import { LogRowDelete } from '@/components/LogRowDelete';
+import { BulkDelete } from '@/components/BulkDelete';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
 } from '@/lib/dates';
 import { fmtMl } from '@/lib/units';
 import {
-  Droplet, Plus, Edit3, Trash2, Sparkles, ArrowRight, Clock,
+  Droplet, Plus, Edit3, Sparkles, ArrowRight, Clock,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -102,10 +104,14 @@ export default async function StoolLog({
         title="Stool Log"
         subtitle={`All recorded diaper changes for ${baby.name}.`}
         right={
-          <Link href={`/babies/${params.babyId}/stool/new`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-mint-500 to-mint-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-            <Plus className="h-4 w-4" /> Log stool
-          </Link>
+          <div className="flex items-center gap-2">
+            <BulkDelete babyId={params.babyId} table="stool_logs" timeColumn="stool_time"
+              visibleIds={rows.map(r => r.id)} kindLabel="stool logs" />
+            <Link href={`/babies/${params.babyId}/stool/new`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-mint-500 to-mint-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+              <Plus className="h-4 w-4" /> Log stool
+            </Link>
+          </div>
         } />
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -173,9 +179,7 @@ export default async function StoolLog({
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
                     <Edit3 className="h-3 w-3" /> Edit
                   </Link>
-                  <span className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-coral-600" aria-hidden>
-                    <Trash2 className="h-3 w-3" />
-                  </span>
+                  <LogRowDelete table="stool_logs" id={selected.id} />
                 </div>
               )}
             </div>

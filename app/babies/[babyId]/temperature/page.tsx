@@ -4,12 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
+import { LogRowDelete } from '@/components/LogRowDelete';
+import { BulkDelete } from '@/components/BulkDelete';
 import { Sparkline } from '@/components/Sparkline';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate,
 } from '@/lib/dates';
 import {
-  Thermometer, Plus, Edit3, Trash2, Sparkles, ArrowRight, Clock,
+  Thermometer, Plus, Edit3, Sparkles, ArrowRight, Clock,
   AlertTriangle, ShieldCheck,
 } from 'lucide-react';
 
@@ -111,10 +113,14 @@ export default async function TemperatureLog({
         title="Temperature Log"
         subtitle={`All temperature readings for ${baby.name}.`}
         right={
-          <Link href={`/babies/${params.babyId}/temperature/new`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-coral-500 to-coral-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-            <Plus className="h-4 w-4" /> Log reading
-          </Link>
+          <div className="flex items-center gap-2">
+            <BulkDelete babyId={params.babyId} table="temperature_logs" timeColumn="measured_at"
+              visibleIds={rows.map(r => r.id)} kindLabel="readings" />
+            <Link href={`/babies/${params.babyId}/temperature/new`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-coral-500 to-coral-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
+              <Plus className="h-4 w-4" /> Log reading
+            </Link>
+          </div>
         } />
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -186,9 +192,7 @@ export default async function TemperatureLog({
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
                     <Edit3 className="h-3 w-3" /> Edit
                   </Link>
-                  <span className="inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200 bg-white text-coral-600" aria-hidden>
-                    <Trash2 className="h-3 w-3" />
-                  </span>
+                  <LogRowDelete table="temperature_logs" id={selected.id} />
                 </div>
               )}
             </div>
