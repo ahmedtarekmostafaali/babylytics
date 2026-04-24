@@ -185,17 +185,23 @@ create trigger trg_touch_care_plan before update on public.care_plan
   for each row execute function public.touch_updated_at();
 
 -- Audit triggers --------------------------------------------------------------
+-- NOTE: care_plan is intentionally excluded — its PK is baby_id (not id), and
+-- the shared audit_row_change() helper extracts (v_new->>'id') as row_id,
+-- which would null-violate audit_log.row_id. care_plan is a singleton per
+-- baby so per-row audit history isn't useful here anyway.
 do $$
 declare t text;
 begin
   for t in select unnest(array[
     'admissions','discharges','lab_panels','lab_panel_items',
-    'allergies','medical_conditions','care_plan'
+    'allergies','medical_conditions'
   ]) loop
     execute format('drop trigger if exists trg_audit_%1$s on public.%1$s', t);
     execute format('create trigger trg_audit_%1$s after insert or update or delete on public.%1$s for each row execute function public.audit_row_change()', t);
   end loop;
 end $$;
+-- Make sure no stale care_plan audit trigger exists from earlier runs.
+drop trigger if exists trg_audit_care_plan on public.care_plan;
 
 -- RLS -------------------------------------------------------------------------
 -- The medical profile is sensitive but useful — same audience as the daily
