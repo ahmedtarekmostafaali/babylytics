@@ -6,17 +6,24 @@ import { KpiCard } from '@/components/KpiCard';
 import { FeedingChart } from '@/components/FeedingChart';
 import { WeightChart } from '@/components/WeightChart';
 import { StoolChart } from '@/components/StoolChart';
+import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { fmtDateTime, fmtRelative, last24hWindow } from '@/lib/dates';
+import { fmtDateTime, fmtRelative, parseRangeParam } from '@/lib/dates';
 import { fmtMl, fmtPct, fmtKg } from '@/lib/units';
 import { Milk, Target, TrendingDown, Percent, Droplet, Droplets, Pill, Scale } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function BabyPage({ params }: { params: { babyId: string } }) {
+export default async function BabyPage({
+  params,
+  searchParams,
+}: {
+  params: { babyId: string };
+  searchParams: { range?: string; start?: string; end?: string };
+}) {
   const supabase = createClient();
   const babyId = params.babyId;
-  const { start, end } = last24hWindow();
+  const range = parseRangeParam(searchParams);
 
   const { data: baby } = await supabase
     .from('babies')
@@ -26,6 +33,9 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
     .single();
   if (!baby) notFound();
 
+  // Series defaults: stretch over the filter window where sensible.
+  const seriesDays = Math.min(Math.max(range.days, 14), 90);
+
   const [
     feedingKpi, stoolKpi, medicationKpi,
     feedingSeries, stoolSeries, weightSeries,
@@ -34,11 +44,11 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
     lowConf, recentFiles,
     activeMeds,
   ] = await Promise.all([
-    supabase.rpc('feeding_kpis',         { p_baby: babyId, p_start: start, p_end: end }).single(),
-    supabase.rpc('stool_kpis',           { p_baby: babyId, p_start: start, p_end: end }).single(),
-    supabase.rpc('medication_kpis',      { p_baby: babyId, p_start: start, p_end: end }).single(),
-    supabase.rpc('daily_feeding_series', { p_baby: babyId, p_days: 30 }),
-    supabase.rpc('daily_stool_series',   { p_baby: babyId, p_days: 30 }),
+    supabase.rpc('feeding_kpis',         { p_baby: babyId, p_start: range.start, p_end: range.end }).single(),
+    supabase.rpc('stool_kpis',           { p_baby: babyId, p_start: range.start, p_end: range.end }).single(),
+    supabase.rpc('medication_kpis',      { p_baby: babyId, p_start: range.start, p_end: range.end }).single(),
+    supabase.rpc('daily_feeding_series', { p_baby: babyId, p_days: seriesDays }),
+    supabase.rpc('daily_stool_series',   { p_baby: babyId, p_days: seriesDays }),
     supabase.rpc('weight_trend',         { p_baby: babyId, p_days: 365 }),
     supabase.rpc('current_weight_kg',    { p_baby: babyId }),
     supabase.from('feedings')
@@ -74,6 +84,13 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
   const feedingPct = Number(f.feeding_percentage) || 0;
   const adherencePct = Number(m.adherence_pct) || 0;
 
+  // Scale "recommended" to the window length so it compares apples-to-apples.
+  const recommendedDaily = Number(f.recommended_feed_ml) || 0;
+  const windowRecommended = Math.round(recommendedDaily * range.days);
+  const totalMl = Number(f.total_feed_ml) || 0;
+  const windowPct = windowRecommended > 0 ? Math.round((totalMl / windowRecommended) * 100) : 0;
+  const windowRemaining = Math.max(0, windowRecommended - totalMl);
+
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 space-y-6">
       <BabyHeader
@@ -98,20 +115,26 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
         </div>
       )}
 
-      {/* KPI row — rolling 24h */}
+      {/* KPI row with filter */}
       <section>
-        <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Last 24 hours</h2>
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+          <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">{range.label}</h2>
+          <DateRangeFilter currentKey={range.key} />
+        </div>
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <KpiCard tint="peach" icon={Milk}       label="Total feed"          value={fmtMl(f.total_feed_ml)}       sub={`${f.feed_count ?? 0} feeds · avg ${fmtMl(f.avg_feed_ml)}`} />
-          <KpiCard tint="peach" icon={Target}     label="Recommended (24h)"   value={fmtMl(f.recommended_feed_ml)} sub={w ? `${fmtKg(w)} × ${factor} ml/kg/day` : 'log a measurement'} />
-          <KpiCard tint="peach" icon={TrendingDown} label="Remaining"         value={fmtMl(f.remaining_feed_ml)}   tone={feedingPct < 70 ? 'warning' : 'positive'} />
-          <KpiCard tint="peach" icon={Percent}    label="Feeding %"           value={fmtPct(f.feeding_percentage)} tone={feedingPct >= 90 ? 'positive' : feedingPct >= 70 ? 'neutral' : 'warning'} />
+          <KpiCard tint="peach" icon={Milk}          label="Total feed"        value={fmtMl(f.total_feed_ml)}       sub={`${f.feed_count ?? 0} feeds · avg ${fmtMl(f.avg_feed_ml)}`} />
+          <KpiCard tint="peach" icon={Target}        label={`Recommended (${range.days}d)`} value={fmtMl(windowRecommended)} sub={w ? `${fmtKg(w)} × ${factor} ml/kg/day` : 'log a measurement'} />
+          <KpiCard tint="peach" icon={TrendingDown}  label="Remaining"         value={fmtMl(windowRemaining)} tone={windowPct < 70 ? 'warning' : 'positive'} />
+          <KpiCard tint="peach" icon={Percent}       label="Feeding %"         value={`${windowPct}%`} tone={windowPct >= 90 ? 'positive' : windowPct >= 70 ? 'neutral' : 'warning'} />
 
           <KpiCard tint="mint"     icon={Droplet}  label="Stool count"    value={s.stool_count ?? 0} sub={`S:${s.small_count ?? 0} · M:${s.medium_count ?? 0} · L:${s.large_count ?? 0}`} />
-          <KpiCard tint="mint"     icon={Droplets} label="Stool quantity" value={fmtMl(s.total_ml)} sub={s.last_stool_at ? `last ${fmtRelative(s.last_stool_at)}` : 'no stool in 24h'} />
+          <KpiCard tint="mint"     icon={Droplets} label="Stool quantity" value={fmtMl(s.total_ml)} sub={s.last_stool_at ? `last ${fmtRelative(s.last_stool_at)}` : 'no stool in window'} />
           <KpiCard tint="lavender" icon={Pill}     label="Med adherence"  value={fmtPct(m.adherence_pct)} sub={`${m.taken ?? 0}/${m.total_doses ?? 0} taken · ${m.missed ?? 0} missed`} tone={adherencePct < 80 ? 'warning' : 'positive'} />
           <KpiCard tint="brand"    icon={Scale}    label="Current weight" value={fmtKg(w)} sub={baby.birth_weight_kg ? `birth ${fmtKg(Number(baby.birth_weight_kg))}` : 'log a measurement'} />
         </div>
+        <p className="mt-2 text-xs text-ink-muted">
+          Percentages use the window: {fmtMl(windowRecommended)} expected over {range.days} day{range.days !== 1 ? 's' : ''}.
+        </p>
       </section>
 
       {/* Active medications */}
@@ -164,7 +187,7 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
       {/* Charts */}
       <section className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Feeding vs recommended — 30 days</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Feeding vs recommended — {seriesDays} days</CardTitle></CardHeader>
           <CardContent><FeedingChart data={(feedingSeries.data ?? []) as { day: string; total_ml: number; recommended_ml: number }[]} /></CardContent>
         </Card>
         <Card>
@@ -172,7 +195,7 @@ export default async function BabyPage({ params }: { params: { babyId: string } 
           <CardContent><WeightChart data={(weightSeries.data ?? []) as { measured_at: string; weight_kg: number | null }[]} /></CardContent>
         </Card>
         <Card className="lg:col-span-2">
-          <CardHeader><CardTitle>Stool trend — 30 days</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Stool trend — {seriesDays} days</CardTitle></CardHeader>
           <CardContent><StoolChart data={(stoolSeries.data ?? []) as { day: string; stool_count: number; total_ml: number }[]} /></CardContent>
         </Card>
       </section>

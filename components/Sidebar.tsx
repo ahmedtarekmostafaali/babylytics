@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Baby, Milk, Droplet, Ruler, Pill, FileText, Users, Pencil, Upload, LogOut,
-  ChevronLeft, Menu, X, Plus,
+  ChevronLeft, Menu, X, Plus, BarChart3,
 } from 'lucide-react';
 
 type BabySummary = { id: string; name: string };
@@ -118,6 +118,7 @@ export function Sidebar() {
               <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}    label="Measurements" active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`)} collapsed={collapsed} />
               <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}     label="Medications"  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`)}  collapsed={collapsed} tint="lavender" />
               <NavItem href={`/babies/${currentBabyId}/ocr`}           icon={FileText} label="OCR inbox"    active={pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`)} collapsed={collapsed} />
+              <NavItem href={`/babies/${currentBabyId}/reports`}       icon={BarChart3} label="Reports"     active={pathname?.startsWith(`/babies/${currentBabyId}/reports`)}      collapsed={collapsed} tint="brand" />
               <NavItem href={`/babies/${currentBabyId}/caregivers`}    icon={Users}    label="Caregivers"   active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`)}   collapsed={collapsed} />
               <NavItem href={`/babies/${currentBabyId}/edit`}          icon={Pencil}   label="Edit profile" active={pathname?.startsWith(`/babies/${currentBabyId}/edit`)}         collapsed={collapsed} />
             </Section>
@@ -190,7 +191,7 @@ export function Sidebar() {
         <Link href="/dashboard" className="flex items-center gap-2">
           {!logoError
             ? // eslint-disable-next-line @next/next/no-img-element
-              <img src="/logo.png" alt="" className="h-7 w-7 rounded-md object-cover" onError={() => setLogoError(true)} />
+              <img src="/Logo.png" alt="" className="h-7 w-7 rounded-md object-cover" onError={() => setLogoError(true)} />
             : <div className="h-7 w-7 rounded-md bg-brand-500 text-white grid place-items-center text-sm font-bold">B</div>}
           <span className="font-semibold text-ink">Babylytics</span>
         </Link>

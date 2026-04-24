@@ -46,6 +46,16 @@ h1, h2, h3, h4, h5 { color: var(--ink-strong); }
 /* Smooth transitions for sidebar collapse */
 .sidebar-transition { transition: transform 200ms ease, width 200ms ease, opacity 180ms ease, padding 200ms ease; }
 
+/* Print styles — clean paper output */
+@media print {
+  body { background: #fff; }
+  aside, .lg\:hidden, .print\:hidden { display: none !important; }
+  main.with-sidebar { padding-left: 0 !important; }
+  /* Avoid cutting cards across page breaks */
+  .rounded-xl, table { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}
+
 /* Content shifts left when sidebar collapses. Sidebar component toggles the
    .is-sidebar-collapsed class on <body>. */
 @media (min-width: 1024px) {
