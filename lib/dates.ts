@@ -1,25 +1,92 @@
-import { format, formatDistanceToNow, startOfDay, endOfDay } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
+
+/**
+ * Timezone used across all formatters. Pick once and stick with it — all users
+ * of this app today are in Egypt. If that ever changes, pull this from the
+ * profile/baby settings instead.
+ */
+export const TIMEZONE = 'Africa/Cairo';
+
+/**
+ * Internal: produces a formatted string with the fixed timezone regardless of
+ * whether we're on the server (UTC) or in a browser in another zone.
+ */
+function fmt(iso: string | null | undefined, opts: Intl.DateTimeFormatOptions): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-GB', { timeZone: TIMEZONE, ...opts }).format(d);
+}
 
 export function fmtDateTime(iso: string | null | undefined) {
   if (!iso) return '—';
-  return format(new Date(iso), 'MMM d, yyyy · HH:mm');
-}
-export function fmtDate(iso: string | null | undefined) {
-  if (!iso) return '—';
-  return format(new Date(iso), 'MMM d, yyyy');
-}
-export function fmtRelative(iso: string | null | undefined) {
-  if (!iso) return '—';
-  return formatDistanceToNow(new Date(iso), { addSuffix: true });
-}
-export function todayWindow() {
-  const now = new Date();
-  return { start: startOfDay(now).toISOString(), end: endOfDay(now).toISOString() };
+  // Output: "Apr 24, 2026 · 14:30" in Cairo time
+  const date = fmt(iso, { month: 'short', day: 'numeric', year: 'numeric' });
+  const time = fmt(iso, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${date} · ${time}`;
 }
 
-/** Rolling 24-hour window ending now. Use this on Server Components where we
- *  can't know the user's local timezone reliably — sidesteps day-boundary
- *  problems by just looking at "the last day" rather than "today". */
+export function fmtDate(iso: string | null | undefined) {
+  return fmt(iso, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export function fmtTime(iso: string | null | undefined) {
+  return fmt(iso, { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+export function fmtRelative(iso: string | null | undefined) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  // Strict format, e.g. "2 hours" instead of "about 2 hours"
+  return `${formatDistanceToNowStrict(d)} ago`;
+}
+
+/** Components of a date in the configured timezone, regardless of caller's TZ. */
+function partsIn(tz: string, d: Date): { y: number; m: number; day: number; h: number; min: number } {
+  const p = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(d).reduce<Record<string, string>>((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return {
+    y: Number(p.year), m: Number(p.month), day: Number(p.day),
+    h: Number(p.hour === '24' ? '0' : p.hour), min: Number(p.minute),
+  };
+}
+
+/** Convert a "YYYY-MM-DDTHH:mm" wall-clock value (assumed to be in TIMEZONE)
+ *  into a correct UTC ISO string. */
+function wallClockToUtcIso(y: number, m: number, day: number, h: number, min: number): string {
+  // We need to find the UTC timestamp that, when shown in TIMEZONE, displays
+  // exactly (y, m, day, h, min). Do it by iterative correction: build a naive
+  // UTC date from the parts, then compute what TIMEZONE would show for it and
+  // subtract the difference. One round is enough in practice.
+  const naive = Date.UTC(y, m - 1, day, h, min, 0, 0);
+  const tzParts = partsIn(TIMEZONE, new Date(naive));
+  const tzNaive = Date.UTC(tzParts.y, tzParts.m - 1, tzParts.day, tzParts.h, tzParts.min, 0, 0);
+  const offset = tzNaive - naive;
+  return new Date(naive - offset).toISOString();
+}
+
+/** Return "now" expressed as TIMEZONE-local parts. */
+function nowInTz() {
+  return partsIn(TIMEZONE, new Date());
+}
+
+/** Rolling windows — these are zone-agnostic (just a number of hours/days from now). */
+export function todayWindow() {
+  // 00:00 → 24:00 of "today" in the configured timezone
+  const n = nowInTz();
+  const startIso = wallClockToUtcIso(n.y, n.m, n.day, 0, 0);
+  const endIso   = wallClockToUtcIso(n.y, n.m, n.day + 1, 0, 0);
+  return { start: startIso, end: endIso };
+}
+
+/** Rolling 24-hour window ending now. */
 export function last24hWindow() {
   const end = new Date();
   const start = new Date(end.getTime() - 24 * 3600 * 1000);
@@ -40,12 +107,9 @@ export interface RangeResult {
   end:   string;
   label: string;
   key:   RangeKey;
-  days:  number;  // useful for chart/series length
+  days:  number;
 }
 
-/** Parse URL searchParams into a canonical time window.
- *  Accepts: ?range=24h|7d|30d|90d  OR  ?start=ISO&end=ISO (takes precedence).
- *  Default: last 24 hours. */
 export function parseRangeParam(sp: { range?: string; start?: string; end?: string } | undefined): RangeResult {
   const s = sp ?? {};
   if (s.start && s.end) {
@@ -65,44 +129,47 @@ export function parseRangeParam(sp: { range?: string; start?: string; end?: stri
   return { start: start.toISOString(), end: end.toISOString(), label: t.label, key, days: t.days };
 }
 
-/** Start of a given day and the next day (UTC). Used by the daily report page. */
+/** Start and next-day boundaries of a given calendar day in the configured TZ. */
 export function dayWindow(isoDate: string) {
-  // isoDate = 'YYYY-MM-DD' (interpret as local midnight → UTC)
   const [y, m, d] = isoDate.split('-').map(Number);
-  const start = new Date(y, (m ?? 1) - 1, d ?? 1, 0, 0, 0, 0);
-  const end   = new Date(start.getTime() + 86400000);
-  return { start: start.toISOString(), end: end.toISOString() };
+  return {
+    start: wallClockToUtcIso(y, m ?? 1, d ?? 1, 0, 0),
+    end:   wallClockToUtcIso(y, m ?? 1, (d ?? 1) + 1, 0, 0),
+  };
 }
 
-/** "YYYY-MM-DD" for today in the user's local timezone. */
+/** "YYYY-MM-DD" for today in the configured timezone (NOT server local). */
 export function todayLocalDate(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const n = nowInTz();
+  const pad = (x: number) => String(x).padStart(2, '0');
+  return `${n.y}-${pad(n.m)}-${pad(n.day)}`;
 }
+
 export function ageInDays(dob: string) {
   const ms = Date.now() - new Date(dob).getTime();
   return Math.floor(ms / 86400000);
 }
 
-/** Convert a <input type="datetime-local"> value into an ISO TIMESTAMPTZ
- *  the server can parse. Returns null if empty. */
+/** Convert a `<input type="datetime-local">` value (user typed it in TIMEZONE)
+ *  to a correct UTC ISO. */
 export function localInputToIso(local: string | null | undefined): string | null {
   if (!local) return null;
-  const d = new Date(local);
-  if (isNaN(d.getTime())) return null;
-  return d.toISOString();
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(local);
+  if (!m) return null;
+  return wallClockToUtcIso(Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5]));
 }
 
-/** Inverse of the above — ISO → "YYYY-MM-DDTHH:mm" for <input type="datetime-local">. */
+/** ISO → "YYYY-MM-DDTHH:mm" in TIMEZONE, for <input type="datetime-local">. */
 export function isoToLocalInput(iso: string | null | undefined): string {
   if (!iso) return '';
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const p = partsIn(TIMEZONE, d);
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${p.y}-${pad(p.m)}-${pad(p.day)}T${pad(p.h)}:${pad(p.min)}`;
 }
 
-/** Return "now" as a datetime-local string suitable for <input type="datetime-local">. */
+/** "Now" in TIMEZONE, as `datetime-local`. */
 export function nowLocalInput(): string {
   return isoToLocalInput(new Date().toISOString());
 }

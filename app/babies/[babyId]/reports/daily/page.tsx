@@ -9,7 +9,8 @@ import { BabyAvatar } from '@/components/BabyAvatar';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import { dayWindow, fmtDateTime, fmtDate, todayLocalDate } from '@/lib/dates';
 import { fmtMl, fmtPct, fmtKg, fmtCm } from '@/lib/units';
-import { Milk, Droplet, Pill, Scale, Ruler, Target, Percent } from 'lucide-react';
+import { Milk, Droplet, Pill, Scale, Ruler, Target, Percent, Thermometer, Syringe } from 'lucide-react';
+import { Comments } from '@/components/Comments';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Daily report' };
@@ -30,7 +31,7 @@ export default async function DailyReport({
     .eq('id', babyId).single();
   if (!baby) notFound();
 
-  const [feedingKpi, stoolKpi, medKpi, currentWeight, feedings, stools, doseLogs, measurements, avatarUrl] = await Promise.all([
+  const [feedingKpi, stoolKpi, medKpi, currentWeight, feedings, stools, doseLogs, measurements, temps, vaccines, avatarUrl] = await Promise.all([
     supabase.rpc('feeding_kpis',    { p_baby: babyId, p_start: start, p_end: end }).single(),
     supabase.rpc('stool_kpis',      { p_baby: babyId, p_start: start, p_end: end }).single(),
     supabase.rpc('medication_kpis', { p_baby: babyId, p_start: start, p_end: end }).single(),
@@ -39,6 +40,8 @@ export default async function DailyReport({
     supabase.from('stool_logs').select('id,stool_time,quantity_category,quantity_ml,color,consistency,has_diaper_rash,notes,source').eq('baby_id', babyId).is('deleted_at', null).gte('stool_time', start).lt('stool_time', end).order('stool_time', { ascending: true }),
     supabase.from('medication_logs').select('id,medication_id,medication_time,status,actual_dosage,notes').eq('baby_id', babyId).is('deleted_at', null).gte('medication_time', start).lt('medication_time', end).order('medication_time', { ascending: true }),
     supabase.from('measurements').select('id,measured_at,weight_kg,height_cm,head_circ_cm,notes').eq('baby_id', babyId).is('deleted_at', null).gte('measured_at', start).lt('measured_at', end).order('measured_at', { ascending: true }),
+    supabase.from('temperature_logs').select('id,measured_at,temperature_c,method,notes').eq('baby_id', babyId).is('deleted_at', null).gte('measured_at', start).lt('measured_at', end).order('measured_at', { ascending: true }),
+    supabase.from('vaccinations').select('id,vaccine_name,administered_at,dose_number,total_doses,notes').eq('baby_id', babyId).is('deleted_at', null).eq('status','administered').gte('administered_at', start).lt('administered_at', end).order('administered_at', { ascending: true }),
     signAvatarUrl(supabase, baby.avatar_path),
   ]);
 
@@ -86,13 +89,25 @@ export default async function DailyReport({
         </div>
       </div>
 
-      {/* KPI grid — 4 across on print so it fits one page */}
+      {/* KPI grid — compact so it fits one page alongside the new temp tile */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <MiniKpi tint="peach" icon={Milk}    label="Feeds"    value={f.feed_count ?? 0} sub={`${fmtMl(f.total_feed_ml)}${f.feed_count ? ` · avg ${fmtMl(f.avg_feed_ml)}` : ''}`} />
         <MiniKpi tint="peach" icon={Target}  label="Target"   value={fmtMl(f.recommended_feed_ml)} sub={w ? `${fmtKg(w)} × ${baby.feeding_factor_ml_per_kg_per_day} ml/kg` : ''} />
         <MiniKpi tint="peach" icon={Percent} label="Feeding %" value={fmtPct(f.feeding_percentage)} />
         <MiniKpi tint="mint"  icon={Droplet} label="Stools"   value={s.stool_count ?? 0} sub={s.total_ml ? `${fmtMl(s.total_ml)} total` : ''} />
         <MiniKpi tint="lavender" icon={Pill} label="Doses"     value={`${m.taken ?? 0}/${m.total_doses ?? 0}`} sub={`${m.missed ?? 0} missed · ${fmtPct(m.adherence_pct)}`} />
+
+        {/* Temperature snapshot */}
+        {(() => {
+          const values = ((temps.data ?? []) as { temperature_c: number }[]).map(r => Number(r.temperature_c)).filter(Number.isFinite);
+          const peak = values.length ? Math.max(...values) : null;
+          const avg  = values.length ? (values.reduce((a, b) => a + b, 0) / values.length) : null;
+          return (
+            <MiniKpi tint="coral" icon={Thermometer} label="Temperature"
+              value={peak != null ? `${peak.toFixed(1)} °C` : '—'}
+              sub={avg != null ? `avg ${avg.toFixed(1)} · ${values.length} readings` : 'no readings'} />
+          );
+        })()}
         {/* combined growth card — only when some measurement was logged today */}
         {todayMeasurement && (
           <MiniKpi tint="brand" icon={Scale} label="Growth"
@@ -141,6 +156,23 @@ export default async function DailyReport({
           ].filter(Boolean).join(' · ') || 'measurement',
           sub: r.notes ?? undefined,
         }))} />
+
+        <TimelineCard title="Temperature" tint="coral" items={(temps.data ?? []).map(r => ({
+          time: fmtDateTime(r.measured_at).split(' · ')[1] ?? '',
+          line: `${Number(r.temperature_c).toFixed(1)} °C · ${r.method}`,
+          sub: r.notes ?? undefined,
+        }))} />
+
+        <TimelineCard title="Vaccinations" tint="lavender" items={(vaccines.data ?? []).map(v => ({
+          time: v.administered_at ? (fmtDateTime(v.administered_at).split(' · ')[1] ?? '') : '',
+          line: `${v.vaccine_name}${v.dose_number && v.total_doses ? ` · dose ${v.dose_number}/${v.total_doses}` : ''}`,
+          sub: v.notes ?? undefined,
+        }))} />
+      </div>
+
+      {/* Print-hidden comments thread for this day */}
+      <div className="print:hidden">
+        <Comments babyId={babyId} target="babies" targetId={babyId} title={`Caregiver notes · ${fmtDate(isoDate)}`} />
       </div>
 
       <footer className="hidden print:block pt-3 text-center text-[10px] text-ink-muted border-t border-slate-200">

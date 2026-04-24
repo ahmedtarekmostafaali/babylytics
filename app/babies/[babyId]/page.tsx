@@ -9,10 +9,14 @@ import { WeightChart } from '@/components/WeightChart';
 import { StoolChart } from '@/components/StoolChart';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { fmtDateTime, fmtRelative, parseRangeParam } from '@/lib/dates';
+import { fmtDate, fmtDateTime, fmtRelative, parseRangeParam } from '@/lib/dates';
 import { fmtMl, fmtPct, fmtKg } from '@/lib/units';
 import { signAvatarUrl } from '@/lib/baby-avatar';
-import { Milk, Target, TrendingDown, Percent, Droplet, Droplets, Pill, Scale, Moon, ArrowRight } from 'lucide-react';
+import { Comments } from '@/components/Comments';
+import {
+  Milk, Target, TrendingDown, Percent, Droplet, Droplets, Pill, Scale, Moon, ArrowRight,
+  Thermometer, Syringe,
+} from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +51,8 @@ export default async function BabyPage({
     currentWeight,
     lastFeed, lastStool, lastMeasurement, lastDose,
     lowConf, activeMeds,
+    tempWindow, lastTemp,
+    upcomingVaccines, administeredVaccines,
   ] = await Promise.all([
     supabase.rpc('feeding_kpis',         { p_baby: babyId, p_start: range.start, p_end: range.end }).single(),
     supabase.rpc('stool_kpis',           { p_baby: babyId, p_start: range.start, p_end: range.end }).single(),
@@ -71,6 +77,27 @@ export default async function BabyPage({
       .eq('baby_id', babyId).is('deleted_at', null)
       .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString()}`)
       .order('starts_at', { ascending: false }),
+
+    // Temperature readings in the current range
+    supabase.from('temperature_logs')
+      .select('id,measured_at,temperature_c,method')
+      .eq('baby_id', babyId).is('deleted_at', null)
+      .gte('measured_at', range.start).lt('measured_at', range.end)
+      .order('measured_at', { ascending: false }),
+    supabase.from('temperature_logs')
+      .select('id,measured_at,temperature_c,method')
+      .eq('baby_id', babyId).is('deleted_at', null)
+      .order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+
+    // Vaccinations
+    supabase.from('vaccinations')
+      .select('id,vaccine_name,scheduled_at,dose_number,total_doses,status')
+      .eq('baby_id', babyId).is('deleted_at', null).eq('status', 'scheduled')
+      .order('scheduled_at', { ascending: true }).limit(3),
+    supabase.from('vaccinations')
+      .select('id,vaccine_name,administered_at,dose_number,total_doses,status')
+      .eq('baby_id', babyId).is('deleted_at', null).eq('status', 'administered')
+      .order('administered_at', { ascending: false }).limit(3),
   ]);
 
   const f = (feedingKpi.data    ?? {}) as { total_feed_ml: number; avg_feed_ml: number; feed_count: number; recommended_feed_ml: number; feeding_percentage: number };
@@ -253,6 +280,95 @@ export default async function BabyPage({
         </section>
       )}
 
+      {/* Temperature + Vaccinations summary */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        {/* Temperature */}
+        <div className="rounded-2xl bg-gradient-to-br from-coral-50 to-white border border-slate-200/70 shadow-card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-xl bg-coral-500 text-white grid place-items-center">
+                <Thermometer className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Temperature</div>
+                <div className="text-sm font-semibold text-ink-strong">Last {range.label.toLowerCase()}</div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Link href={`/babies/${babyId}/temperature/new`}
+                className="rounded-full bg-coral-500 text-white text-xs px-3 py-1 hover:bg-coral-600">+ Log</Link>
+              <Link href={`/babies/${babyId}/temperature`}
+                className="rounded-full border border-slate-300 bg-white text-xs px-3 py-1 hover:bg-slate-50">All</Link>
+            </div>
+          </div>
+          {(() => {
+            const temps = (tempWindow.data ?? []) as { temperature_c: number; measured_at: string }[];
+            const values = temps.map(r => Number(r.temperature_c)).filter(Number.isFinite);
+            const last = lastTemp.data as { temperature_c: number; measured_at: string; method: string } | null;
+            const hi = values.length > 0 ? Math.max(...values) : null;
+            const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
+            const lastVal = last ? Number(last.temperature_c) : null;
+            const status = lastVal == null ? 'brand' : lastVal >= 38 ? 'coral' : lastVal >= 37.5 ? 'peach' : lastVal < 36 ? 'brand' : 'mint';
+            const statusLabel = lastVal == null ? 'no reading' : lastVal >= 38 ? 'Fever' : lastVal >= 37.5 ? 'Elevated' : lastVal < 36 ? 'Low' : 'Normal';
+            const statusClr = { coral:'text-coral-700 bg-coral-100', peach:'text-peach-700 bg-peach-100', mint:'text-mint-700 bg-mint-100', brand:'text-brand-700 bg-brand-100' }[status];
+            return (
+              <div className="grid grid-cols-3 gap-2">
+                <Stat label="Latest" value={lastVal != null ? `${lastVal.toFixed(1)} °C` : '—'}
+                  sub={last ? fmtRelative(last.measured_at) : 'never'} />
+                <Stat label="Avg" value={avg != null ? `${avg.toFixed(1)} °C` : '—'}
+                  sub={values.length > 0 ? `${values.length} readings` : 'no data'} />
+                <Stat label="Peak" value={hi != null ? `${hi.toFixed(1)} °C` : '—'}
+                  sub={<span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusClr}`}>{statusLabel}</span>} />
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Vaccinations */}
+        <div className="rounded-2xl bg-gradient-to-br from-lavender-50 to-white border border-slate-200/70 shadow-card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-xl bg-lavender-500 text-white grid place-items-center">
+                <Syringe className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Vaccinations</div>
+                <div className="text-sm font-semibold text-ink-strong">
+                  {(administeredVaccines.data ?? []).length} done · {(upcomingVaccines.data ?? []).length} upcoming
+                </div>
+              </div>
+            </div>
+            <Link href={`/babies/${babyId}/vaccinations`}
+              className="rounded-full border border-slate-300 bg-white text-xs px-3 py-1 hover:bg-slate-50">Open</Link>
+          </div>
+          <div className="space-y-1.5 text-sm">
+            {(upcomingVaccines.data ?? []).length === 0 && (administeredVaccines.data ?? []).length === 0 && (
+              <div className="text-xs text-ink-muted">Nothing scheduled — <Link href={`/babies/${babyId}/vaccinations`} className="text-lavender-700 hover:underline">add or suggest a plan</Link>.</div>
+            )}
+            {upcomingVaccines.data?.slice(0, 3).map(v => (
+              <div key={v.id} className="flex items-center justify-between rounded-xl bg-white border border-slate-100 px-3 py-1.5">
+                <div className="truncate">
+                  <span className="font-medium text-ink-strong">{v.vaccine_name}</span>
+                  {v.dose_number && v.total_doses ? <span className="text-ink-muted"> · {v.dose_number}/{v.total_doses}</span> : null}
+                </div>
+                <span className="text-xs text-ink-muted whitespace-nowrap ml-2">
+                  {v.scheduled_at ? fmtDate(v.scheduled_at) : 'TBD'}
+                </span>
+              </div>
+            ))}
+            {administeredVaccines.data?.slice(0, 2).map(v => (
+              <div key={v.id} className="flex items-center justify-between rounded-xl bg-mint-50 px-3 py-1.5">
+                <div className="truncate">
+                  <span className="font-medium text-ink-strong">{v.vaccine_name}</span>
+                  <span className="text-mint-700 text-xs font-semibold ml-1">✓ done</span>
+                </div>
+                <span className="text-xs text-ink-muted whitespace-nowrap">{v.administered_at ? fmtDate(v.administered_at) : ''}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Charts */}
       <section className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -277,10 +393,26 @@ export default async function BabyPage({
           <QuickLink href={`/babies/${babyId}/stool`}        icon={Droplet} tint="mint"     label="Stool" />
           <QuickLink href={`/babies/${babyId}/medications`}  icon={Pill}    tint="lavender" label="Medications" />
           <QuickLink href={`/babies/${babyId}/measurements`} icon={Scale}   tint="brand"    label="Measurements" />
+          <QuickLink href={`/babies/${babyId}/temperature`}  icon={Thermometer} tint="coral" label="Temperature" />
+          <QuickLink href={`/babies/${babyId}/vaccinations`} icon={Syringe} tint="lavender" label="Vaccinations" />
           <QuickLink href={`/babies/${babyId}/reports`}      icon={Moon}    tint="peach"    label="Reports" />
           <QuickLink href={`/babies/${babyId}/upload`}       icon={Droplets} tint="coral"   label="Upload" />
         </div>
       </section>
+
+      {/* General comments attached to the baby itself */}
+      <Comments babyId={babyId} target="babies" targetId={babyId} title="Caregiver notes" />
+    </div>
+  );
+}
+
+/** Small stat tile used inside the temperature analytics card */
+function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub: React.ReactNode }) {
+  return (
+    <div className="rounded-xl bg-white border border-slate-100 px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wider text-ink-muted">{label}</div>
+      <div className="mt-0.5 text-base font-bold text-ink-strong leading-tight">{value}</div>
+      <div className="text-[10px] text-ink-muted">{sub}</div>
     </div>
   );
 }

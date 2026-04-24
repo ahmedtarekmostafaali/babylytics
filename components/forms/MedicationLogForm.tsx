@@ -5,11 +5,14 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { MedicationLogSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
-import { Input, Label, Select, Textarea } from '@/components/ui/Input';
+import { Input, Label } from '@/components/ui/Input';
+import { Section, TypeTile, WhenPicker } from '@/components/forms/FormKit';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
+import { Pill, Save, Check, XCircle, AlertTriangle, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type Status = 'taken'|'missed'|'skipped';
-type Med = { id: string; name: string };
+type Med = { id: string; name: string; dosage: string | null; route: string };
 
 export type MedLogFormValue = {
   id?: string;
@@ -43,15 +46,13 @@ export function MedicationLogForm({
   useEffect(() => {
     setMedsLoading(true);
     supabase.from('medications')
-      .select('id,name')
-      .eq('baby_id', babyId)
-      .is('deleted_at', null)
+      .select('id,name,dosage,route')
+      .eq('baby_id', babyId).is('deleted_at', null)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         const list = (data ?? []) as Med[];
         setMeds(list);
         setMedsLoading(false);
-        // Only auto-pick if nothing explicit was passed in (initial/defaultMedId)
         if (!medId && list[0]) setMedId(list[0].id);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,55 +81,79 @@ export function MedicationLogForm({
     router.refresh();
   }
 
+  const selectedMed = meds.find(m => m.id === medId);
+
   return (
-    <form className="space-y-4" onSubmit={submit}>
-      <div>
-        <Label htmlFor="m">Medication</Label>
+    <form onSubmit={submit} className="space-y-8">
+      <Section n={1} title="Which medication?">
         {medsLoading ? (
-          <div className="h-10 rounded-md border border-slate-300 bg-white px-3 grid place-items-center text-sm text-ink-muted">
-            Loading medications…
-          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-ink-muted">Loading medications…</div>
         ) : meds.length === 0 ? (
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-            No medications yet.{' '}
-            <Link href={`/babies/${babyId}/medications/new`} className="font-semibold underline">
-              Add one first
-            </Link>
-            , then come back to log a dose.
+          <div className="rounded-2xl border border-peach-300 bg-peach-50 p-4 text-sm">
+            <p className="text-peach-900 font-medium">No medications set up yet.</p>
+            <p className="text-peach-800/80 mt-1">
+              <Link href={`/babies/${babyId}/medications/new`} className="underline font-semibold">Add one first</Link>,
+              then come back to log a dose.
+            </p>
           </div>
         ) : (
-          <Select id="m" value={medId} onChange={e => setMedId(e.target.value)}>
-            <option value="">— pick one —</option>
-            {meds.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </Select>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {meds.map(m => (
+              <button key={m.id} type="button" onClick={() => setMedId(m.id)}
+                className={cn(
+                  'flex items-center gap-3 rounded-2xl border p-4 text-left transition',
+                  medId === m.id
+                    ? 'ring-2 ring-lavender-500 bg-lavender-50 border-transparent'
+                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                )}>
+                <div className={cn('h-11 w-11 rounded-xl grid place-items-center shrink-0',
+                  medId === m.id ? 'bg-lavender-500 text-white' : 'bg-lavender-100 text-lavender-500'
+                )}>
+                  <Pill className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-ink-strong truncate">{m.name}</div>
+                  <div className="text-xs text-ink-muted truncate">
+                    {m.dosage ? m.dosage : 'no dosage on file'}{m.route !== 'oral' ? ` · ${m.route}` : ''}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         )}
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label htmlFor="t">When</Label>
-          <Input id="t" type="datetime-local" required value={time} onChange={e => setTime(e.target.value)} />
+      </Section>
+
+      <Section n={2} title="Status">
+        <div className="grid grid-cols-3 gap-3">
+          <TypeTile icon={Check}         label="Taken"   tint="mint"  active={status === 'taken'}   onClick={() => setStatus('taken')} />
+          <TypeTile icon={AlertTriangle} label="Missed"  tint="coral" active={status === 'missed'}  onClick={() => setStatus('missed')} />
+          <TypeTile icon={XCircle}       label="Skipped" tint="peach" active={status === 'skipped'} onClick={() => setStatus('skipped')} />
         </div>
-        <div>
-          <Label htmlFor="s">Status</Label>
-          <Select id="s" value={status} onChange={e => setStatus(e.target.value as Status)}>
-            <option value="taken">Taken</option>
-            <option value="missed">Missed</option>
-            <option value="skipped">Skipped</option>
-          </Select>
-        </div>
+      </Section>
+
+      <Section n={3} title="When?">
+        <WhenPicker time={time} onChange={setTime} tint="lavender" />
+      </Section>
+
+      <Section n={4} title="Actual dosage" optional>
+        <Input placeholder={selectedMed?.dosage ? `Prescribed: ${selectedMed.dosage}` : 'e.g. 5 ml, 1 drop'}
+          value={dose} onChange={e => setDose(e.target.value)} />
+      </Section>
+
+      <Section n={5} title="Add details" optional>
+        <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
+          placeholder="Any reaction, refusal, or observation?"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+      </Section>
+
+      {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
+
+      <div className="flex items-center gap-2">
+        <Button type="submit" disabled={saving || medsLoading || (meds.length === 0 && !medId)}
+          className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-lavender-500 to-lavender-600">
+          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log dose'}
+        </Button>
       </div>
-      <div>
-        <Label htmlFor="d">Actual dosage (optional)</Label>
-        <Input id="d" placeholder="if different from prescribed" value={dose} onChange={e => setDose(e.target.value)} />
-      </div>
-      <div>
-        <Label htmlFor="n">Notes</Label>
-        <Textarea id="n" rows={2} value={notes ?? ''} onChange={e => setNotes(e.target.value)} />
-      </div>
-      {err && <p className="text-sm text-red-600">{err}</p>}
-      <Button type="submit" disabled={saving || medsLoading || (meds.length === 0 && !medId)}>
-        {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log dose'}
-      </Button>
     </form>
   );
 }

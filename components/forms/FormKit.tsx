@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import { Clock, Check, Minus, Plus } from 'lucide-react';
@@ -151,32 +152,56 @@ export function Stepper({
   );
 }
 
-/** "When?" section — shared across every log form */
+/** "When?" section — shared across every log form. Tracks which quick preset
+ *  the user picked so it stays highlighted, and shows the exact datetime
+ *  picker on its own row for breathing room. */
 export function WhenPicker({ time, onChange, tint = 'coral' }: {
   time: string;
   onChange: (local: string) => void;
   tint?: Tint;
 }) {
-  function setRelative(minutesAgo: number) {
+  const [picked, setPicked] = useState<0 | 15 | 30 | 60 | 'custom' | null>(null);
+
+  function setRelative(minutesAgo: 0 | 15 | 30 | 60) {
     const d = new Date(Date.now() - minutesAgo * 60000);
     const pad = (n: number) => String(n).padStart(2, '0');
     onChange(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    setPicked(minutesAgo);
   }
-  const isNow = (() => {
+
+  // Auto-detect if current time value matches "now" on mount / external changes.
+  // If the picker hasn't chosen anything yet and the value is close to now, mark Now active.
+  const currentNear = (() => {
     const d = new Date(time);
     return Math.abs(d.getTime() - Date.now()) < 2 * 60 * 1000;
   })();
+  const effectivePicked = picked ?? (currentNear ? 0 : 'custom');
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <QuickPill active={isNow} onClick={() => setRelative(0)} tint={tint} icon={<Check className="h-3.5 w-3.5" />}>Now</QuickPill>
-      <QuickPill onClick={() => setRelative(15)} tint={tint}>−15 min</QuickPill>
-      <QuickPill onClick={() => setRelative(30)} tint={tint}>−30 min</QuickPill>
-      <QuickPill onClick={() => setRelative(60)} tint={tint}>−1 hr</QuickPill>
-      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
-        <Clock className="h-3.5 w-3.5 text-ink-muted" />
-        <input type="datetime-local" value={time} onChange={e => onChange(e.target.value)}
-          className="bg-transparent text-sm focus:outline-none" />
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <QuickPill active={effectivePicked === 0}  onClick={() => setRelative(0)}  tint={tint} icon={<Check className="h-3.5 w-3.5" />}>Now</QuickPill>
+        <QuickPill active={effectivePicked === 15} onClick={() => setRelative(15)} tint={tint}>−15 min</QuickPill>
+        <QuickPill active={effectivePicked === 30} onClick={() => setRelative(30)} tint={tint}>−30 min</QuickPill>
+        <QuickPill active={effectivePicked === 60} onClick={() => setRelative(60)} tint={tint}>−1 hr</QuickPill>
+      </div>
+      <div>
+        <div className="text-xs font-medium text-ink-muted mb-1.5">Exact time</div>
+        <div className={cn(
+          'inline-flex items-center gap-2 rounded-2xl border bg-white px-4 py-2.5 w-full sm:w-auto',
+          effectivePicked === 'custom'
+            ? {coral:'border-coral-500',brand:'border-brand-500',peach:'border-peach-500',mint:'border-mint-500',lavender:'border-lavender-500'}[tint]
+            : 'border-slate-200'
+        )}>
+          <Clock className={cn('h-4 w-4',
+            effectivePicked === 'custom'
+              ? {coral:'text-coral-500',brand:'text-brand-500',peach:'text-peach-500',mint:'text-mint-500',lavender:'text-lavender-500'}[tint]
+              : 'text-ink-muted'
+          )} />
+          <input type="datetime-local" value={time}
+            onChange={e => { onChange(e.target.value); setPicked('custom'); }}
+            className="bg-transparent text-base focus:outline-none flex-1" />
+        </div>
       </div>
     </div>
   );

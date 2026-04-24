@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
-import { Baby as BabyIcon, Milk, Utensils, Play, Square, Clock, Minus, Plus, Save, Check } from 'lucide-react';
+import { Baby as BabyIcon, Milk, Utensils, Play, Square, Clock, Save } from 'lucide-react';
+import { Section, TypeTile, WhenPicker, Stepper, Field } from '@/components/forms/FormKit';
 import { cn } from '@/lib/utils';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 
@@ -71,12 +72,6 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
   const [bottleKind, setBottleKind] = useState<'formula'|'mixed'|'other'>(
     initial?.milk_type === 'mixed' ? 'mixed' : initial?.milk_type === 'other' ? 'other' : 'formula'
   );
-
-  function setRelativeTime(minutesAgo: number) {
-    const d = new Date(Date.now() - minutesAgo * 60000);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    setTime(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
-  }
 
   const isBottle = mode === 'bottle';
   const isBreast = mode === 'breast';
@@ -260,17 +255,7 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
 
       {/* 3. When */}
       <Section title="When?" n={3}>
-        <div className="flex flex-wrap items-center gap-2">
-          <QuickPill active={isNowIsh(time)} onClick={() => setRelativeTime(0)} icon={<Check className="h-3.5 w-3.5" />}>Now</QuickPill>
-          <QuickPill onClick={() => setRelativeTime(15)}>−15 min</QuickPill>
-          <QuickPill onClick={() => setRelativeTime(30)}>−30 min</QuickPill>
-          <QuickPill onClick={() => setRelativeTime(60)}>−1 hr</QuickPill>
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
-            <Clock className="h-3.5 w-3.5 text-ink-muted" />
-            <input type="datetime-local" value={time} onChange={e => setTime(e.target.value)}
-              className="bg-transparent text-sm focus:outline-none" />
-          </div>
-        </div>
+        <WhenPicker time={time} onChange={setTime} tint="coral" />
       </Section>
 
       {/* 4. Notes */}
@@ -298,12 +283,6 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
 
 // ---- Helpers --------------------------------------------------------------
 
-function isNowIsh(local: string): boolean {
-  const d = new Date(local);
-  const now = Date.now();
-  return Math.abs(d.getTime() - now) < 2 * 60 * 1000; // within 2 min
-}
-
 function fmtDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -311,51 +290,6 @@ function fmtDuration(sec: number): string {
 }
 
 // ---- Small UI pieces ------------------------------------------------------
-
-function Section({ n, title, optional, children }: { n: number; title: string; optional?: boolean; children: React.ReactNode }) {
-  return (
-    <section>
-      <h3 className="mb-3 text-lg font-bold text-ink-strong">
-        <span className="text-ink-muted font-medium">{n}. </span>
-        {title}
-        {optional && <span className="ml-1 text-ink-muted text-sm font-normal">(optional)</span>}
-      </h3>
-      {children}
-    </section>
-  );
-}
-
-function TypeTile({ icon: Icon, label, tint, active, onClick }: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  tint: 'coral' | 'brand' | 'peach';
-  active: boolean;
-  onClick: () => void;
-}) {
-  const ring = {
-    coral: 'ring-coral-500 bg-coral-50',
-    brand: 'ring-brand-500 bg-brand-50',
-    peach: 'ring-peach-500 bg-peach-50',
-  }[tint];
-  const iconTone = {
-    coral: active ? 'bg-coral-500 text-white' : 'bg-coral-100 text-coral-500',
-    brand: active ? 'bg-brand-500 text-white' : 'bg-brand-100 text-brand-500',
-    peach: active ? 'bg-peach-500 text-white' : 'bg-peach-100 text-peach-500',
-  }[tint];
-  return (
-    <button type="button" onClick={onClick}
-      className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-2xl border p-5 transition',
-        active ? `ring-2 ${ring} border-transparent` : 'border-slate-200 bg-white hover:bg-slate-50'
-      )}
-    >
-      <div className={cn('h-12 w-12 rounded-2xl grid place-items-center', iconTone)}>
-        <Icon className="h-6 w-6" />
-      </div>
-      <span className={cn('font-semibold', active ? 'text-ink-strong' : 'text-ink')}>{label}</span>
-    </button>
-  );
-}
 
 function BreastBox({ side, label, minutes, onChange }: {
   side: 'L' | 'R';
@@ -387,32 +321,3 @@ function BreastBox({ side, label, minutes, onChange }: {
   );
 }
 
-function QuickPill({ active, onClick, icon, children }: {
-  active?: boolean;
-  onClick: () => void;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <button type="button" onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm transition',
-        active
-          ? 'bg-coral-500 border-coral-500 text-white shadow-sm'
-          : 'bg-white border-slate-200 text-ink hover:bg-slate-50'
-      )}
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-ink-muted mb-1.5">{label}</label>
-      {children}
-    </div>
-  );
-}
