@@ -172,7 +172,9 @@ export default async function DailyReport({
 
       {/* Print-hidden comments thread for this day */}
       <div className="print:hidden">
-        <Comments babyId={babyId} target="babies" targetId={babyId} title={`Caregiver notes · ${fmtDate(isoDate)}`} />
+        <Comments babyId={babyId} target="babies" targetId={babyId}
+          scopeDate={isoDate}
+          title={`Notes for ${fmtDate(isoDate)}`} />
       </div>
 
       <footer className="hidden print:block pt-3 text-center text-[10px] text-ink-muted border-t border-slate-200">

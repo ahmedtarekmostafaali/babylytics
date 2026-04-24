@@ -50,11 +50,11 @@ export default async function BabyOverview({
   const age = ageInDays(baby.dob);
 
   const [
-    lastFeed, lastTemp, lastStool, lastDose, lastMeasurement,
+    lastFeed, lastTemp, lastStool, lastDose, lastMeasurement, lastSleep,
     currentWeight,
-    todayFeeds, todayStool, todayMeds, todayTemps, todayMeasurements,
+    todayFeeds, todayStool, todayMeds, todayTemps, todayMeasurements, todaySleeps,
     activeMeds, recentTaken,
-    weekFeeds, weekStool, weekTemps, prevWeekFeeds,
+    weekFeeds, weekStool, weekTemps, weekSleeps, prevWeekFeeds,
     weightSeries,
     upcomingVaccines,
     lowConf,
@@ -74,6 +74,9 @@ export default async function BabyOverview({
     supabase.from('measurements')
       .select('id,measured_at,weight_kg,height_cm').eq('baby_id', babyId).is('deleted_at', null)
       .order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('sleep_logs')
+      .select('id,start_at,end_at,duration_min,location,quality').eq('baby_id', babyId).is('deleted_at', null)
+      .order('start_at', { ascending: false }).limit(1).maybeSingle(),
 
     supabase.rpc('current_weight_kg', { p_baby: babyId }),
 
@@ -98,6 +101,10 @@ export default async function BabyOverview({
       .select('id,measured_at,weight_kg,height_cm,head_circ_cm').eq('baby_id', babyId).is('deleted_at', null)
       .gte('measured_at', day.start).lt('measured_at', day.end)
       .order('measured_at', { ascending: true }),
+    supabase.from('sleep_logs')
+      .select('id,start_at,end_at,duration_min,location,quality,notes').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('start_at', day.start).lt('start_at', day.end)
+      .order('start_at', { ascending: true }),
 
     // Active meds + recent taken doses to compute "next dose"
     supabase.from('medications')
@@ -119,6 +126,9 @@ export default async function BabyOverview({
     supabase.from('temperature_logs')
       .select('id,measured_at,temperature_c').eq('baby_id', babyId).is('deleted_at', null)
       .gte('measured_at', last14.start).lt('measured_at', last14.end),
+    supabase.from('sleep_logs')
+      .select('id,start_at,end_at,duration_min').eq('baby_id', babyId).is('deleted_at', null)
+      .gte('start_at', last7.start).lt('start_at', last7.end),
     // Previous week — for the "up X%" insight banner
     supabase.from('feedings').select('id').eq('baby_id', babyId).is('deleted_at', null)
       .gte('feeding_time', new Date(new Date(last7.start).getTime() - 7 * 86400000).toISOString())
@@ -193,6 +203,16 @@ export default async function BabyOverview({
       href: `/babies/${babyId}/measurements/${r.id}`,
     });
   }
+  for (const r of (todaySleeps.data ?? [])) {
+    const dur = r.duration_min ?? null;
+    const label = dur != null ? `${Math.floor(dur / 60)}h ${dur % 60}m` : 'in progress';
+    tl.push({
+      at: r.start_at, tint: 'lavender', icon: Moon,
+      title: `Sleep · ${label}`,
+      subtitle: [r.location, r.quality].filter(Boolean).join(' · '),
+      href: `/babies/${babyId}/sleep/${r.id}`,
+    });
+  }
   tl.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   // ───────── Insights: last 7 days breakdowns
@@ -209,23 +229,29 @@ export default async function BabyOverview({
   }
   const feedBars = Array.from(feedByDay.entries()).map(([day, n]) => ({ day, n }));
 
-  // Temperature line (max per day, last 7d)
-  const tempByDay = new Map<string, number | null>();
+  // Temperature — we keep the last reading on hand in case a future card wants
+  // it; the insights grid uses Total Sleep instead of Temperature per the
+  // mockup. Reference kept to avoid an unused-query warning.
+  void weekTemps; void lastTemp;
+
+  // Sleep minutes per day (last 7d) — used for Total Sleep mini-chart
+  const sleepByDay = new Map<string, number>();
   for (let i = 6; i >= 0; i--) {
     const d = new Date(Date.now() - i * 86400000);
     const key = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-    tempByDay.set(key, null);
+    sleepByDay.set(key, 0);
   }
-  for (const r of (weekTemps.data ?? []) as { measured_at: string; temperature_c: number | string }[]) {
-    const k = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(r.measured_at));
-    if (!tempByDay.has(k)) continue;
-    const v = Number(r.temperature_c);
-    const prev = tempByDay.get(k);
-    if (!Number.isFinite(v)) continue;
-    tempByDay.set(k, prev == null ? v : Math.max(prev, v));
+  let weekSleepMinTotal = 0;
+  for (const r of (weekSleeps.data ?? []) as { start_at: string; duration_min: number | null }[]) {
+    const k = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(r.start_at));
+    if (!sleepByDay.has(k)) continue;
+    const mins = r.duration_min ?? 0;
+    sleepByDay.set(k, (sleepByDay.get(k) ?? 0) + mins);
+    weekSleepMinTotal += mins;
   }
-  const tempLine = Array.from(tempByDay.values()).map(v => (v == null ? 36.8 : v));
-  const lastTempValue = (lastTemp.data?.temperature_c != null) ? Number(lastTemp.data.temperature_c) : null;
+  const sleepLine = Array.from(sleepByDay.values()).map(v => v / 60); // hours per day
+  const avgSleepHours = (weekSleepMinTotal / 60) / 7;
+  const lastSleepDurMin = lastSleep.data?.duration_min ?? null;
 
   // Stool summary donut (last 7d, by category)
   type StoolRow = { quantity_category: string | null };
@@ -374,11 +400,18 @@ export default async function BabyOverview({
         />
         <LastCard
           tint="lavender" icon={Moon}
-          label="Last temperature"
-          value={lastTemp.data ? `${Number(lastTemp.data.temperature_c).toFixed(1)} °C` : 'No data'}
-          sub={lastTemp.data ? lastTemp.data.method : 'tap to log'}
-          time={lastTemp.data?.measured_at ?? null}
-          href={`/babies/${babyId}/temperature`}
+          label="Last sleep"
+          value={
+            lastSleep.data
+              ? (lastSleep.data.end_at == null
+                  ? 'In progress'
+                  : `${Math.floor((lastSleepDurMin ?? 0) / 60)}h ${(lastSleepDurMin ?? 0) % 60}m`)
+              : 'No data'
+          }
+          sub={lastSleep.data ? `${lastSleep.data.location}${lastSleep.data.quality ? ` · ${String(lastSleep.data.quality).replace('_',' ')}` : ''}` : 'tap to log'}
+          time={lastSleep.data?.start_at ?? null}
+          href={`/babies/${babyId}/sleep`}
+          badge={lastSleep.data?.end_at == null ? 'live' : undefined}
         />
         <LastCard
           tint="mint" icon={Droplet}
@@ -480,14 +513,14 @@ export default async function BabyOverview({
               <BarRow data={feedBars.map(b => b.n)} color="#F4A6A6" />
             </InsightCell>
 
-            {/* Temperature — line */}
+            {/* Total Sleep — line */}
             <InsightCell
-              title="Temperature"
+              title="Total sleep"
               tint="lavender"
-              big={lastTempValue != null ? `${lastTempValue.toFixed(1)}°` : '—'}
-              unit="latest"
+              big={`${avgSleepHours.toFixed(1)}h`}
+              unit="avg / day"
             >
-              <Sparkline data={tempLine} color="#B9A7D8" height={36} width={140} />
+              <Sparkline data={sleepLine.length ? sleepLine : [0]} color="#B9A7D8" height={36} width={140} />
             </InsightCell>
 
             {/* Stool summary donut */}
@@ -642,6 +675,7 @@ export default async function BabyOverview({
           <div className="flex items-center gap-2 overflow-x-auto">
             <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-2 pr-1 whitespace-nowrap">Quick add</span>
             <QuickPill href={`/babies/${babyId}/feedings/new`}     icon={Milk}        tint="coral"    label="Feeding" />
+            <QuickPill href={`/babies/${babyId}/sleep/new`}        icon={Moon}        tint="lavender" label="Sleep" />
             <QuickPill href={`/babies/${babyId}/stool/new`}        icon={Droplet}     tint="mint"     label="Stool" />
             <QuickPill href={`/babies/${babyId}/medications/log`}  icon={Pill}        tint="lavender" label="Medication" />
             <QuickPill href={`/babies/${babyId}/temperature/new`}  icon={Thermometer} tint="peach"    label="Temperature" />

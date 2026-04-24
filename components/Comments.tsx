@@ -7,26 +7,33 @@ import { fmtRelative } from '@/lib/dates';
 
 type TargetTable =
   | 'feedings' | 'stool_logs' | 'medications' | 'medication_logs' | 'measurements'
-  | 'temperature_logs' | 'vaccinations' | 'medical_files' | 'extracted_text' | 'babies';
+  | 'temperature_logs' | 'vaccinations' | 'sleep_logs' | 'medical_files' | 'extracted_text' | 'babies';
 
 type Row = {
   id: string;
   author: string;
   body: string;
   created_at: string;
+  scope_date: string | null;
 };
 
 /**
  * Inline thread attached to any domain row. Reads via (target_table, target_id)
  * and writes via the `comments` table — everything RLS-gated by baby_users.
+ *
+ * When `scopeDate` is provided (YYYY-MM-DD), the thread is filtered to that
+ * date — used by the daily report so comments belong to the day being viewed.
+ * New comments inherit the same scope_date automatically.
  */
 export function Comments({
-  babyId, target, targetId, title = 'Comments',
+  babyId, target, targetId, title = 'Comments', scopeDate,
 }: {
   babyId: string;
   target: TargetTable;
   targetId: string;
   title?: string;
+  /** YYYY-MM-DD — if set, reads + writes are filtered/tagged with this date. */
+  scopeDate?: string;
 }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,15 +47,16 @@ export function Comments({
     supabase.auth.getUser().then(({ data }) => {
       setMe(data.user ? { id: data.user.id, email: data.user.email ?? null } : null);
     });
-    supabase
+    let q = supabase
       .from('comments')
-      .select('id,author,body,created_at')
+      .select('id,author,body,created_at,scope_date')
       .eq('target_table', target)
       .eq('target_id', targetId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: true })
+      .is('deleted_at', null);
+    if (scopeDate) q = q.eq('scope_date', scopeDate);
+    q.order('created_at', { ascending: true })
       .then(({ data }) => { setRows((data ?? []) as Row[]); setLoading(false); });
-  }, [target, targetId]);
+  }, [target, targetId, scopeDate]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,8 +67,12 @@ export function Comments({
     if (!auth.user) { setPosting(false); setErr('Not signed in.'); return; }
     const { data, error } = await supabase
       .from('comments')
-      .insert({ baby_id: babyId, target_table: target, target_id: targetId, body: body.trim(), author: auth.user.id })
-      .select('id,author,body,created_at')
+      .insert({
+        baby_id: babyId, target_table: target, target_id: targetId,
+        body: body.trim(), author: auth.user.id,
+        scope_date: scopeDate ?? null,
+      })
+      .select('id,author,body,created_at,scope_date')
       .single();
     setPosting(false);
     if (error) { setErr(error.message); return; }

@@ -64,4 +64,40 @@ export const BabySchema = z.object({
   birth_weight_kg: z.coerce.number().min(0).max(10).nullable().optional(),
   birth_height_cm: z.coerce.number().min(0).max(80).nullable().optional(),
   feeding_factor: z.coerce.number().min(50).max(250).default(150),
+  blood_type: z.enum(['A+','A-','B+','B-','AB+','AB-','O+','O-','unknown']).nullable().optional(),
+  doctor_name: z.string().max(200).nullable().optional(),
+  doctor_phone: z.string().max(40).nullable().optional(),
+  doctor_clinic: z.string().max(200).nullable().optional(),
+  next_appointment_at: z.string().nullable().optional(),
+  next_appointment_notes: z.string().max(400).nullable().optional(),
+});
+
+export const SleepSchema = z.object({
+  start_at: z.string().min(1),
+  end_at: z.string().nullable().optional(),
+  location: z.enum(['crib','bed','car','stroller','arms','other']),
+  quality: z.enum(['sound','restless','woke_often','unknown']).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+}).refine(
+  v => !v.end_at || new Date(v.end_at).getTime() >= new Date(v.start_at).getTime(),
+  { message: 'End time must be after start time', path: ['end_at'] },
+);
+
+export const TemperatureSchema = z.object({
+  measured_at: z.string().min(1),
+  temperature_c: z.coerce.number().min(30).max(45),
+  method: z.enum(['axillary','oral','rectal','ear','forehead','other']),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
+export const VaccinationSchema = z.object({
+  vaccine_name: z.string().min(1).max(200),
+  scheduled_at: z.string().nullable().optional(),
+  administered_at: z.string().nullable().optional(),
+  dose_number: z.coerce.number().int().min(1).max(10).nullable().optional(),
+  total_doses: z.coerce.number().int().min(1).max(10).nullable().optional(),
+  status: z.enum(['scheduled','administered','missed','cancelled']),
+  provider: z.string().max(200).nullable().optional(),
+  lot_number: z.string().max(80).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 });
