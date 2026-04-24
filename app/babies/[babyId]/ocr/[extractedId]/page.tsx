@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { OcrReview } from '@/components/OcrReview';
+import { PageShell, PageHeader } from '@/components/PageHeader';
 import type { StructuredOcr } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -34,36 +34,35 @@ export default async function OcrReviewPage({ params }: { params: { babyId: stri
   }
 
   return (
-    <div>
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <Link href={`/babies/${params.babyId}/files/${extracted.file_id}`} className="text-sm text-slate-500 hover:underline">← file</Link>
-            <h1 className="text-xl font-semibold mt-1">Review OCR extraction</h1>
-            <p className="text-sm text-slate-500">Edit any value. Nothing is saved to your logs until you hit <strong>Confirm</strong>.</p>
-          </div>
-        </div>
+    <PageShell max="5xl">
+      <PageHeader
+        backHref={`/babies/${params.babyId}/files/${extracted.file_id}`}
+        backLabel="file"
+        eyebrow="Smart Scan review"
+        eyebrowTint="coral"
+        title="Review extraction"
+        subtitle={<>Edit any value. Nothing is saved to your logs until you hit <strong>Confirm</strong>.</>}
+      />
 
-        <OcrReview
-          extracted={{
-            id: extracted.id,
-            file_id: extracted.file_id,
-            baby_id: extracted.baby_id,
-            provider: extracted.provider,
-            model: extracted.model,
-            raw_text: extracted.raw_text,
-            confidence_score: extracted.confidence_score,
-            is_handwritten: extracted.is_handwritten,
-            detected_language: extracted.detected_language,
-            flag_low_confidence: extracted.flag_low_confidence,
-            status: extracted.status as 'extracted',
-            structured_data: extracted.structured_data as StructuredOcr,
-          }}
-          meds={(meds ?? []) as { id: string; name: string }[]}
-          previewUrl={previewUrl}
-          babyId={params.babyId}
-        />
-      </main>
-    </div>
+      <OcrReview
+        extracted={{
+          id: extracted.id,
+          file_id: extracted.file_id,
+          baby_id: extracted.baby_id,
+          provider: extracted.provider,
+          model: extracted.model,
+          raw_text: extracted.raw_text,
+          confidence_score: extracted.confidence_score,
+          is_handwritten: extracted.is_handwritten,
+          detected_language: extracted.detected_language,
+          flag_low_confidence: extracted.flag_low_confidence,
+          status: extracted.status as 'extracted',
+          structured_data: extracted.structured_data as StructuredOcr,
+        }}
+        meds={(meds ?? []) as { id: string; name: string }[]}
+        previewUrl={previewUrl}
+        babyId={params.babyId}
+      />
+    </PageShell>
   );
 }

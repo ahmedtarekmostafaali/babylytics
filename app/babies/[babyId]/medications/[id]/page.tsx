@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { MedicationForm } from '@/components/forms/MedicationForm';
+import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,24 +14,20 @@ export default async function EditMedication({ params }: { params: { babyId: str
     .eq('id', params.id).is('deleted_at', null).single();
   if (!data) notFound();
   return (
-    <div>
-      <main className="max-w-xl mx-auto px-4 py-6">
-        <Link href={`/babies/${params.babyId}/medications`} className="text-sm text-slate-500 hover:underline">← medications</Link>
-        <Card className="mt-3">
-          <CardHeader><CardTitle>Edit medication</CardTitle></CardHeader>
-          <CardContent>
-            <MedicationForm babyId={params.babyId} initial={{
-              id: data.id, baby_id: data.baby_id,
-              name: data.name, dosage: data.dosage,
-              route: data.route as 'oral',
-              frequency_hours: data.frequency_hours,
-              total_doses: data.total_doses,
-              starts_at: data.starts_at, ends_at: data.ends_at,
-              prescribed_by: data.prescribed_by, notes: data.notes,
-            }} />
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+    <PageShell max="3xl">
+      <PageHeader backHref={`/babies/${params.babyId}/medications`} backLabel="medications"
+        eyebrow="Edit medication" eyebrowTint="lavender" title={data.name} />
+      <Card><CardContent className="py-6">
+        <MedicationForm babyId={params.babyId} initial={{
+          id: data.id, baby_id: data.baby_id,
+          name: data.name, dosage: data.dosage,
+          route: data.route as 'oral',
+          frequency_hours: data.frequency_hours,
+          total_doses: data.total_doses,
+          starts_at: data.starts_at, ends_at: data.ends_at,
+          prescribed_by: data.prescribed_by, notes: data.notes,
+        }} />
+      </CardContent></Card>
+    </PageShell>
   );
 }

@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { FeedingForm } from '@/components/forms/FeedingForm';
+import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,25 +15,24 @@ export default async function EditFeeding({ params }: { params: { babyId: string
   if (!data) notFound();
 
   return (
-    <div>
-      <main className="max-w-xl mx-auto px-4 py-6">
-        <Link href={`/babies/${params.babyId}`} className="text-sm text-slate-500 hover:underline">← back</Link>
-        <Card className="mt-3">
-          <CardHeader><CardTitle>Edit feeding</CardTitle></CardHeader>
-          <CardContent>
-            <FeedingForm babyId={params.babyId} initial={{
-              id: data.id,
-              baby_id: data.baby_id,
-              feeding_time: data.feeding_time,
-              milk_type: data.milk_type as 'formula',
-              quantity_ml: data.quantity_ml,
-              kcal: data.kcal,
-              duration_min: data.duration_min,
-              notes: data.notes,
-            }} />
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+    <PageShell max="3xl">
+      <PageHeader
+        backHref={`/babies/${params.babyId}/feedings`}
+        backLabel="feedings"
+        eyebrow="Edit feeding"
+        eyebrowTint="peach"
+        title="Adjust this feeding"
+        subtitle="Any change is recorded in the audit log."
+      />
+      <Card><CardContent className="py-6">
+        <FeedingForm babyId={params.babyId} initial={{
+          id: data.id, baby_id: data.baby_id,
+          feeding_time: data.feeding_time,
+          milk_type: data.milk_type as 'formula',
+          quantity_ml: data.quantity_ml, kcal: data.kcal,
+          duration_min: data.duration_min, notes: data.notes,
+        }} />
+      </CardContent></Card>
+    </PageShell>
   );
 }

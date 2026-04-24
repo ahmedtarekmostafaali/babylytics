@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { BabyEditForm, type BabyEditValue } from '@/components/forms/BabyEditForm';
+import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,6 @@ export default async function EditBabyPage({ params }: { params: { babyId: strin
     .single();
   if (!baby) notFound();
 
-  // Look up role — only owners can delete
   const [{ data: membership }, { data: currentWeight }] = await Promise.all([
     supabase.from('baby_users')
       .select('role')
@@ -31,20 +30,17 @@ export default async function EditBabyPage({ params }: { params: { babyId: strin
   const canDelete = membership?.role === 'owner';
 
   return (
-    <div>
-      <main className="max-w-xl mx-auto px-4 py-6">
-        <Link href={`/babies/${params.babyId}`} className="text-sm text-slate-500 hover:underline">← back to {baby.name}</Link>
-        <Card className="mt-3">
-          <CardHeader><CardTitle className="text-base">Edit baby profile</CardTitle></CardHeader>
-          <CardContent>
-            <BabyEditForm
-              baby={baby as BabyEditValue}
-              currentWeightKg={currentWeight as number | null}
-              canDelete={canDelete}
-            />
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+    <PageShell max="3xl">
+      <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
+        eyebrow="Profile" eyebrowTint="brand" title="Edit baby profile"
+        subtitle="Name, date of birth, birth stats, and feeding factor." />
+      <Card><CardContent className="py-6">
+        <BabyEditForm
+          baby={baby as BabyEditValue}
+          currentWeightKg={currentWeight as number | null}
+          canDelete={canDelete}
+        />
+      </CardContent></Card>
+    </PageShell>
   );
 }

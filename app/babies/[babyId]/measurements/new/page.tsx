@@ -1,17 +1,19 @@
-import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { MeasurementForm } from '@/components/forms/MeasurementForm';
+import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export default function NewMeasurement({ params }: { params: { babyId: string } }) {
   return (
-    <div>
-      <main className="max-w-xl mx-auto px-4 py-6">
-        <Link href={`/babies/${params.babyId}`} className="text-sm text-slate-500 hover:underline">← back</Link>
-        <Card className="mt-3">
-          <CardHeader><CardTitle>Log a measurement</CardTitle></CardHeader>
-          <CardContent><MeasurementForm babyId={params.babyId} /></CardContent>
-        </Card>
-      </main>
-    </div>
+    <PageShell max="3xl">
+      <PageHeader
+        backHref={`/babies/${params.babyId}`}
+        backLabel="dashboard"
+        eyebrow="Growth"
+        eyebrowTint="brand"
+        title="Log a measurement"
+        subtitle="Keeping growth data current refines feeding recommendations."
+      />
+      <Card><CardContent className="py-6"><MeasurementForm babyId={params.babyId} /></CardContent></Card>
+    </PageShell>
   );
 }

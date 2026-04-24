@@ -3,7 +3,10 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { PageShell, PageHeader } from '@/components/PageHeader';
+import { TimelineRow } from '@/components/TimelineRow';
 import { fmtDateTime } from '@/lib/dates';
+import { Pill } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,54 +29,72 @@ export default async function MedicationsList({ params }: { params: { babyId: st
   const medName = (id: string) => meds?.find(m => m.id === id)?.name ?? '—';
 
   return (
-    <div>
-      <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <Link href={`/babies/${params.babyId}`} className="text-sm text-slate-500 hover:underline">← {baby.name}</Link>
-            <h1 className="text-xl font-semibold mt-1">Medications</h1>
-          </div>
+    <PageShell max="3xl">
+      <PageHeader
+        backHref={`/babies/${params.babyId}`}
+        backLabel={baby.name}
+        eyebrow="Medications"
+        eyebrowTint="lavender"
+        title="Prescriptions & doses"
+        subtitle={`${(meds ?? []).length} medication${(meds ?? []).length === 1 ? '' : 's'} · ${(logs ?? []).length} recent doses`}
+        right={
           <div className="flex gap-2">
-            <Link href={`/babies/${params.babyId}/medications/new`}><Button variant="secondary">Add medication</Button></Link>
-            <Link href={`/babies/${params.babyId}/medications/log`}><Button>Log dose</Button></Link>
+            <Link href={`/babies/${params.babyId}/medications/new`}><Button variant="secondary">+ Medication</Button></Link>
+            <Link href={`/babies/${params.babyId}/medications/log`}><Button variant="lavender">+ Log dose</Button></Link>
           </div>
-        </div>
+        }
+      />
 
-        <Card>
-          <CardHeader><CardTitle>Prescriptions</CardTitle></CardHeader>
-          <CardContent className="divide-y divide-slate-100 text-sm">
-            {(meds ?? []).length === 0 && <p className="text-slate-500">No medications yet.</p>}
-            {meds?.map(m => (
-              <Link key={m.id} href={`/babies/${params.babyId}/medications/${m.id}`} className="flex items-center justify-between py-2 hover:bg-slate-50 -mx-2 px-2 rounded">
-                <div>
-                  <div className="font-medium">{m.name}{m.dosage ? ` · ${m.dosage}` : ''}{m.route !== 'oral' ? ` · ${m.route}` : ''}</div>
-                  <div className="text-xs text-slate-500">
+      <Card>
+        <CardHeader><CardTitle>Prescriptions</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          {(meds ?? []).length === 0 && <p className="text-ink-muted text-sm">No medications yet.</p>}
+          {meds?.map(m => {
+            const active = !m.ends_at || new Date(m.ends_at).getTime() > Date.now();
+            return (
+              <Link
+                key={m.id}
+                href={`/babies/${params.babyId}/medications/${m.id}`}
+                className="flex items-center gap-4 rounded-2xl p-3 sm:p-4 bg-lavender-50/70 hover:bg-lavender-100/70 border border-transparent hover:border-slate-200/80 transition-colors"
+              >
+                <span className="h-11 w-11 rounded-xl bg-lavender-100 text-lavender-600 grid place-items-center shrink-0">
+                  <Pill className="h-5 w-5" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-semibold text-ink-strong truncate">
+                    {m.name}{m.dosage ? ` · ${m.dosage}` : ''}{m.route !== 'oral' ? ` · ${m.route}` : ''}
+                  </span>
+                  <span className="block text-xs text-ink-muted">
                     every {m.frequency_hours ?? '—'}h · {fmtDateTime(m.starts_at)}{m.ends_at ? ` → ${fmtDateTime(m.ends_at)}` : ''}
                     {m.prescribed_by ? ` · ${m.prescribed_by}` : ''}
-                  </div>
-                </div>
-                <span className="text-xs text-slate-400">edit</span>
+                  </span>
+                </span>
+                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${active ? 'bg-mint-100 text-mint-700' : 'bg-slate-100 text-ink-muted'}`}>
+                  {active ? 'Active' : 'Ended'}
+                </span>
               </Link>
-            ))}
-          </CardContent>
-        </Card>
+            );
+          })}
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader><CardTitle>Recent doses</CardTitle></CardHeader>
-          <CardContent className="divide-y divide-slate-100 text-sm">
-            {(logs ?? []).length === 0 && <p className="text-slate-500">No doses logged yet.</p>}
-            {logs?.map(l => (
-              <Link key={l.id} href={`/babies/${params.babyId}/medications/log/${l.id}`} className="flex items-center justify-between py-2 hover:bg-slate-50 -mx-2 px-2 rounded">
-                <div>
-                  <div className="font-medium">{medName(l.medication_id)} · {l.status}{l.actual_dosage ? ` · ${l.actual_dosage}` : ''}</div>
-                  <div className="text-xs text-slate-500">{fmtDateTime(l.medication_time)}{l.source !== 'manual' ? ` · ${l.source}` : ''}</div>
-                </div>
-                <span className="text-xs text-slate-400">edit</span>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+      <Card>
+        <CardHeader><CardTitle>Recent doses</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          {(logs ?? []).length === 0 && <p className="text-ink-muted text-sm">No doses logged yet.</p>}
+          {logs?.map(l => (
+            <TimelineRow
+              key={l.id}
+              href={`/babies/${params.babyId}/medications/log/${l.id}`}
+              icon={Pill}
+              tint="lavender"
+              title={`${medName(l.medication_id)} · ${l.status}${l.actual_dosage ? ` · ${l.actual_dosage}` : ''}`}
+              subtitle={l.source !== 'manual' ? `entered via ${l.source}` : 'manual entry'}
+              time={l.medication_time}
+            />
+          ))}
+        </CardContent>
+      </Card>
+    </PageShell>
   );
 }

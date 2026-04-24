@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Input, Label, Select } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { BabySchema } from '@/lib/validators';
+import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export default function NewBabyPage() {
   const router = useRouter();
@@ -44,51 +45,51 @@ export default function NewBabyPage() {
   }
 
   return (
-    <div>
-      <main className="max-w-xl mx-auto px-4 py-8">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Add a baby</CardTitle></CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={submit}>
+    <PageShell max="3xl">
+      <PageHeader backHref="/dashboard" backLabel="dashboard"
+        eyebrow="Welcome" eyebrowTint="coral" title="Add a baby"
+        subtitle="You can always change these later on the profile page." />
+      <Card>
+        <CardContent className="py-6">
+          <form className="space-y-4" onSubmit={submit}>
+            <div>
+              <Label htmlFor="n">Name</Label>
+              <Input id="n" required value={name} onChange={e => setName(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="d">Date &amp; time of birth</Label>
+              <Input id="d" type="datetime-local" required value={dob} onChange={e => setDob(e.target.value)} />
+              <p className="text-xs text-ink-muted mt-1">Exact time matters for first-day feeding math.</p>
+            </div>
+            <div>
+              <Label htmlFor="g">Gender</Label>
+              <Select id="g" value={gender} onChange={e => setGender(e.target.value as typeof gender)}>
+                <option value="unspecified">Unspecified</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="n">Name</Label>
-                <Input id="n" required value={name} onChange={e => setName(e.target.value)} />
-              </div>
-              <div>
-                <Label htmlFor="d">Date & time of birth</Label>
-                <Input id="d" type="datetime-local" required value={dob} onChange={e => setDob(e.target.value)} />
-                <p className="text-xs text-slate-500 mt-1">Exact time matters for first-day feeding math.</p>
-              </div>
-              <div>
-                <Label htmlFor="g">Gender</Label>
-                <Select id="g" value={gender} onChange={e => setGender(e.target.value as typeof gender)}>
-                  <option value="unspecified">Unspecified</option>
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                  <option value="other">Other</option>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="bw">Birth weight (kg)</Label>
-                  <Input id="bw" type="number" step="0.001" min={0} max={10} value={birthWeight} onChange={e => setBirthWeight(e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="bh">Birth height (cm)</Label>
-                  <Input id="bh" type="number" step="0.1" min={0} max={80} value={birthHeight} onChange={e => setBirthHeight(e.target.value)} />
-                </div>
+                <Label htmlFor="bw">Birth weight (kg)</Label>
+                <Input id="bw" type="number" step="0.001" min={0} max={10} value={birthWeight} onChange={e => setBirthWeight(e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="f">Feeding factor (ml / kg / day)</Label>
-                <Input id="f" type="number" step="1" min={50} max={250} value={factor} onChange={e => setFactor(e.target.value)} />
-                <p className="text-xs text-slate-500 mt-1">Default 150. Adjust on your pediatrician's advice.</p>
+                <Label htmlFor="bh">Birth height (cm)</Label>
+                <Input id="bh" type="number" step="0.1" min={0} max={80} value={birthHeight} onChange={e => setBirthHeight(e.target.value)} />
               </div>
-              {err && <p className="text-sm text-red-600">{err}</p>}
-              <Button type="submit" disabled={loading}>{loading ? 'Saving…' : 'Create baby'}</Button>
-            </form>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+            </div>
+            <div>
+              <Label htmlFor="f">Feeding factor (ml / kg / day)</Label>
+              <Input id="f" type="number" step="1" min={50} max={250} value={factor} onChange={e => setFactor(e.target.value)} />
+              <p className="text-xs text-ink-muted mt-1">Default 150. Adjust on your pediatrician&apos;s advice.</p>
+            </div>
+            {err && <p className="text-sm text-coral-600">{err}</p>}
+            <Button type="submit" disabled={loading}>{loading ? 'Saving…' : 'Create baby'}</Button>
+          </form>
+        </CardContent>
+      </Card>
+    </PageShell>
   );
 }

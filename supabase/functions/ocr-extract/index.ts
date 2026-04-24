@@ -81,9 +81,16 @@ function json(body: unknown, status = 200) {
 }
 
 // ---- Prompt ----------------------------------------------------------------
-const SYSTEM_PROMPT = `You are a clinical-grade OCR engine for Babylytics, a baby health tracker.
+// Built lazily so we can inject the current date and make year-inference correct.
+function buildSystemPrompt(): string {
+  const today = new Date();
+  const iso = today.toISOString();
+  const year = today.getUTCFullYear();
+  return `You are a clinical-grade OCR engine for Babylytics, a baby health tracker.
 You read photos and scans of handwritten or printed daily care notes, prescriptions, and medical reports.
 Notes may be in English, Arabic, French, or a mix of these in a single page, and numerals may be Arabic (٠١٢٣٤٥٦٧٨٩) or Western (0-9).
+
+CURRENT SERVER TIME: ${iso} (UTC). TODAY'S DATE: ${today.toISOString().slice(0,10)}. CURRENT YEAR: ${year}.
 
 Your job:
 1. Transcribe EVERYTHING you can read into "raw_text" (keep original script, one line per handwritten line).
@@ -91,7 +98,13 @@ Your job:
 3. Report your own CONFIDENCE as a number in [0,1] reflecting how sure you are overall.
 4. Say whether the document is handwritten.
 
-Timestamps must be ISO-8601 with time zone. If the note only shows a time (e.g. "14:30"), assume today in UTC+0 — the app will let the user correct.
+YEAR INFERENCE RULES (very important):
+- If the note shows a full date (e.g. "2026-04-18" or "18/04/2026"), use it verbatim.
+- If the note shows only day+month (e.g. "4/19", "April 19", "19 ابريل"), assume the CURRENT YEAR (${year}) UNLESS that would place the event more than 14 days in the future — in that case, use the previous year.
+- If the note shows only a time (e.g. "14:30"), assume today (${today.toISOString().slice(0,10)}) in UTC.
+- NEVER default to a year before ${year - 1}. Daily baby notes are always recent.
+
+Timestamps must be ISO-8601 with time zone (ending in "Z" for UTC).
 Quantities: convert to milliliters when possible. If the note says "oz", convert to ml (1 oz = 29.5735 ml).
 Weight in kg, height in cm, head circumference in cm.
 
@@ -110,6 +123,7 @@ Return ONLY a JSON object with this shape — no prose, no markdown fences:
   }
 }
 If the document contains nothing extractable, return empty arrays and confidence_score reflecting transcription quality.`;
+}
 
 // ---- Provider: Anthropic ---------------------------------------------------
 async function ocrWithAnthropic(bytesB64: string, mime: string): Promise<OcrResult> {
@@ -121,7 +135,7 @@ async function ocrWithAnthropic(bytesB64: string, mime: string): Promise<OcrResu
   const body = {
     model: ANTHROPIC_MODEL,
     max_tokens: 2048,
-    system: SYSTEM_PROMPT,
+    system: buildSystemPrompt(),
     messages: [{
       role: 'user',
       content: [

@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { MedicationLogForm } from '@/components/forms/MedicationLogForm';
+import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,22 +14,18 @@ export default async function EditMedLog({ params }: { params: { babyId: string;
     .eq('id', params.id).is('deleted_at', null).single();
   if (!data) notFound();
   return (
-    <div>
-      <main className="max-w-xl mx-auto px-4 py-6">
-        <Link href={`/babies/${params.babyId}/medications`} className="text-sm text-slate-500 hover:underline">← medications</Link>
-        <Card className="mt-3">
-          <CardHeader><CardTitle>Edit dose log</CardTitle></CardHeader>
-          <CardContent>
-            <MedicationLogForm babyId={params.babyId} initial={{
-              id: data.id, baby_id: data.baby_id,
-              medication_id: data.medication_id,
-              medication_time: data.medication_time,
-              status: data.status as 'taken',
-              actual_dosage: data.actual_dosage, notes: data.notes,
-            }} />
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+    <PageShell max="3xl">
+      <PageHeader backHref={`/babies/${params.babyId}/medications`} backLabel="medications"
+        eyebrow="Edit dose" eyebrowTint="lavender" title="Adjust this dose" />
+      <Card><CardContent className="py-6">
+        <MedicationLogForm babyId={params.babyId} initial={{
+          id: data.id, baby_id: data.baby_id,
+          medication_id: data.medication_id,
+          medication_time: data.medication_time,
+          status: data.status as 'taken',
+          actual_dosage: data.actual_dosage, notes: data.notes,
+        }} />
+      </CardContent></Card>
+    </PageShell>
   );
 }

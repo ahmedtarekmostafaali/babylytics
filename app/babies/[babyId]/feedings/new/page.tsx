@@ -1,17 +1,19 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { FeedingForm } from '@/components/forms/FeedingForm';
-import Link from 'next/link';
+import { PageShell, PageHeader } from '@/components/PageHeader';
 
 export default function NewFeeding({ params }: { params: { babyId: string } }) {
   return (
-    <div>
-      <main className="max-w-xl mx-auto px-4 py-6">
-        <Link href={`/babies/${params.babyId}`} className="text-sm text-slate-500 hover:underline">← back</Link>
-        <Card className="mt-3">
-          <CardHeader><CardTitle>Log a feeding</CardTitle></CardHeader>
-          <CardContent><FeedingForm babyId={params.babyId} /></CardContent>
-        </Card>
-      </main>
-    </div>
+    <PageShell max="3xl">
+      <PageHeader
+        backHref={`/babies/${params.babyId}`}
+        backLabel="dashboard"
+        eyebrow="Feedings"
+        eyebrowTint="peach"
+        title="Log a feeding"
+        subtitle="Breast, bottle or solid — the sooner logged, the more accurate your patterns."
+      />
+      <Card><CardContent className="py-6"><FeedingForm babyId={params.babyId} /></CardContent></Card>
+    </PageShell>
   );
 }
