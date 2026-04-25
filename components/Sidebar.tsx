@@ -13,7 +13,7 @@ import { effectiveStage, fmtGestationalAge } from '@/lib/lifecycle';
 import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
-  Stethoscope, CalendarClock, HeartPulse, ScanLine, Activity, Heart,
+  Stethoscope, CalendarClock, HeartPulse, ScanLine, Activity, Heart, Tv, FlaskConical,
 } from 'lucide-react';
 
 type BabyRow = {
@@ -193,6 +193,9 @@ export function Sidebar() {
                 <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}     label="Measurements" active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />
                 <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label="Temperature"  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />
                 <NavItem href={`/babies/${currentBabyId}/sleep`}         icon={Moon}      label="Sleep"        active={pathname?.startsWith(`/babies/${currentBabyId}/sleep`) ?? false} collapsed={collapsed} tint="lavender" />
+                <NavItem href={`/babies/${currentBabyId}/activities`}    icon={Activity}  label="Activities"   active={pathname?.startsWith(`/babies/${currentBabyId}/activities`) ?? false} collapsed={collapsed} tint="mint" />
+                <NavItem href={`/babies/${currentBabyId}/screen-time`}   icon={Tv}        label="Screen time"  active={pathname?.startsWith(`/babies/${currentBabyId}/screen-time`) ?? false} collapsed={collapsed} tint="lavender" />
+                <NavItem href={`/babies/${currentBabyId}/labs`}          icon={FlaskConical} label="Labs"     active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
                 <NavItem href={`/babies/${currentBabyId}/vaccinations`}  icon={Syringe}   label="Vaccinations" active={pathname?.startsWith(`/babies/${currentBabyId}/vaccinations`) ?? false} collapsed={collapsed} tint="lavender" />
                 {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`} icon={CalendarClock} label="Appointments" active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
               </>}

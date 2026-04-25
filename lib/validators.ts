@@ -84,6 +84,24 @@ export const SleepSchema = z.object({
   { message: 'End time must be after start time', path: ['end_at'] },
 );
 
+export const ScreenTimeSchema = z.object({
+  started_at:    z.string().min(1),
+  duration_min:  z.coerce.number().int().min(1).max(1440),
+  content_type:  z.enum(['educational','entertainment','video_call','passive','other']).nullable().optional(),
+  device:        z.enum(['tv','tablet','phone','laptop','other']).nullable().optional(),
+  notes:         z.string().max(2000).nullable().optional(),
+});
+
+export const ActivitySchema = z.object({
+  started_at:    z.string().min(1),
+  duration_min:  z.coerce.number().int().min(1).max(720).nullable().optional(),
+  activity_type: z.string().min(1).max(120),
+  intensity:     z.enum(['low','moderate','high']).nullable().optional(),
+  location:      z.string().max(120).nullable().optional(),
+  mood:          z.enum(['happy','calm','fussy','tired','curious','other']).nullable().optional(),
+  notes:         z.string().max(2000).nullable().optional(),
+});
+
 export const TemperatureSchema = z.object({
   measured_at: z.string().min(1),
   temperature_c: z.coerce.number().min(30).max(45),
