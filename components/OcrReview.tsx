@@ -22,6 +22,16 @@ type UsRow      = {
   sex_predicted: 'male'|'female'|'undetermined'|'';
   anomalies: string; summary: string;
 };
+type LabPanelRow = {
+  panel_kind: 'blood'|'urine'|'stool'|'culture'|'imaging'|'genetic'|'other';
+  panel_name: string;
+  sample_at: string;
+  result_at: string;
+  lab_name: string;
+  summary: string;
+  abnormal: boolean;
+  items: { test_name: string; value: string; unit: string; reference: string; is_abnormal: boolean; flag: ''|'low'|'high'|'critical'|'positive'|'negative' }[];
+};
 
 type Med = { id: string; name: string };
 
@@ -112,6 +122,29 @@ export function OcrReview({
   );
   const [savingUs, setSavingUs] = useState(false);
   const [usMsg, setUsMsg] = useState<string | null>(null);
+
+  const [labPanels, setLabPanels] = useState<LabPanelRow[]>(() =>
+    (initial.lab_panels ?? []).map(p => ({
+      panel_kind: (p.panel_kind ?? 'blood') as LabPanelRow['panel_kind'],
+      panel_name: p.panel_name ?? '',
+      sample_at:  p.sample_at  ? isoToLocalInput(p.sample_at)  : '',
+      result_at:  p.result_at  ? isoToLocalInput(p.result_at)  : nowLocalInput(),
+      lab_name:   p.lab_name ?? '',
+      summary:    p.summary ?? '',
+      abnormal:   p.abnormal ?? false,
+      items: (p.items ?? []).map(it => ({
+        test_name: it.test_name ?? '',
+        value:     it.value ?? '',
+        unit:      it.unit ?? '',
+        reference: it.reference ?? '',
+        is_abnormal: it.is_abnormal ?? false,
+        flag:      (it.flag ?? '') as LabPanelRow['items'][number]['flag'],
+      })),
+    }))
+  );
+  const [savingLab, setSavingLab] = useState(false);
+  const [labMsg, setLabMsg] = useState<string | null>(null);
+  const labRequests = (initial.lab_requests ?? []) as string[];
 
   const [freeNotes, setFreeNotes] = useState<string>(initial.notes ?? '');
   const [err, setErr] = useState<string | null>(null);
@@ -489,6 +522,196 @@ export function OcrReview({
         </Card>
       )}
 
+      {/* Lab panels — separate save (writes to public.lab_panels + items) */}
+      {labPanels.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Lab panel{labPanels.length === 1 ? '' : 's'} ({labPanels.length})</CardTitle>
+            <span className="text-[11px] uppercase tracking-wider text-peach-700 bg-peach-50 px-2 py-0.5 rounded-full">
+              saved separately
+            </span>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {labPanels.map((p, pi) => (
+              <div key={pi} className="rounded-xl border border-peach-200 bg-peach-50/30 p-4 space-y-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div>
+                    <Label>Type</Label>
+                    <Select disabled={readOnly} value={p.panel_kind}
+                      onChange={e => setLabPanels(rs => patch(rs, pi, { panel_kind: e.target.value as LabPanelRow['panel_kind'] }))}>
+                      <option value="blood">Blood</option>
+                      <option value="urine">Urine</option>
+                      <option value="stool">Stool</option>
+                      <option value="culture">Culture</option>
+                      <option value="imaging">Imaging</option>
+                      <option value="genetic">Genetic</option>
+                      <option value="other">Other</option>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Panel name</Label>
+                    <Input disabled={readOnly} value={p.panel_name}
+                      onChange={e => setLabPanels(rs => patch(rs, pi, { panel_name: e.target.value }))}
+                      placeholder="CBC with differential" />
+                  </div>
+                  <div>
+                    <Label>Sample taken</Label>
+                    <Input type="datetime-local" disabled={readOnly} value={p.sample_at}
+                      onChange={e => setLabPanels(rs => patch(rs, pi, { sample_at: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Result issued</Label>
+                    <Input type="datetime-local" disabled={readOnly} value={p.result_at}
+                      onChange={e => setLabPanels(rs => patch(rs, pi, { result_at: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Lab</Label>
+                    <Input disabled={readOnly} value={p.lab_name}
+                      onChange={e => setLabPanels(rs => patch(rs, pi, { lab_name: e.target.value }))} />
+                  </div>
+                  <div className="md:col-span-3">
+                    <Label>One-line summary</Label>
+                    <Input disabled={readOnly} value={p.summary}
+                      onChange={e => setLabPanels(rs => patch(rs, pi, { summary: e.target.value }))} />
+                  </div>
+                  <label className="md:col-span-3 inline-flex items-center gap-2 text-sm">
+                    <input type="checkbox" disabled={readOnly} checked={p.abnormal}
+                      onChange={e => setLabPanels(rs => patch(rs, pi, { abnormal: e.target.checked }))} />
+                    Flag panel as abnormal
+                  </label>
+                </div>
+
+                {/* Items table */}
+                {p.items.length > 0 && (
+                  <div className="rounded-lg border border-slate-200 bg-white overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-[10px] uppercase tracking-wider text-ink-muted border-b border-slate-100">
+                          <th className="px-2 py-1.5">Test</th>
+                          <th className="px-2 py-1.5">Value</th>
+                          <th className="px-2 py-1.5">Unit</th>
+                          <th className="px-2 py-1.5">Reference</th>
+                          <th className="px-2 py-1.5">Flag</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {p.items.map((it, ii) => (
+                          <tr key={ii} className={it.is_abnormal ? 'bg-coral-50/40' : ''}>
+                            <td className="px-2 py-1"><Input className="h-8 text-xs" disabled={readOnly} value={it.test_name} onChange={e => setLabPanels(rs => patchItem(rs, pi, ii, { test_name: e.target.value }))} /></td>
+                            <td className="px-2 py-1"><Input className="h-8 text-xs" disabled={readOnly} value={it.value}     onChange={e => setLabPanels(rs => patchItem(rs, pi, ii, { value: e.target.value }))} /></td>
+                            <td className="px-2 py-1"><Input className="h-8 text-xs" disabled={readOnly} value={it.unit}      onChange={e => setLabPanels(rs => patchItem(rs, pi, ii, { unit: e.target.value }))} /></td>
+                            <td className="px-2 py-1"><Input className="h-8 text-xs" disabled={readOnly} value={it.reference} onChange={e => setLabPanels(rs => patchItem(rs, pi, ii, { reference: e.target.value }))} /></td>
+                            <td className="px-2 py-1">
+                              <Select className="h-8 text-xs" disabled={readOnly} value={it.flag}
+                                onChange={e => setLabPanels(rs => patchItem(rs, pi, ii, { flag: e.target.value as LabPanelRow['items'][number]['flag'], is_abnormal: !!e.target.value }))}>
+                                <option value="">—</option>
+                                <option value="low">low</option>
+                                <option value="high">high</option>
+                                <option value="critical">critical</option>
+                                <option value="positive">positive</option>
+                                <option value="negative">negative</option>
+                              </Select>
+                            </td>
+                            <td className="px-1 py-1">
+                              {!readOnly && <button type="button" onClick={() => setLabPanels(rs => removeItem(rs, pi, ii))}
+                                className="text-coral-600 hover:text-coral-700 text-xs">×</button>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2">
+                  {!readOnly && p.items.length === 0 && (
+                    <Button type="button" variant="ghost" size="sm"
+                      onClick={() => setLabPanels(rs => addItem(rs, pi))}>
+                      + add row
+                    </Button>
+                  )}
+                  {!readOnly && (
+                    <Button type="button" variant="ghost" size="sm"
+                      onClick={() => setLabPanels(rs => rs.filter((_, j) => j !== pi))}>
+                      remove panel
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {!readOnly && (
+              <div className="flex items-center justify-end gap-2">
+                {labMsg && <span className="text-xs text-mint-700">{labMsg}</span>}
+                <Button type="button" disabled={savingLab} onClick={async () => {
+                  setLabMsg(null);
+                  const rows = labPanels
+                    .filter(p => p.panel_name.trim() && p.result_at);
+                  if (rows.length === 0) return;
+                  setSavingLab(true);
+                  const supabase = createClient();
+                  const userId = (await supabase.auth.getUser()).data.user?.id;
+                  let saved = 0;
+                  for (const p of rows) {
+                    const { data: panelRow, error: pErr } = await supabase.from('lab_panels').insert({
+                      baby_id: babyId,
+                      panel_kind: p.panel_kind,
+                      panel_name: p.panel_name.trim(),
+                      sample_at: p.sample_at ? localInputToIso(p.sample_at) : null,
+                      result_at: localInputToIso(p.result_at),
+                      lab_name: p.lab_name || null,
+                      summary: p.summary || null,
+                      abnormal: p.abnormal,
+                      file_id: extracted.file_id,
+                      created_by: userId,
+                    }).select('id').single();
+                    if (pErr || !panelRow) { setLabMsg(`Error: ${pErr?.message ?? 'failed'}`); break; }
+                    const itemRows = p.items
+                      .filter(i => i.test_name.trim())
+                      .map(i => ({
+                        panel_id: panelRow.id,
+                        test_name: i.test_name.trim(),
+                        value: i.value || null,
+                        unit: i.unit || null,
+                        reference: i.reference || null,
+                        is_abnormal: !!i.is_abnormal,
+                        flag: i.flag || null,
+                      }));
+                    if (itemRows.length > 0) {
+                      const { error: iErr } = await supabase.from('lab_panel_items').insert(itemRows);
+                      if (iErr) { setLabMsg(`Saved panel but rows failed: ${iErr.message}`); break; }
+                    }
+                    saved += 1;
+                  }
+                  setSavingLab(false);
+                  if (saved > 0) {
+                    setLabMsg(`Saved ${saved} lab panel${saved === 1 ? '' : 's'} ✓`);
+                    setTimeout(() => router.push(`/babies/${babyId}/labs`), 800);
+                  }
+                }}>
+                  {savingLab ? 'Saving…' : `Save lab panel${labPanels.length === 1 ? '' : 's'}`}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lab requests pulled from a prescription / referral */}
+      {labRequests.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Lab tests ordered by this document</CardTitle></CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <p className="text-xs text-ink-muted">When the results come back, add a new lab panel — these are just a heads-up.</p>
+            <ul className="flex flex-wrap gap-1.5">
+              {labRequests.map((req, i) => (
+                <li key={i} className="inline-flex items-center rounded-full bg-peach-100 text-peach-700 px-3 py-1 text-xs font-semibold">{req}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader><CardTitle>Free-text notes (not saved to logs)</CardTitle></CardHeader>
         <CardContent><Textarea rows={3} disabled={readOnly} value={freeNotes} onChange={e => setFreeNotes(e.target.value)} /></CardContent>
@@ -512,6 +735,27 @@ export function OcrReview({
 // ---- helpers --------------------------------------------------------------
 function patch<T>(rows: T[], i: number, diff: Partial<T>): T[] {
   return rows.map((r, j) => j === i ? { ...r, ...diff } : r);
+}
+
+function patchItem(panels: LabPanelRow[], pi: number, ii: number, diff: Partial<LabPanelRow['items'][number]>): LabPanelRow[] {
+  return panels.map((p, j) => j === pi ? {
+    ...p,
+    items: p.items.map((it, k) => k === ii ? { ...it, ...diff } : it),
+  } : p);
+}
+
+function addItem(panels: LabPanelRow[], pi: number): LabPanelRow[] {
+  return panels.map((p, j) => j === pi ? {
+    ...p,
+    items: [...p.items, { test_name: '', value: '', unit: '', reference: '', is_abnormal: false, flag: '' as const }],
+  } : p);
+}
+
+function removeItem(panels: LabPanelRow[], pi: number, ii: number): LabPanelRow[] {
+  return panels.map((p, j) => j === pi ? {
+    ...p,
+    items: p.items.filter((_, k) => k !== ii),
+  } : p);
 }
 
 function Section({ title, onAdd, children }: { title: string; onAdd?: () => void; children: React.ReactNode }) {

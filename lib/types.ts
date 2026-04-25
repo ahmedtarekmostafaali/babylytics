@@ -161,6 +161,24 @@ export interface StructuredOcr {
     anomalies?: string;
     summary?: string;
   }[];
+  lab_panels?: {
+    panel_kind?: 'blood' | 'urine' | 'stool' | 'culture' | 'imaging' | 'genetic' | 'other';
+    panel_name?: string;
+    sample_at?: string;
+    result_at?: string;
+    lab_name?: string;
+    summary?: string;
+    abnormal?: boolean;
+    items?: {
+      test_name?: string;
+      value?: string;
+      unit?: string;
+      reference?: string;
+      is_abnormal?: boolean;
+      flag?: 'low' | 'high' | 'critical' | 'positive' | 'negative';
+    }[];
+  }[];
+  lab_requests?: string[];
   notes?: string;
 }
 

@@ -71,6 +71,24 @@ type StructuredData = {
     anomalies?: string;
     summary?: string;
   }[];
+  lab_panels?: {
+    panel_kind?: 'blood'|'urine'|'stool'|'culture'|'imaging'|'genetic'|'other';
+    panel_name?: string;
+    sample_at?: string;
+    result_at?: string;
+    lab_name?: string;
+    summary?: string;
+    abnormal?: boolean;
+    items?: {
+      test_name?: string;
+      value?: string;
+      unit?: string;
+      reference?: string;
+      is_abnormal?: boolean;
+      flag?: 'low'|'high'|'critical'|'positive'|'negative';
+    }[];
+  }[];
+  lab_requests?: string[];  // ordered tests pulled out of a prescription/referral
   notes?: string;
 };
 
@@ -129,6 +147,20 @@ Timestamps must be ISO-8601 with time zone (ending in "Z" for UTC).
 Quantities: convert to milliliters when possible. If the note says "oz", convert to ml (1 oz = 29.5735 ml).
 Weight in kg, height in cm, head circumference in cm.
 
+LAB REPORT FIELDS (extract into "lab_panels" array — usually ONE entry per panel; multi-panel reports may yield multiple entries):
+- "panel_kind": one of "blood","urine","stool","culture","imaging","genetic","other" — pick the closest.
+- "panel_name": e.g. "CBC with differential", "Urinalysis", "Stool culture", "Vitamin D 25-OH".
+- "sample_at" / "result_at": ISO timestamps. Most lab reports show both; result_at is mandatory.
+- "lab_name": laboratory or hospital name (verbatim).
+- "summary": one-line takeaway / impression (e.g. "Mild iron-deficiency anemia, otherwise unremarkable").
+- "abnormal": true if ANY item is flagged out of range; false otherwise.
+- "items": array of test rows — each row has "test_name", "value" (string so ranges/qualifiers work), "unit", "reference" (verbatim, e.g. "11.0 - 14.0"), "is_abnormal" (boolean), and an optional "flag" of "low"/"high"/"critical"/"positive"/"negative".
+  Extract every row you can read — CBC reports often have 15-25 rows, urinalysis 10-15, etc.
+
+LAB REQUEST FIELDS (extract into "lab_requests" array — only when the document is a prescription / referral that ORDERS lab tests, not a result):
+- An array of strings, each one a test name as written ("CBC", "TSH", "Stool analysis", etc.).
+- If the document is purely a result (not an order), leave this empty.
+
 ULTRASOUND REPORT FIELDS (extract into "ultrasounds" array — typically ONE entry per scan):
 - "scanned_at": exam date / report date as ISO timestamp.
 - "gestational_week" / "gestational_day": GA shown as e.g. "29w 1d", "GA 29+1", "29 weeks 1 day". Split into the two integers.
@@ -158,10 +190,12 @@ Return ONLY a JSON object with this shape — no prose, no markdown fences:
     "measurements":    [{ "measured_at":"ISO", "weight_kg":0, "height_cm":0, "head_circ_cm":0, "notes":"..." }],
     "medication_logs": [{ "medication_time":"ISO", "status":"taken|missed|skipped", "notes":"..." }],
     "ultrasounds":     [{ "scanned_at":"ISO", "gestational_week":0, "gestational_day":0, "bpd_mm":0, "hc_mm":0, "ac_mm":0, "fl_mm":0, "efw_g":0, "fhr_bpm":0, "placenta_position":"...", "amniotic_fluid":"...", "sex_predicted":"male|female|undetermined", "anomalies":"...", "summary":"..." }],
+    "lab_panels":      [{ "panel_kind":"blood|urine|stool|culture|imaging|genetic|other", "panel_name":"...", "sample_at":"ISO", "result_at":"ISO", "lab_name":"...", "summary":"...", "abnormal": false, "items":[{ "test_name":"...", "value":"...", "unit":"...", "reference":"...", "is_abnormal": false, "flag":"low|high|critical|positive|negative" }] }],
+    "lab_requests":    ["CBC", "TSH", "Stool analysis"],
     "notes": "any free-text observations worth keeping"
   }
 }
-If the document contains nothing extractable, return empty arrays and confidence_score reflecting transcription quality.${isLab ? '\n(Lab structured rows are not yet auto-extracted — transcribe results into "notes".)' : ''}`;
+If the document contains nothing extractable, return empty arrays and confidence_score reflecting transcription quality.`;
 }
 
 // ---- Provider: Anthropic ---------------------------------------------------
