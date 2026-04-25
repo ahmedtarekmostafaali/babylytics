@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { AppointmentSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
-import { Input, Label, Select, Textarea } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Input';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
-import { Save, Trash2, CalendarClock } from 'lucide-react';
+import { Save, Trash2 } from 'lucide-react';
+import { Section, Field, QuickPill, Stepper, WhenPicker } from '@/components/forms/FormKit';
 
 export type AppointmentFormValue = {
   id?: string;
@@ -21,6 +22,14 @@ export type AppointmentFormValue = {
   conclusion?: string | null;
 };
 
+const STATUSES: { value: NonNullable<AppointmentFormValue['status']>; label: string }[] = [
+  { value: 'scheduled',   label: 'Scheduled'   },
+  { value: 'completed',   label: 'Completed'   },
+  { value: 'cancelled',   label: 'Cancelled'   },
+  { value: 'missed',      label: 'Missed'      },
+  { value: 'rescheduled', label: 'Rescheduled' },
+];
+
 export function AppointmentForm({
   babyId, doctors, initial,
 }: {
@@ -31,7 +40,7 @@ export function AppointmentForm({
   const router = useRouter();
   const [doctorId, setDoctorId] = useState<string | null>(initial?.doctor_id ?? doctors[0]?.id ?? null);
   const [when, setWhen]         = useState(initial?.scheduled_at ? isoToLocalInput(initial.scheduled_at) : nowLocalInput());
-  const [duration, setDuration] = useState<string>(initial?.duration_min?.toString() ?? '30');
+  const [duration, setDuration] = useState<number>(initial?.duration_min ?? 30);
   const [purpose, setPurpose]   = useState(initial?.purpose ?? '');
   const [location, setLocation] = useState(initial?.location ?? '');
   const [status, setStatus]     = useState<AppointmentFormValue['status']>(initial?.status ?? 'scheduled');
@@ -87,73 +96,111 @@ export function AppointmentForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label>Doctor</Label>
-          <Select value={doctorId ?? ''} onChange={e => setDoctorId(e.target.value || null)}>
-            <option value="">— No doctor —</option>
-            {doctors.map(d => (
-              <option key={d.id} value={d.id}>
-                {d.name}{d.specialty ? ` · ${d.specialty}` : ''}
-              </option>
-            ))}
-          </Select>
+    <form onSubmit={submit} className="space-y-8">
+      {/* 1. Doctor + status */}
+      <Section n={1} title="Who and what status?">
+        <div className="space-y-4">
+          <Field label="Doctor">
+            <Select
+              value={doctorId ?? ''}
+              onChange={e => setDoctorId(e.target.value || null)}
+              className="h-12 rounded-2xl"
+            >
+              <option value="">— No doctor —</option>
+              {doctors.map(d => (
+                <option key={d.id} value={d.id}>
+                  {d.name}{d.specialty ? ` · ${d.specialty}` : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Status">
+            <div className="flex flex-wrap gap-2">
+              {STATUSES.map(s => (
+                <QuickPill key={s.value} active={status === s.value} onClick={() => setStatus(s.value)} tint="lavender">
+                  {s.label}
+                </QuickPill>
+              ))}
+            </div>
+          </Field>
         </div>
-        <div>
-          <Label>Status</Label>
-          <Select value={status} onChange={e => setStatus(e.target.value as AppointmentFormValue['status'])}>
-            <option value="scheduled">Scheduled</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="missed">Missed</option>
-            <option value="rescheduled">Rescheduled</option>
-          </Select>
-        </div>
-        <div>
-          <Label>Date & time</Label>
-          <Input type="datetime-local" value={when} onChange={e => setWhen(e.target.value)} required />
-        </div>
-        <div>
-          <Label>Duration (min)</Label>
-          <Input type="number" min={5} max={600} step={5} value={duration} onChange={e => setDuration(e.target.value)} />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Purpose</Label>
-          <Input value={purpose ?? ''} onChange={e => setPurpose(e.target.value)} placeholder="e.g. 2-month check-up, vaccination" />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Location</Label>
-          <Input value={location ?? ''} onChange={e => setLocation(e.target.value)} placeholder="Clinic address or video link" />
-        </div>
-      </div>
+      </Section>
 
-      <div>
-        <Label>Prep notes (before the visit)</Label>
-        <Textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-          placeholder="Questions to ask, prep notes, things to remember…" />
-      </div>
+      {/* 2. When + duration + purpose */}
+      <Section n={2} title="When and what for?">
+        <div className="space-y-4">
+          <WhenPicker time={when} onChange={setWhen} tint="lavender" />
+          <Stepper
+            label="Duration"
+            value={duration}
+            onChange={setDuration}
+            unit="min"
+            step={5}
+            min={5}
+            max={600}
+            badge={{ text: 'TIME', tint: 'lavender' }}
+          />
+          <Field label="Purpose">
+            <input
+              value={purpose ?? ''}
+              onChange={e => setPurpose(e.target.value)}
+              placeholder="e.g. 2-month check-up, vaccination"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30"
+            />
+          </Field>
+        </div>
+      </Section>
 
-      <div>
-        <Label>Doctor&apos;s conclusion (after the visit)</Label>
-        <Textarea rows={4} value={conclusion ?? ''} onChange={e => setConclusion(e.target.value)}
-          placeholder="What the doctor said, diagnosis, treatment plan, follow-up instructions, next appointment, prescriptions issued, etc." />
-        <p className="text-[11px] text-ink-muted mt-1">Fill this in after the appointment so it stays in the baby&apos;s record.</p>
-      </div>
+      {/* 3. Location */}
+      <Section n={3} title="Where?" optional>
+        <Field label="Location">
+          <input
+            value={location ?? ''}
+            onChange={e => setLocation(e.target.value)}
+            placeholder="Clinic address or video link"
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30"
+          />
+        </Field>
+      </Section>
+
+      {/* 4. Notes — split prep + conclusion */}
+      <Section n={4} title="Add details" optional>
+        <div className="space-y-4">
+          <Field label="Prep notes (before the visit)" hint="Questions to ask, prep notes, things to remember.">
+            <textarea
+              rows={3}
+              value={notes ?? ''}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Questions to ask, prep notes, things to remember…"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30"
+            />
+          </Field>
+          <Field label="Doctor's conclusion (after the visit)" hint="Fill this in after the appointment so it stays in the baby's record.">
+            <textarea
+              rows={4}
+              value={conclusion ?? ''}
+              onChange={e => setConclusion(e.target.value)}
+              placeholder="What the doctor said, diagnosis, treatment plan, follow-up instructions, next appointment, prescriptions issued, etc."
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30"
+            />
+          </Field>
+        </div>
+      </Section>
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
-          className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-lavender-500 to-brand-500">
-          <CalendarClock className="h-4 w-4" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Book appointment'}
+          className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-lavender-500 to-brand-500 hover:from-lavender-600 hover:to-brand-600">
+          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Book appointment'}
         </Button>
         {initial?.id && (
-          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-12 rounded-2xl">
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
       </div>
+      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }

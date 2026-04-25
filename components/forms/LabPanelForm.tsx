@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { LabPanelSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
-import { Input, Label, Select, Textarea } from '@/components/ui/Input';
+import { Input, Select } from '@/components/ui/Input';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
-import { Trash2, FlaskConical, Plus, X } from 'lucide-react';
+import { Save, Trash2, Plus, X, Clock } from 'lucide-react';
+import { Section, Field, QuickPill, WhenPicker } from '@/components/forms/FormKit';
+import { cn } from '@/lib/utils';
 
 export type LabPanelFormValue = {
   id?: string;
@@ -31,6 +33,16 @@ export type LabItem = {
   is_abnormal?: boolean;
   flag?: 'low'|'high'|'critical'|'positive'|'negative'|null;
 };
+
+const PANEL_KINDS: { value: LabPanelFormValue['panel_kind']; label: string }[] = [
+  { value: 'blood',   label: 'Blood'         },
+  { value: 'urine',   label: 'Urine'         },
+  { value: 'stool',   label: 'Stool'         },
+  { value: 'culture', label: 'Culture'       },
+  { value: 'imaging', label: 'Imaging'       },
+  { value: 'genetic', label: 'Genetic'       },
+  { value: 'other',   label: 'Other'         },
+];
 
 export function LabPanelForm({
   babyId, initial, initialItems,
@@ -135,117 +147,157 @@ export function LabPanelForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label>Type</Label>
-          <Select value={panelKind} onChange={e => setPanelKind(e.target.value as LabPanelFormValue['panel_kind'])}>
-            <option value="blood">Blood</option>
-            <option value="urine">Urine</option>
-            <option value="stool">Stool</option>
-            <option value="culture">Culture / swab</option>
-            <option value="imaging">Imaging</option>
-            <option value="genetic">Genetic</option>
-            <option value="other">Other</option>
-          </Select>
+    <form onSubmit={submit} className="space-y-8">
+      {/* 1. Panel kind + name */}
+      <Section n={1} title="What kind of lab?">
+        <div className="space-y-4">
+          <Field label="Panel type">
+            <div className="flex flex-wrap gap-2">
+              {PANEL_KINDS.map(k => (
+                <QuickPill key={k.value} active={panelKind === k.value} onClick={() => setPanelKind(k.value)} tint="peach">
+                  {k.label}
+                </QuickPill>
+              ))}
+            </div>
+          </Field>
+          <Field label="Panel name">
+            <input
+              value={panelName}
+              onChange={e => setPanelName(e.target.value)}
+              required
+              placeholder="e.g. CBC with differential"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
+            />
+          </Field>
         </div>
-        <div>
-          <Label>Panel name</Label>
-          <Input value={panelName} onChange={e => setPanelName(e.target.value)} required
-            placeholder="e.g. CBC with differential" />
-        </div>
-        <div>
-          <Label>Sample taken at (optional)</Label>
-          <Input type="datetime-local" value={sampleAt} onChange={e => setSampleAt(e.target.value)} />
-        </div>
-        <div>
-          <Label>Result issued at</Label>
-          <Input type="datetime-local" value={resultAt} onChange={e => setResultAt(e.target.value)} required />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Laboratory</Label>
-          <Input value={labName} onChange={e => setLabName(e.target.value)} placeholder="Where it was run" />
-        </div>
-        <div className="sm:col-span-2">
-          <Label>One-line summary</Label>
-          <Input value={summary} onChange={e => setSummary(e.target.value)}
-            placeholder="e.g. Mild iron-deficiency anemia, otherwise unremarkable" />
-        </div>
-        <label className="sm:col-span-2 inline-flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={abnormal} onChange={e => setAbnormal(e.target.checked)} className="rounded" />
-          <span>Flag panel as abnormal (will appear in summary)</span>
-        </label>
-      </div>
+      </Section>
 
-      <div className="rounded-xl border border-slate-200 p-4 bg-slate-50/40">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-sm font-bold text-ink-strong">Structured test rows</h4>
-            <p className="text-xs text-ink-muted">Optional — leave empty if you only attached a scan.</p>
-          </div>
-          <button type="button"
-            onClick={() => setShowStructured(s => !s)}
-            className="text-xs font-semibold text-brand-600 hover:underline">
-            {showStructured ? 'Hide rows' : 'Add rows'}
-          </button>
-        </div>
+      {/* 2. Result details */}
+      <Section n={2} title="Result details">
+        <div className="space-y-4">
+          <Field label="Sample taken at" hint="Optional — the moment the sample was collected.">
+            <div className={cn(
+              'inline-flex items-center gap-2 rounded-2xl border bg-white px-4 py-2.5 w-full sm:w-auto',
+              sampleAt ? 'border-peach-500' : 'border-slate-200'
+            )}>
+              <Clock className={cn('h-4 w-4', sampleAt ? 'text-peach-500' : 'text-ink-muted')} />
+              <input
+                type="datetime-local"
+                value={sampleAt}
+                onChange={e => setSampleAt(e.target.value)}
+                className="bg-transparent text-base focus:outline-none flex-1"
+              />
+            </div>
+          </Field>
 
-        {showStructured && (
-          <div className="mt-4 space-y-2">
-            {items.length === 0 && (
-              <p className="text-xs text-ink-muted italic">No rows yet.</p>
-            )}
-            {items.map((row, idx) => (
-              <div key={idx} className="grid gap-2 sm:grid-cols-12 items-center">
-                <Input className="sm:col-span-3" placeholder="Test name (e.g. Hemoglobin)"
-                  value={row.test_name} onChange={e => updateRow(idx, { test_name: e.target.value })} />
-                <Input className="sm:col-span-2" placeholder="Value"
-                  value={row.value ?? ''} onChange={e => updateRow(idx, { value: e.target.value })} />
-                <Input className="sm:col-span-1" placeholder="Unit"
-                  value={row.unit ?? ''} onChange={e => updateRow(idx, { unit: e.target.value })} />
-                <Input className="sm:col-span-3" placeholder="Reference range"
-                  value={row.reference ?? ''} onChange={e => updateRow(idx, { reference: e.target.value })} />
-                <Select className="sm:col-span-2" value={row.flag ?? ''}
-                  onChange={e => updateRow(idx, { flag: (e.target.value || null) as LabItem['flag'], is_abnormal: !!e.target.value })}>
-                  <option value="">— normal —</option>
-                  <option value="low">Low</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                  <option value="positive">Positive</option>
-                  <option value="negative">Negative</option>
-                </Select>
-                <button type="button" onClick={() => removeRow(idx)}
-                  className="sm:col-span-1 h-9 grid place-items-center rounded-lg border border-slate-200 text-coral-500 hover:bg-coral-50">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-            <button type="button" onClick={addRow}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline mt-2">
-              <Plus className="h-3 w-3" /> Add row
+          <Field label="Result issued at">
+            <WhenPicker time={resultAt} onChange={setResultAt} tint="peach" />
+          </Field>
+
+          <Field label="Laboratory">
+            <input
+              value={labName}
+              onChange={e => setLabName(e.target.value)}
+              placeholder="Where it was run"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
+            />
+          </Field>
+
+          <Field label="One-line summary">
+            <input
+              value={summary}
+              onChange={e => setSummary(e.target.value)}
+              placeholder="e.g. Mild iron-deficiency anemia, otherwise unremarkable"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
+            />
+          </Field>
+
+          <label className="flex items-center gap-2 text-sm rounded-2xl border border-slate-200 bg-white px-4 py-3 cursor-pointer hover:bg-slate-50">
+            <input type="checkbox" checked={abnormal} onChange={e => setAbnormal(e.target.checked)} className="rounded" />
+            <span>Flag panel as <span className="font-semibold text-coral-600">abnormal</span> (will appear in summary)</span>
+          </label>
+        </div>
+      </Section>
+
+      {/* 3. Structured rows */}
+      <Section n={3} title="Structured test rows" optional>
+        <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50/40">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-ink-strong">Per-test values</h4>
+              <p className="text-xs text-ink-muted">Optional — leave empty if you only attached a scan.</p>
+            </div>
+            <button type="button"
+              onClick={() => setShowStructured(s => !s)}
+              className="text-xs font-semibold text-peach-600 hover:underline">
+              {showStructured ? 'Hide rows' : 'Add rows'}
             </button>
           </div>
-        )}
-      </div>
 
-      <div>
-        <Label>Notes</Label>
-        <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
-      </div>
+          {showStructured && (
+            <div className="mt-4 space-y-2">
+              {items.length === 0 && (
+                <p className="text-xs text-ink-muted italic">No rows yet.</p>
+              )}
+              {items.map((row, idx) => (
+                <div key={idx} className="grid gap-2 sm:grid-cols-12 items-center">
+                  <Input className="sm:col-span-3" placeholder="Test name (e.g. Hemoglobin)"
+                    value={row.test_name} onChange={e => updateRow(idx, { test_name: e.target.value })} />
+                  <Input className="sm:col-span-2" placeholder="Value"
+                    value={row.value ?? ''} onChange={e => updateRow(idx, { value: e.target.value })} />
+                  <Input className="sm:col-span-1" placeholder="Unit"
+                    value={row.unit ?? ''} onChange={e => updateRow(idx, { unit: e.target.value })} />
+                  <Input className="sm:col-span-3" placeholder="Reference range"
+                    value={row.reference ?? ''} onChange={e => updateRow(idx, { reference: e.target.value })} />
+                  <Select className="sm:col-span-2" value={row.flag ?? ''}
+                    onChange={e => updateRow(idx, { flag: (e.target.value || null) as LabItem['flag'], is_abnormal: !!e.target.value })}>
+                    <option value="">— normal —</option>
+                    <option value="low">Low</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                    <option value="positive">Positive</option>
+                    <option value="negative">Negative</option>
+                  </Select>
+                  <button type="button" onClick={() => removeRow(idx)}
+                    className="sm:col-span-1 h-9 grid place-items-center rounded-lg border border-slate-200 text-coral-500 hover:bg-coral-50">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={addRow}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-peach-600 hover:underline mt-2">
+                <Plus className="h-3 w-3" /> Add row
+              </button>
+            </div>
+          )}
+        </div>
+      </Section>
+
+      {/* 4. Notes */}
+      <Section n={4} title="Add details" optional>
+        <textarea
+          rows={3}
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Anything important — context, follow-up, what the doctor said…"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
+        />
+      </Section>
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
-          className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-peach-500 to-coral-500">
-          <FlaskConical className="h-4 w-4" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save lab result'}
+          className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-peach-500 to-coral-500 hover:from-peach-600 hover:to-coral-600">
+          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save lab result'}
         </Button>
         {initial?.id && (
-          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-12 rounded-2xl">
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
       </div>
+      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }

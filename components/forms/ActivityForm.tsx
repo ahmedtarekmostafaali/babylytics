@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ActivitySchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
-import { Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
-import { Trash2, Activity } from 'lucide-react';
+import { Save, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Section, Field, QuickPill, Stepper, WhenPicker } from '@/components/forms/FormKit';
 
 export type ActivityValue = {
   id?: string;
@@ -26,6 +26,21 @@ const SUGGESTED_ACTIVITIES = [
   'Sensory play', 'Massage', 'Bath play', 'Garden', 'Dancing', 'Gym',
 ];
 
+const INTENSITIES: { value: NonNullable<ActivityValue['intensity']>; label: string }[] = [
+  { value: 'low',      label: 'Low'      },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'high',     label: 'High'     },
+];
+
+const MOODS: { value: NonNullable<ActivityValue['mood']>; label: string }[] = [
+  { value: 'happy',   label: 'Happy'   },
+  { value: 'calm',    label: 'Calm'    },
+  { value: 'curious', label: 'Curious' },
+  { value: 'fussy',   label: 'Fussy'   },
+  { value: 'tired',   label: 'Tired'   },
+  { value: 'other',   label: 'Other'   },
+];
+
 export function ActivityForm({
   babyId, initial,
 }: {
@@ -34,7 +49,7 @@ export function ActivityForm({
 }) {
   const router = useRouter();
   const [startedAt, setStartedAt] = useState(initial?.started_at ? isoToLocalInput(initial.started_at) : nowLocalInput());
-  const [duration, setDuration]   = useState<string>(initial?.duration_min?.toString() ?? '15');
+  const [duration, setDuration]   = useState<number>(initial?.duration_min ?? 15);
   const [type, setType]           = useState(initial?.activity_type ?? '');
   const [intensity, setIntensity] = useState<ActivityValue['intensity']>(initial?.intensity ?? 'low');
   const [location, setLocation]   = useState(initial?.location ?? '');
@@ -89,86 +104,112 @@ export function ActivityForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      {/* Quick-pick activity chips */}
-      {!initial?.id && (
-        <div>
-          <Label>Quick pick</Label>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {SUGGESTED_ACTIVITIES.map(a => (
-              <button key={a} type="button" onClick={() => setType(a)}
-                className={cn(
-                  'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition',
-                  type === a
-                    ? 'bg-mint-500 text-white shadow-sm'
-                    : 'bg-mint-50 text-mint-700 hover:bg-mint-100'
-                )}>
-                {a}
-              </button>
-            ))}
-          </div>
+    <form onSubmit={submit} className="space-y-8">
+      {/* 1. Activity */}
+      <Section n={1} title="What activity?">
+        <div className="space-y-3">
+          {!initial?.id && (
+            <div className="flex flex-wrap gap-2">
+              {SUGGESTED_ACTIVITIES.map(a => (
+                <QuickPill key={a} active={type === a} onClick={() => setType(a)} tint="mint">
+                  {a}
+                </QuickPill>
+              ))}
+            </div>
+          )}
+          <Field label="Activity name">
+            <input
+              value={type}
+              onChange={e => setType(e.target.value)}
+              required
+              placeholder="e.g. Tummy time, Park walk, Swimming class"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30"
+            />
+          </Field>
         </div>
-      )}
+      </Section>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Label>Activity</Label>
-          <Input value={type} onChange={e => setType(e.target.value)} required placeholder="e.g. Tummy time, Park walk, Swimming class" />
-        </div>
-        <div>
-          <Label>Started at</Label>
-          <Input type="datetime-local" value={startedAt} onChange={e => setStartedAt(e.target.value)} required />
-        </div>
-        <div>
-          <Label>Duration (min)</Label>
-          <Input type="number" min={1} max={720} value={duration} onChange={e => setDuration(e.target.value)} placeholder="15" />
-        </div>
-        <div>
-          <Label>Intensity</Label>
-          <Select value={intensity ?? ''} onChange={e => setIntensity((e.target.value || null) as ActivityValue['intensity'])}>
-            <option value="">— Unspecified —</option>
-            <option value="low">Low</option>
-            <option value="moderate">Moderate</option>
-            <option value="high">High</option>
-          </Select>
-        </div>
-        <div>
-          <Label>Mood</Label>
-          <Select value={mood ?? ''} onChange={e => setMood((e.target.value || null) as ActivityValue['mood'])}>
-            <option value="">— Unspecified —</option>
-            <option value="happy">Happy</option>
-            <option value="calm">Calm</option>
-            <option value="curious">Curious</option>
-            <option value="fussy">Fussy</option>
-            <option value="tired">Tired</option>
-            <option value="other">Other</option>
-          </Select>
-        </div>
-        <div className="sm:col-span-2">
-          <Label>Location</Label>
-          <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Home, park, grandma's house, gym…" />
-        </div>
-      </div>
+      {/* 2. Details */}
+      <Section n={2} title="Details">
+        <div className="space-y-4">
+          <Stepper
+            label="Duration"
+            value={duration}
+            onChange={setDuration}
+            unit="min"
+            step={5}
+            min={0}
+            max={720}
+            badge={{ text: 'TIME', tint: 'mint' }}
+          />
 
-      <div>
-        <Label>Notes</Label>
-        <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)}
-          placeholder="What happened, milestones, reactions…" />
-      </div>
+          <Field label="Intensity">
+            <div className="flex flex-wrap gap-2">
+              {INTENSITIES.map(it => (
+                <QuickPill key={it.value} active={intensity === it.value} onClick={() => setIntensity(it.value)} tint="mint">
+                  {it.label}
+                </QuickPill>
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Mood">
+            <div className="flex flex-wrap gap-2">
+              {MOODS.map(m => (
+                <QuickPill key={m.value} active={mood === m.value} onClick={() => setMood(m.value)} tint="mint">
+                  {m.label}
+                </QuickPill>
+              ))}
+            </div>
+          </Field>
+        </div>
+      </Section>
+
+      {/* 3. When */}
+      <Section n={3} title="When?">
+        <WhenPicker time={startedAt} onChange={setStartedAt} tint="mint" />
+      </Section>
+
+      {/* 4. Add details */}
+      <Section n={4} title="Add details" optional>
+        <div className="space-y-3">
+          <Field label="Location">
+            <input
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="Home, park, grandma's house, gym…"
+              className={cn(
+                'h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base',
+                'focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30'
+              )}
+            />
+          </Field>
+          <Field label="Notes">
+            <textarea
+              rows={3}
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="What happened, milestones, reactions…"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30"
+            />
+          </Field>
+        </div>
+      </Section>
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
-          className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-mint-500 to-brand-500">
-          <Activity className="h-4 w-4" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log activity'}
+          className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-mint-500 to-brand-500 hover:from-mint-600 hover:to-brand-600">
+          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log activity'}
         </Button>
         {initial?.id && (
-          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-12 rounded-2xl">
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
       </div>
+      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }
