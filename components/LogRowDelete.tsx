@@ -18,7 +18,8 @@ export function LogRowDelete({
     | 'feedings' | 'stool_logs' | 'medications' | 'medication_logs'
     | 'measurements' | 'temperature_logs' | 'vaccinations' | 'sleep_logs'
     | 'screen_time_logs' | 'activity_logs' | 'lab_panels'
-    | 'prenatal_visits' | 'ultrasounds' | 'fetal_movements';
+    | 'prenatal_visits' | 'ultrasounds' | 'fetal_movements'
+    | 'teething_logs' | 'speaking_logs' | 'developmental_milestones';
   id: string;
   label?: string;
 }) {
