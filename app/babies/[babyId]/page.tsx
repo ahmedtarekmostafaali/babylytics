@@ -63,6 +63,8 @@ export default async function BabyOverview({
       supabase.rpc('next_appointment', { p_baby: babyId }).maybeSingle(),
     ]);
     const isParent = ['owner','parent'].includes((m?.role as string) ?? '');
+    const appt = nextAppt as { scheduled_at: string; doctor_name: string | null; purpose: string | null } | null;
+    const us = lastUs as { id: string; scanned_at: string; gestational_week: number | null; summary: string | null } | null;
     return (
       <PregnancyDashboard
         babyId={babyId}
@@ -71,8 +73,8 @@ export default async function BabyOverview({
         edd={baby.edd}
         lmp={baby.lmp}
         summary={(summaryRow ?? {}) as Parameters<typeof PregnancyDashboard>[0]['summary']}
-        latestUltrasound={lastUs ? { id: lastUs.id, scanned_at: lastUs.scanned_at, gestational_week: lastUs.gestational_week, summary: lastUs.summary } : null}
-        nextAppointment={nextAppt ? { scheduled_at: nextAppt.scheduled_at, doctor_name: nextAppt.doctor_name, purpose: nextAppt.purpose } : null}
+        latestUltrasound={us ? { id: us.id, scanned_at: us.scanned_at, gestational_week: us.gestational_week, summary: us.summary } : null}
+        nextAppointment={appt ? { scheduled_at: appt.scheduled_at, doctor_name: appt.doctor_name, purpose: appt.purpose } : null}
         canEdit={isParent}
       />
     );
