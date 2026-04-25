@@ -12,7 +12,7 @@ import { fmtKg, fmtCm } from '@/lib/units';
 import {
   HeartPulse, AlertTriangle, FlaskConical, Hospital, LogOut as DischargeIcon,
   Activity, Pill, Stethoscope, Syringe, Plus, ArrowRight,
-  ClipboardList, Sparkles,
+  ClipboardList, Sparkles, ScanLine, Baby,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -63,7 +63,7 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
     { data: carePlanRaw },
     { data: vaxList },
   ] = await Promise.all([
-    supabase.from('babies').select('id,name,dob,gender,blood_type,birth_weight_kg,birth_height_cm,avatar_path')
+    supabase.from('babies').select('id,name,dob,gender,blood_type,birth_weight_kg,birth_height_cm,avatar_path,lifecycle_stage,edd,lmp,conception_method')
       .eq('id', params.babyId).is('deleted_at', null).single(),
     supabase.from('doctors').select('id,name,specialty,clinic,phone,is_primary')
       .eq('baby_id', params.babyId).is('deleted_at', null)
@@ -119,6 +119,49 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
 
   const carePlan = (carePlanRaw ?? {}) as { medical_plan: string | null; feeding_plan: string | null; labs_needed: string | null; blood_type: string | null };
   const avatarUrl = await signAvatarUrl(supabase, baby.avatar_path);
+
+  // ---- Pregnancy history (only if a pregnancy_profile row exists) ----
+  // The section renders read-only at any stage. While stage = pregnancy this
+  // is a duplicate of what's already on the dashboard, but once the baby is
+  // born it becomes the only place the prenatal record lives — and it's
+  // included in the PDF export.
+  const [{ data: pregProfileRaw }, { data: visitsRaw }, { data: ultrasoundsRaw }, { data: kicksRaw }] = await Promise.all([
+    supabase.from('pregnancy_profile').select('*').eq('baby_id', params.babyId).maybeSingle(),
+    supabase.from('prenatal_visits').select('id,visited_at,gestational_week,gestational_day,maternal_weight_kg,bp_systolic,bp_diastolic,fetal_heart_rate_bpm,fundal_height_cm,doctor_id,notes')
+      .eq('baby_id', params.babyId).is('deleted_at', null)
+      .order('visited_at', { ascending: false }),
+    supabase.from('ultrasounds').select('id,scanned_at,gestational_week,gestational_day,bpd_mm,hc_mm,ac_mm,fl_mm,efw_g,fhr_bpm,placenta_position,amniotic_fluid,sex_predicted,anomalies,summary')
+      .eq('baby_id', params.babyId).is('deleted_at', null)
+      .order('scanned_at', { ascending: false }),
+    supabase.from('fetal_movements').select('id,counted_at,duration_min,movements')
+      .eq('baby_id', params.babyId).is('deleted_at', null)
+      .order('counted_at', { ascending: false }),
+  ]);
+  const pregProfile = pregProfileRaw as null | {
+    mother_dob: string | null; mother_blood_type: string | null;
+    gravida: number | null; para: number | null;
+    pre_pregnancy_weight_kg: number | null; pre_pregnancy_height_cm: number | null;
+    risk_factors: string | null; notes: string | null;
+  };
+  const visits = (visitsRaw ?? []) as Array<{
+    id: string; visited_at: string;
+    gestational_week: number | null; gestational_day: number | null;
+    maternal_weight_kg: number | null; bp_systolic: number | null; bp_diastolic: number | null;
+    fetal_heart_rate_bpm: number | null; fundal_height_cm: number | null;
+    doctor_id: string | null; notes: string | null;
+  }>;
+  const ultrasounds = (ultrasoundsRaw ?? []) as Array<{
+    id: string; scanned_at: string;
+    gestational_week: number | null; gestational_day: number | null;
+    bpd_mm: number | null; hc_mm: number | null; ac_mm: number | null; fl_mm: number | null;
+    efw_g: number | null; fhr_bpm: number | null;
+    placenta_position: string | null; amniotic_fluid: string | null;
+    sex_predicted: string | null; anomalies: string | null; summary: string | null;
+  }>;
+  const kicks = (kicksRaw ?? []) as Array<{ id: string; counted_at: string; duration_min: number; movements: number }>;
+  const hasPregnancyData = !!pregProfile || visits.length > 0 || ultrasounds.length > 0 || kicks.length > 0;
+  const totalKicks = kicks.reduce((sum, k) => sum + k.movements, 0);
+  const totalKickMinutes = kicks.reduce((sum, k) => sum + k.duration_min, 0);
 
   // ---- Auto summary inputs ----
   const dob = baby.dob;
@@ -459,11 +502,157 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
           </div>
         </ProfileSection>
 
+        {/* === PREGNANCY HISTORY === only if there's prenatal data on file */}
+        {hasPregnancyData && (
+          <div id="pregnancy-history" />
+        )}
+        {hasPregnancyData && (
+          <ProfileSection icon={Baby} title="Pregnancy history" tint="lavender"
+            empty={false} addHref={null}>
+            <div className="space-y-4">
+              {pregProfile && (
+                <div className="rounded-xl border border-lavender-200 bg-lavender-50/40 p-4 grid gap-3 sm:grid-cols-2">
+                  <PregField label="EDD"  value={baby.edd ? fmtDate(baby.edd) : null} />
+                  <PregField label="LMP"  value={baby.lmp ? fmtDate(baby.lmp) : null} />
+                  <PregField label="Mother's DOB"        value={pregProfile.mother_dob ? fmtDate(pregProfile.mother_dob) : null} />
+                  <PregField label="Mother's blood type" value={pregProfile.mother_blood_type} mono />
+                  <PregField label="Gravida / Para" value={
+                    pregProfile.gravida != null || pregProfile.para != null
+                      ? `${pregProfile.gravida ?? '—'} / ${pregProfile.para ?? '—'}` : null
+                  } />
+                  <PregField label="Pre-pregnancy weight" value={pregProfile.pre_pregnancy_weight_kg ? `${pregProfile.pre_pregnancy_weight_kg} kg` : null} />
+                  <PregField label="Conception" value={baby.conception_method} />
+                  <PregField label="Height" value={pregProfile.pre_pregnancy_height_cm ? `${pregProfile.pre_pregnancy_height_cm} cm` : null} />
+                  {pregProfile.risk_factors && (
+                    <div className="sm:col-span-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Risk factors</div>
+                      <div className="mt-1 text-sm text-ink-strong whitespace-pre-wrap">{pregProfile.risk_factors}</div>
+                    </div>
+                  )}
+                  {pregProfile.notes && (
+                    <div className="sm:col-span-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Notes</div>
+                      <div className="mt-1 text-sm text-ink-strong whitespace-pre-wrap">{pregProfile.notes}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Counts row */}
+              <div className="grid gap-3 grid-cols-3 text-center">
+                <PregCount label="Prenatal visits" value={visits.length} icon={Stethoscope} tint="lavender" />
+                <PregCount label="Ultrasounds"      value={ultrasounds.length} icon={ScanLine} tint="brand" />
+                <PregCount label="Kicks logged"      value={totalKicks} sub={`${totalKickMinutes} min`} icon={Activity} tint="coral" />
+              </div>
+
+              {ultrasounds.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-ink-strong uppercase tracking-wider mb-2 mt-2">Ultrasound timeline</h4>
+                  <ul className="space-y-2">
+                    {ultrasounds.map(u => {
+                      const ga = u.gestational_week != null ? `${u.gestational_week}w${u.gestational_day != null ? ` ${u.gestational_day}d` : ''}` : null;
+                      return (
+                        <li key={u.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <ScanLine className="h-3.5 w-3.5 text-brand-600" />
+                            <span className="font-semibold text-ink-strong">{fmtDate(u.scanned_at)}</span>
+                            {ga && <span className="text-[10px] uppercase tracking-wider text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full">{ga}</span>}
+                            {u.sex_predicted && u.sex_predicted !== 'undetermined' && (
+                              <span className="text-[10px] uppercase tracking-wider text-coral-700 bg-coral-50 px-2 py-0.5 rounded-full">{u.sex_predicted}</span>
+                            )}
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-3 text-xs text-ink">
+                            {u.efw_g != null && <span>EFW {u.efw_g} g</span>}
+                            {u.fhr_bpm != null && <span>♥ {u.fhr_bpm} bpm</span>}
+                            {u.bpd_mm != null && <span>BPD {u.bpd_mm} mm</span>}
+                            {u.hc_mm  != null && <span>HC {u.hc_mm} mm</span>}
+                            {u.ac_mm  != null && <span>AC {u.ac_mm} mm</span>}
+                            {u.fl_mm  != null && <span>FL {u.fl_mm} mm</span>}
+                          </div>
+                          {u.summary && <p className="mt-1.5 text-xs text-ink-muted">{u.summary}</p>}
+                          {u.anomalies && <p className="mt-1 text-xs text-coral-700">⚠ {u.anomalies}</p>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {visits.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-ink-strong uppercase tracking-wider mb-2 mt-2">Prenatal visits</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-[10px] uppercase tracking-wider text-ink-muted">
+                          <th className="py-1 pr-3">Date</th>
+                          <th className="py-1 pr-3">GA</th>
+                          <th className="py-1 pr-3">Weight</th>
+                          <th className="py-1 pr-3">BP</th>
+                          <th className="py-1 pr-3">FHR</th>
+                          <th className="py-1 pr-3">Fundal</th>
+                          <th className="py-1">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {visits.map(v => (
+                          <tr key={v.id}>
+                            <td className="py-1.5 pr-3">{fmtDate(v.visited_at)}</td>
+                            <td className="py-1.5 pr-3">{v.gestational_week != null ? `${v.gestational_week}w${v.gestational_day != null ? ` ${v.gestational_day}d` : ''}` : '—'}</td>
+                            <td className="py-1.5 pr-3">{v.maternal_weight_kg != null ? `${v.maternal_weight_kg} kg` : '—'}</td>
+                            <td className="py-1.5 pr-3">{v.bp_systolic && v.bp_diastolic ? `${v.bp_systolic}/${v.bp_diastolic}` : '—'}</td>
+                            <td className="py-1.5 pr-3">{v.fetal_heart_rate_bpm ?? '—'}</td>
+                            <td className="py-1.5 pr-3">{v.fundal_height_cm != null ? `${v.fundal_height_cm} cm` : '—'}</td>
+                            <td className="py-1.5 truncate max-w-[12rem]">{v.notes ?? ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ProfileSection>
+        )}
+
         {/* Footer in export */}
         <div className="pt-3 border-t border-slate-200 text-[10px] text-ink-muted">
           This record is parent-maintained and not a substitute for professional medical advice. Always verify against original clinical documents.
         </div>
       </div>
+    </div>
+  );
+}
+
+function PregField({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
+  const empty = !value;
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</div>
+      <div className={`mt-1 ${mono ? 'font-mono' : ''} ${empty ? 'text-ink-muted italic' : 'text-ink-strong'}`}>
+        {empty ? 'Not set' : value}
+      </div>
+    </div>
+  );
+}
+
+function PregCount({ label, value, sub, icon: Icon, tint }: {
+  label: string; value: number; sub?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tint: 'lavender'|'brand'|'coral';
+}) {
+  const tintCss = {
+    lavender: 'bg-lavender-100 text-lavender-700',
+    brand:    'bg-brand-100 text-brand-700',
+    coral:    'bg-coral-100 text-coral-700',
+  }[tint];
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3">
+      <span className={`mx-auto h-7 w-7 rounded-lg grid place-items-center mb-1 ${tintCss}`}>
+        <Icon className="h-3.5 w-3.5" />
+      </span>
+      <div className="text-2xl font-bold text-ink-strong tabular-nums">{value}</div>
+      <div className="text-[10px] uppercase tracking-wider text-ink-muted">{label}{sub ? ` · ${sub}` : ''}</div>
     </div>
   );
 }

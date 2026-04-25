@@ -186,6 +186,13 @@ export default async function BabyOverview({
     supabase.rpc('my_baby_role', { b: babyId }),
   ]);
 
+  // Pregnancy archive flag — show a small entry tile if this baby was tracked
+  // through pregnancy. Cheap existence check, single row max.
+  const { count: hasPregnancyArchive } = await supabase.from('pregnancy_profile')
+    .select('baby_id', { count: 'exact', head: true })
+    .eq('baby_id', babyId);
+  const showPregnancyArchive = (hasPregnancyArchive ?? 0) > 0;
+
   const w = (currentWeight.data as number | null) ?? null;
 
   // ───────── Timeline: combine today's events
@@ -420,6 +427,12 @@ export default async function BabyOverview({
             <div className="text-xs text-ink-muted mt-0.5">
               {baby.gender} · {age} days old{w ? ` · ${fmtKg(w)}` : ''}
             </div>
+            {showPregnancyArchive && (
+              <Link href={`/babies/${babyId}/medical-profile#pregnancy-history`}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-lavender-100 hover:bg-lavender-200 text-lavender-700 text-[11px] font-semibold px-3 py-1">
+                <Sparkles className="h-3 w-3" /> Pregnancy archive available <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
