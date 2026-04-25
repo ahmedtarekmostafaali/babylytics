@@ -56,7 +56,7 @@ export default async function BabyOverview({
   // Stage-aware fork — pregnancy gets a completely different dashboard.
   const stage = effectiveStage(baby.lifecycle_stage as 'pregnancy'|'newborn'|'infant'|'toddler'|'child'|'archived'|null, baby.dob);
   if (stage === 'pregnancy') {
-    const [{ data: m }, { data: summaryRow }, { data: lastUs }, { data: nextAppt }, { data: pregProf }] = await Promise.all([
+    const [{ data: m }, { data: summaryRow }, { data: lastUs }, { data: nextAppt }, { data: pregProf }, hiddenPregnancy] = await Promise.all([
       supabase.from('baby_users').select('role').eq('baby_id', babyId).eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '').maybeSingle(),
       supabase.rpc('prenatal_summary', { p_baby: babyId }).single(),
       supabase.from('ultrasounds').select('id,scanned_at,gestational_week,summary')
@@ -65,6 +65,7 @@ export default async function BabyOverview({
       supabase.rpc('next_appointment', { p_baby: babyId }).maybeSingle(),
       supabase.from('pregnancy_profile').select('pre_pregnancy_weight_kg,pre_pregnancy_height_cm')
         .eq('baby_id', babyId).maybeSingle(),
+      loadHiddenWidgets(supabase, babyId, 'pregnancy_dashboard'),
     ]);
     const isParent = ['owner','parent'].includes((m?.role as string) ?? '');
     const appt = nextAppt as { scheduled_at: string; doctor_name: string | null; purpose: string | null } | null;
@@ -83,6 +84,7 @@ export default async function BabyOverview({
         canEdit={isParent}
         prePregnancyWeightKg={pp?.pre_pregnancy_weight_kg ?? null}
         prePregnancyHeightCm={pp?.pre_pregnancy_height_cm ?? null}
+        hiddenWidgets={Array.from(hiddenPregnancy)}
       />
     );
   }

@@ -4,7 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export type WidgetScope = 'overview' | 'daily_report' | 'full_report';
+export type WidgetScope = 'overview' | 'pregnancy_dashboard' | 'daily_report' | 'full_report';
 
 export type WidgetDef = {
   id: string;
@@ -44,6 +44,28 @@ export const OVERVIEW_WIDGETS: WidgetDef[] = [
   { id: 'next_appointment',   label: 'Next appointment',      description: 'Upcoming doctor visit.',                    group: 'Care' },
   { id: 'low_confidence_ocr', label: 'Smart Scan attention',  description: 'Items needing review.',                     group: 'Care' },
   { id: 'comments',           label: 'Comments',              description: 'Notes from caregivers and doctors.',        group: 'Care' },
+];
+
+export const PREGNANCY_DASHBOARD_WIDGETS: WidgetDef[] = [
+  { id: 'mark_as_born_cta',  label: 'Mark as born CTA',     description: 'Hero button for transitioning to newborn.',                                  group: 'Header' },
+  { id: 'late_term_banner',  label: 'Late-term tip banner', description: 'Reminder banner when ≥36 weeks.',                                            group: 'Header' },
+
+  { id: 'kpi_ga',            label: 'Gestational age',      description: 'Weeks + days + trimester.',                                                  group: 'KPIs' },
+  { id: 'kpi_bp',            label: 'Latest BP',            description: 'Systolic / diastolic with category.',                                       group: 'KPIs' },
+  { id: 'kpi_weight',        label: 'Maternal weight',      description: 'Latest weight + total gain.',                                                group: 'KPIs' },
+  { id: 'kpi_fhr',           label: 'Fetal heart rate',     description: 'From last visit or scan.',                                                   group: 'KPIs' },
+
+  { id: 'kicks_card',        label: 'Kick count today',     description: 'Tap to start a session.',                                                    group: 'Activity' },
+  { id: 'visits_count',      label: 'Prenatal visits count',description: 'Quick link to the visits log.',                                              group: 'Activity' },
+  { id: 'ultrasounds_count', label: 'Ultrasounds count',    description: 'Quick link to scans.',                                                       group: 'Activity' },
+
+  { id: 'week_insight',      label: 'Week-by-week insight', description: '"Baby is the size of …" + a one-paragraph highlight.',                       group: 'Insights' },
+  { id: 'iom_band',          label: 'IOM weight gain band', description: 'Pre-pregnancy BMI vs. recommended band.',                                    group: 'Insights' },
+
+  { id: 'latest_ultrasound', label: 'Latest ultrasound',    description: 'Most recent scan summary.',                                                  group: 'Highlights' },
+  { id: 'next_appointment',  label: 'Next appointment',     description: 'Upcoming OB visit.',                                                         group: 'Highlights' },
+
+  { id: 'quick_actions',     label: 'Quick actions',        description: 'Chips for log visit / scan / vitals / meds / profile.',                     group: 'Actions' },
 ];
 
 export const DAILY_REPORT_WIDGETS: WidgetDef[] = [
@@ -92,8 +114,9 @@ export const FULL_REPORT_WIDGETS: WidgetDef[] = [
 ];
 
 export function widgetCatalog(scope: WidgetScope): WidgetDef[] {
-  if (scope === 'overview')      return OVERVIEW_WIDGETS;
-  if (scope === 'daily_report')  return DAILY_REPORT_WIDGETS;
+  if (scope === 'overview')            return OVERVIEW_WIDGETS;
+  if (scope === 'pregnancy_dashboard') return PREGNANCY_DASHBOARD_WIDGETS;
+  if (scope === 'daily_report')        return DAILY_REPORT_WIDGETS;
   return FULL_REPORT_WIDGETS;
 }
 

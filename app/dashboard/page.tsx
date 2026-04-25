@@ -51,6 +51,7 @@ export default async function DashboardPage() {
     supabase.from('notifications')
       .select('id,kind,payload,created_at,baby_id')
       .is('read_at', null)
+      .or(`user_id.eq.${user?.id ?? ''},user_id.is.null`)
       .order('created_at', { ascending: false })
       .limit(10),
     supabase.from('profiles').select('display_name').eq('id', user?.id ?? '').single(),
@@ -166,21 +167,48 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Unread notifications */}
+      {/* Unread notifications — only the user's own + broadcasts they haven't read */}
       {unread && unread.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Bell className="h-4 w-4 text-coral-600" />
             <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Unread notifications</h2>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-coral-700 bg-coral-50 px-1.5 py-0.5 rounded-full">
+              {unread.length}
+            </span>
           </div>
           <div className="rounded-2xl bg-white/85 border border-slate-200 divide-y divide-slate-100 shadow-card">
-            {unread.map(n => (
-              <Link key={n.id} href={`/babies/${n.baby_id}`}
-                className="flex items-center justify-between py-3 px-4 hover:bg-slate-50">
-                <span className="font-medium text-ink-strong">{friendlyNotificationLabel(n.kind)}</span>
-                <span className="text-xs text-ink-muted">{fmtDateTime(n.created_at)}</span>
-              </Link>
-            ))}
+            {unread.map(n => {
+              // Deep-link per kind so the dashboard tile takes the user
+              // straight to the actionable target, not just the baby home.
+              const href = (() => {
+                const baby = `/babies/${n.baby_id}`;
+                const p = n.payload as Record<string, unknown> | null;
+                switch (n.kind) {
+                  case 'medication_due':
+                  case 'medication_missed':  return `${baby}/medications`;
+                  case 'low_ocr_confidence':
+                    if (typeof p?.extracted_id === 'string') return `${baby}/ocr/${p.extracted_id}`;
+                    if (typeof p?.file_id === 'string')      return `${baby}/files/${p.file_id}`;
+                    return `${baby}/ocr`;
+                  case 'feeding_alert':      return `${baby}/feedings`;
+                  case 'stool_alert':        return `${baby}/stool`;
+                  case 'file_ready':         return `${baby}/ocr`;
+                  default:                   return baby;
+                }
+              })();
+              const baby = (babies ?? []).find(b => b.id === n.baby_id);
+              return (
+                <Link key={n.id} href={href}
+                  className="flex items-center justify-between py-3 px-4 hover:bg-slate-50 transition group">
+                  <div className="min-w-0">
+                    <div className="font-medium text-ink-strong">{friendlyNotificationLabel(n.kind)}</div>
+                    {baby && <div className="text-[11px] text-ink-muted">{baby.name}</div>}
+                  </div>
+                  <span className="text-xs text-ink-muted shrink-0">{fmtDateTime(n.created_at)}</span>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

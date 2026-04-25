@@ -183,6 +183,7 @@ export function Sidebar() {
                 <NavItem href={`/babies/${currentBabyId}/prenatal/ultrasounds`}  icon={ScanLine}    label="Ultrasounds"     active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/ultrasounds`) ?? false} collapsed={collapsed} tint="brand" />
                 <NavItem href={`/babies/${currentBabyId}/prenatal/kicks`}        icon={Activity}    label="Kick counter"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/kicks`) ?? false} collapsed={collapsed} tint="coral" />
                 <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}     label="Maternal vitals" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />
+                <NavItem href={`/babies/${currentBabyId}/labs`}                  icon={FlaskConical} label="Labs"           active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
                 <NavItem href={`/babies/${currentBabyId}/medications`}           icon={Pill}        label="Medications"     active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="mint" />
                 {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`}  icon={CalendarClock} label="Appointments"  active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
               </>}

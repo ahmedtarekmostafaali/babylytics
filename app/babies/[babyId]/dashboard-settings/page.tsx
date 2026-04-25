@@ -20,10 +20,10 @@ export default async function DashboardSettings({ params }: { params: { babyId: 
     .eq('user_id', userId)
     .eq('baby_id', params.babyId);
 
-  const initialHidden: Record<'overview'|'daily_report'|'full_report', string[]> = {
-    overview: [], daily_report: [], full_report: [],
+  const initialHidden: Record<'overview'|'pregnancy_dashboard'|'daily_report'|'full_report', string[]> = {
+    overview: [], pregnancy_dashboard: [], daily_report: [], full_report: [],
   };
-  for (const r of (rows ?? []) as { scope: 'overview'|'daily_report'|'full_report'; hidden_widgets: string[] }[]) {
+  for (const r of (rows ?? []) as { scope: 'overview'|'pregnancy_dashboard'|'daily_report'|'full_report'; hidden_widgets: string[] }[]) {
     initialHidden[r.scope] = r.hidden_widgets;
   }
 

@@ -98,9 +98,9 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                 const isSelf = r.user_id === user?.id;
                 return (
                   <li key={r.user_id} className="px-4 sm:px-5 py-3">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      {/* Avatar + name */}
-                      <div className="flex items-center gap-3 min-w-0 flex-1 basis-[240px]">
+                    <div className="flex items-center gap-3">
+                      {/* Avatar + name (flex-1 takes remaining space) */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <span className="h-11 w-11 rounded-full bg-gradient-to-br from-brand-100 to-mint-100 text-brand-700 grid place-items-center text-xs font-bold shrink-0">
                           {initials(name)}
                         </span>
@@ -110,39 +110,33 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                             {r.role === 'owner' && <span className="text-ink-muted font-normal"> (Owner)</span>}
                           </div>
                           <div className="text-xs text-ink-muted truncate">{prof?.email ?? r.user_id}</div>
+                          {/* Mobile-only meta: role chip + joined under email */}
+                          <div className="mt-1 flex items-center gap-2 sm:hidden">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.tint}`}>
+                              <meta.icon className="h-3 w-3" />
+                              {meta.label}
+                            </span>
+                            <span className="text-[10px] text-ink-muted">Joined {fmtDate(r.created_at)}</span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Role pill */}
-                      <div className="shrink-0">
+                      {/* Desktop-only chips (hidden on mobile to keep one tidy line) */}
+                      <div className="hidden sm:flex items-center gap-2 shrink-0">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.tint}`}>
                           <meta.icon className="h-3 w-3" />
                           {meta.label}
                         </span>
+                        <div className="flex items-center gap-1">
+                          <PermIcon role={r.role} kind="view" />
+                          <PermIcon role={r.role} kind="edit" />
+                          <PermIcon role={r.role} kind="reports" />
+                        </div>
+                        <span className="text-[11px] text-ink-muted whitespace-nowrap">{fmtDate(r.created_at)}</span>
                       </div>
 
-                      {/* Permissions icons */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <PermIcon role={r.role} kind="view" />
-                        <PermIcon role={r.role} kind="edit" />
-                        <PermIcon role={r.role} kind="reports" />
-                      </div>
-
-                      {/* Joined */}
-                      <div className="text-xs text-ink-muted shrink-0 hidden sm:block min-w-[90px] text-right">
-                        <div className="text-[10px] uppercase tracking-wider text-ink-muted">Joined</div>
-                        <div className="font-semibold text-ink">{fmtDate(r.created_at)}</div>
-                      </div>
-
-                      {/* Status */}
-                      <div className="shrink-0 hidden sm:block">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-mint-100 text-mint-700 px-2 py-0.5 text-[11px] font-semibold">
-                          <span className="h-1.5 w-1.5 rounded-full bg-mint-500" /> Active
-                        </span>
-                      </div>
-
-                      {/* Actions menu */}
-                      <div className="shrink-0 ml-auto">
+                      {/* Actions menu — always at the end */}
+                      <div className="shrink-0">
                         <CaregiverRowActions babyId={params.babyId} userId={r.user_id}
                           currentRole={r.role} canManage={canManage} isSelf={isSelf} />
                       </div>
@@ -161,18 +155,18 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
           {/* Invite */}
           {canManage && (
             <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
-              <div className="grid lg:grid-cols-[1fr_auto] items-start gap-6 p-5">
-                <div className="min-w-0">
-                  <h2 className="text-lg font-bold text-ink-strong">Invite a caregiver</h2>
-                  <p className="text-xs text-ink-muted mt-0.5">They must already have a Babylytics account.</p>
-                  <div className="mt-4">
-                    <InviteForm babyId={params.babyId} />
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="h-9 w-9 rounded-xl bg-gradient-to-br from-mint-100 to-peach-100 grid place-items-center">
+                    <span className="text-xl">💌</span>
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-bold text-ink-strong">Invite a caregiver</h2>
+                    <p className="text-xs text-ink-muted">By email or shareable link with a pre-assigned role.</p>
                   </div>
                 </div>
-                <div className="hidden lg:block shrink-0 relative">
-                  <div className="w-56 h-48 rounded-2xl bg-gradient-to-br from-mint-100 via-peach-50 to-coral-100 grid place-items-center">
-                    <span className="text-6xl">💌</span>
-                  </div>
+                <div className="mt-4">
+                  <InviteForm babyId={params.babyId} />
                 </div>
               </div>
             </section>

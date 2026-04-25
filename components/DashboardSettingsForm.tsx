@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/Button';
 import { Check, Save, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  OVERVIEW_WIDGETS, DAILY_REPORT_WIDGETS, FULL_REPORT_WIDGETS,
+  OVERVIEW_WIDGETS, PREGNANCY_DASHBOARD_WIDGETS, DAILY_REPORT_WIDGETS, FULL_REPORT_WIDGETS,
   type WidgetDef, type WidgetScope,
 } from '@/lib/dashboard-prefs';
 
 const SCOPES: { id: WidgetScope; label: string; widgets: WidgetDef[] }[] = [
-  { id: 'overview',     label: 'Overview',     widgets: OVERVIEW_WIDGETS },
-  { id: 'daily_report', label: 'Daily report', widgets: DAILY_REPORT_WIDGETS },
-  { id: 'full_report',  label: 'Full report',  widgets: FULL_REPORT_WIDGETS },
+  { id: 'overview',            label: 'Overview',     widgets: OVERVIEW_WIDGETS },
+  { id: 'pregnancy_dashboard', label: 'Pregnancy',    widgets: PREGNANCY_DASHBOARD_WIDGETS },
+  { id: 'daily_report',        label: 'Daily report', widgets: DAILY_REPORT_WIDGETS },
+  { id: 'full_report',         label: 'Full report',  widgets: FULL_REPORT_WIDGETS },
 ];
 
 export function DashboardSettingsForm({
@@ -26,9 +27,10 @@ export function DashboardSettingsForm({
   const router = useRouter();
   const [activeScope, setActiveScope] = useState<WidgetScope>('overview');
   const [hidden, setHidden] = useState<Record<WidgetScope, Set<string>>>(() => ({
-    overview:     new Set(initialHidden.overview),
-    daily_report: new Set(initialHidden.daily_report),
-    full_report:  new Set(initialHidden.full_report),
+    overview:            new Set(initialHidden.overview),
+    pregnancy_dashboard: new Set(initialHidden.pregnancy_dashboard),
+    daily_report:        new Set(initialHidden.daily_report),
+    full_report:         new Set(initialHidden.full_report),
   }));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg]       = useState<string | null>(null);
@@ -84,7 +86,7 @@ export function DashboardSettingsForm({
   return (
     <div className="space-y-5">
       {/* Scope tabs */}
-      <div className="rounded-2xl bg-slate-100 p-1 grid grid-cols-3 text-sm font-semibold">
+      <div className="rounded-2xl bg-slate-100 p-1 grid grid-cols-2 sm:grid-cols-4 text-sm font-semibold">
         {SCOPES.map(s => {
           const active = activeScope === s.id;
           const hiddenCount = hidden[s.id].size;
