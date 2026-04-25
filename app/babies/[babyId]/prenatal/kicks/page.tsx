@@ -1,62 +1,192 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { assertRole } from '@/lib/role-guard';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { LogRangeTabs } from '@/components/LogRangeTabs';
+import { LogRowDelete } from '@/components/LogRowDelete';
 import { Comments } from '@/components/Comments';
 import { KickCounter } from '@/components/forms/KickCounter';
-import { fmtDateTime, fmtRelative } from '@/lib/dates';
-import { Activity } from 'lucide-react';
+import {
+  parseRangeParam, fmtDate, fmtTime, fmtDateTime,
+  todayLocalDate, yesterdayLocalDate, localDayKey,
+} from '@/lib/dates';
+import { Activity, ArrowRight, Clock } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Kick counter' };
 
 type KickRow = {
-  id: string; counted_at: string; duration_min: number; movements: number; notes: string | null;
+  id: string;
+  counted_at: string;
+  duration_min: number;
+  movements: number;
+  notes: string | null;
+  created_at: string;
 };
 
-export default async function KicksPage({ params }: { params: { babyId: string } }) {
-  const supabase = createClient();
-  const { isParent } = await assertRole(params.babyId, {});
+function groupHeading(iso: string): string {
+  const today = todayLocalDate();
+  const y = yesterdayLocalDate();
+  const k = localDayKey(iso);
+  if (k === today) return `Today, ${fmtDate(iso)}`;
+  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  return fmtDate(iso);
+}
 
-  const { data: rows } = await supabase.from('fetal_movements')
-    .select('id,counted_at,duration_min,movements,notes')
+export default async function KicksPage({
+  params, searchParams,
+}: {
+  params: { babyId: string };
+  searchParams: { range?: string; start?: string; end?: string; id?: string };
+}) {
+  const supabase = createClient();
+  const range = parseRangeParam(searchParams);
+  const perms = await assertRole(params.babyId, {});
+
+  const { data: rowsData } = await supabase.from('fetal_movements')
+    .select('id,counted_at,duration_min,movements,notes,created_at')
     .eq('baby_id', params.babyId).is('deleted_at', null)
-    .order('counted_at', { ascending: false }).limit(30);
-  const sessions = (rows ?? []) as KickRow[];
+    .gte('counted_at', range.start).lte('counted_at', range.end)
+    .order('counted_at', { ascending: false }).limit(500);
+  const rows = (rowsData ?? []) as KickRow[];
+
+  // Group rows by day
+  const buckets = new Map<string, KickRow[]>();
+  for (const r of rows) {
+    const k = localDayKey(r.counted_at);
+    if (!buckets.has(k)) buckets.set(k, []);
+    buckets.get(k)!.push(r);
+  }
+  const groups = Array.from(buckets.entries()).map(([k, list]) => ({
+    k, heading: groupHeading(list[0]!.counted_at), list,
+  }));
+
+  const selected = searchParams.id ? rows.find(r => r.id === searchParams.id) : rows[0];
 
   return (
-    <PageShell max="3xl">
+    <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel="Pregnancy"
-        eyebrow="Prenatal" eyebrowTint="coral" title="Kick counter"
+        eyebrow="Prenatal" eyebrowTint="coral"
+        title="Kick counter"
         subtitle="Settle in, watch baby move, tap the big button each time you feel a kick. After 28 weeks, aim for ≥10 kicks within 2 hours." />
 
-      {isParent && <KickCounter babyId={params.babyId} />}
+      {perms.isParent && <KickCounter babyId={params.babyId} />}
 
-      {/* Session history */}
-      <section className="space-y-2">
-        <h3 className="text-sm font-bold text-ink-strong uppercase tracking-wider px-1">Recent sessions</h3>
-        {sessions.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/40 p-6 text-center text-sm text-ink-muted">
-            No kick sessions logged yet.
-          </div>
-        ) : (
-          <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white">
-            {sessions.map(s => (
-              <li key={s.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="h-9 w-9 rounded-xl bg-coral-100 text-coral-700 grid place-items-center shrink-0">
-                  <Activity className="h-4 w-4" />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-ink-strong">
-                    {s.movements} kicks · {s.duration_min} min
-                  </div>
-                  <div className="text-[11px] text-ink-muted">{fmtDateTime(s.counted_at)} · {fmtRelative(s.counted_at)}</div>
-                  {s.notes && <div className="text-xs text-ink mt-0.5 line-clamp-1">{s.notes}</div>}
+      <div className="flex items-center gap-3 flex-wrap">
+        <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
+      </div>
+
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
+        {/* LIST */}
+        <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
+          {groups.length === 0 && (
+            <div className="p-10 text-center text-sm text-ink-muted">
+              No kick sessions in this window.
+            </div>
+          )}
+
+          {groups.map(g => (
+            <section key={g.k}>
+              <div className="px-5 py-3 bg-slate-50/60 border-b border-slate-100">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{g.heading}</div>
+              </div>
+              <ul className="divide-y divide-slate-100">
+                {g.list.map(s => {
+                  const active = selected?.id === s.id;
+                  const subline = s.notes || `${s.duration_min} min session`;
+                  return (
+                    <li key={s.id}>
+                      <Link href={`/babies/${params.babyId}/prenatal/kicks?range=${range.key}&id=${s.id}`}
+                        className={`grid grid-cols-[76px_44px_1fr_auto] items-center gap-3 px-4 py-3 hover:bg-slate-50 transition ${active ? 'bg-coral-50/60' : ''}`}>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-ink-strong leading-tight">
+                            {fmtTime(s.counted_at)}
+                          </div>
+                        </div>
+                        <span className="h-10 w-10 rounded-xl grid place-items-center shrink-0 bg-coral-100 text-coral-600">
+                          <Activity className="h-5 w-5" />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-ink-strong truncate">{s.movements} kicks</div>
+                          {subline && <div className="text-xs text-ink-muted truncate">{subline}</div>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-ink-strong whitespace-nowrap">{s.duration_min} min</span>
+                          <ArrowRight className="h-4 w-4 text-ink-muted" />
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+
+          {rows.length >= 500 && (
+            <div className="px-5 py-3 text-center border-t border-slate-100 bg-slate-50/60">
+              <span className="text-xs text-brand-700 font-semibold">Showing most recent 500 entries. Narrow the range to see more.</span>
+            </div>
+          )}
+        </div>
+
+        {/* DETAIL */}
+        <div className="space-y-4 lg:sticky lg:top-4 self-start">
+          <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-ink-strong">Session details</h3>
+              {selected && perms.canWriteLogs && (
+                <div className="flex items-center gap-1.5">
+                  <LogRowDelete table="fetal_movements" id={selected.id} />
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+              )}
+            </div>
+
+            {!selected ? (
+              <div className="p-8 text-center text-sm text-ink-muted">
+                Pick an item from the list to see details.
+              </div>
+            ) : (
+              <div className="p-5 space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-coral-100 text-coral-600">
+                    <Activity className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-ink-strong">Kick session</div>
+                    <div className="text-xs text-ink-muted flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> {fmtDateTime(selected.counted_at)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-xl bg-coral-50 border border-coral-100 px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-coral-700 font-semibold">Movements</div>
+                    <div className="text-xl font-bold text-ink-strong leading-tight">{selected.movements}<span className="text-xs text-ink-muted ml-1 font-normal">kicks</span></div>
+                  </div>
+                  <div className="rounded-xl bg-peach-50 border border-peach-100 px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-peach-700 font-semibold">Duration</div>
+                    <div className="text-xl font-bold text-ink-strong leading-tight">{selected.duration_min}<span className="text-xs text-ink-muted ml-1 font-normal">min</span></div>
+                  </div>
+                </div>
+
+                {selected.notes && (
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Notes</div>
+                    <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
+                  </div>
+                )}
+
+                <div className="border-t border-slate-100 pt-3">
+                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Logged on</div>
+                  <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+
       <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
         pageScope="prenatal_kicks_list" title="Page comments" />
     </PageShell>

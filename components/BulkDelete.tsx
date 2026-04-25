@@ -12,7 +12,9 @@ import {
 
 type Table =
   | 'feedings' | 'stool_logs' | 'medications' | 'medication_logs'
-  | 'measurements' | 'temperature_logs' | 'vaccinations' | 'sleep_logs';
+  | 'measurements' | 'temperature_logs' | 'vaccinations' | 'sleep_logs'
+  | 'screen_time_logs' | 'activity_logs' | 'lab_panels'
+  | 'prenatal_visits' | 'ultrasounds' | 'fetal_movements';
 
 /**
  * Bulk-delete dialog for any log table. Two modes:

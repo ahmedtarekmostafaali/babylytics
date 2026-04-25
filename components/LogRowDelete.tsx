@@ -16,7 +16,9 @@ export function LogRowDelete({
   /** The log table, e.g. 'feedings'. RLS + audit triggers handle the rest. */
   table:
     | 'feedings' | 'stool_logs' | 'medications' | 'medication_logs'
-    | 'measurements' | 'temperature_logs' | 'vaccinations' | 'sleep_logs';
+    | 'measurements' | 'temperature_logs' | 'vaccinations' | 'sleep_logs'
+    | 'screen_time_logs' | 'activity_logs' | 'lab_panels'
+    | 'prenatal_visits' | 'ultrasounds' | 'fetal_movements';
   id: string;
   label?: string;
 }) {

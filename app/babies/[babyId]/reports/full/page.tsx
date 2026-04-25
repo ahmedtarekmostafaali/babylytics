@@ -167,7 +167,7 @@ export default async function FullReport({
       </Card>
 
       {/* Feedings */}
-      <Card>
+      {show('feed_log') && <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Milk className="h-4 w-4 text-peach-600" /> Feedings ({(feedings.data ?? []).length})</CardTitle></CardHeader>
         <CardContent className="text-sm">
           {(feedings.data ?? []).length === 0 ? <p className="text-ink-muted">No feedings in this range.</p> : (
@@ -201,10 +201,10 @@ export default async function FullReport({
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Stool */}
-      <Card>
+      {show('stool_log') && <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Droplet className="h-4 w-4 text-mint-600" /> Stool logs ({(stools.data ?? []).length})</CardTitle></CardHeader>
         <CardContent className="text-sm">
           {(stools.data ?? []).length === 0 ? <p className="text-ink-muted">No stool logs in this range.</p> : (
@@ -238,10 +238,10 @@ export default async function FullReport({
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Doses */}
-      <Card>
+      {show('med_log') && <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Pill className="h-4 w-4 text-lavender-600" /> Dose log ({(doseLogs.data ?? []).length})</CardTitle></CardHeader>
         <CardContent className="text-sm">
           {(doseLogs.data ?? []).length === 0 ? <p className="text-ink-muted">No doses recorded in this range.</p> : (
@@ -274,10 +274,10 @@ export default async function FullReport({
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Measurements */}
-      <Card>
+      {show('measurement_log') && <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Ruler className="h-4 w-4 text-brand-600" /> Measurements ({(measurements.data ?? []).length})</CardTitle></CardHeader>
         <CardContent className="text-sm">
           {(measurements.data ?? []).length === 0 ? <p className="text-ink-muted">No measurements in this range.</p> : (
@@ -307,10 +307,10 @@ export default async function FullReport({
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Files */}
-      <Card>
+      {show('files_section') && <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="h-4 w-4 text-ink-muted" /> Medical records ({(files.data ?? []).length})</CardTitle></CardHeader>
         <CardContent className="divide-y divide-slate-100 text-sm">
           {(files.data ?? []).length === 0 && <p className="text-ink-muted">No files uploaded in this range.</p>}
@@ -324,7 +324,7 @@ export default async function FullReport({
             </div>
           ))}
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Caregivers */}
       <Card>
