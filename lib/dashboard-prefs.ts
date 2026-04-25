@@ -28,6 +28,8 @@ export const OVERVIEW_WIDGETS: WidgetDef[] = [
   { id: 'last_temp',        label: 'Last temperature', description: 'Most recent reading + method.',            group: 'Latest activity' },
   { id: 'last_dose',        label: 'Last medication',  description: 'Most recent dose status.',                 group: 'Latest activity' },
   { id: 'last_measurement', label: 'Last measurement', description: 'Most recent weight / height / head.',      group: 'Latest activity' },
+  { id: 'last_teething',    label: 'Last teething',    description: 'Most recent teething event.',              group: 'Latest activity' },
+  { id: 'last_speaking',    label: 'Last speech',      description: 'Most recent word / phrase / babble.',      group: 'Latest activity' },
 
   // Today summary cards
   { id: 'todays_summary',   label: "Today's summary",  description: 'Donut + key counts for today.',            group: 'Today' },
@@ -37,6 +39,7 @@ export const OVERVIEW_WIDGETS: WidgetDef[] = [
   { id: 'weekly_sleep_chart', label: 'Weekly sleep chart',    description: '7-day sleep hours bar chart.',              group: 'Trends' },
   { id: 'weight_chart',       label: 'Weight growth chart',   description: 'Sparkline of weight over time.',            group: 'Trends' },
   { id: 'temperature_chart',  label: 'Temperature trend',     description: 'Recent temperature readings.',              group: 'Trends' },
+  { id: 'milestones_reference', label: 'Milestones reference', description: 'Typical age windows: teething, crawling, walking, words, sentences.', group: 'Trends' },
 
   // Timeline + secondary
   { id: 'timeline',           label: 'Timeline',              description: "Today's events feed.",                      group: 'Activity' },

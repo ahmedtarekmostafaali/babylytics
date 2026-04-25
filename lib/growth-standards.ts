@@ -1,10 +1,11 @@
 // Static reference data for the dashboard's growth-insights strip.
 // All medians are WHO Child Growth Standards (2006), 50th percentile.
+// Minimums are WHO 3rd percentile (lower bound of the typical range).
 // Source: WHO Multicentre Growth Reference Study, weight-for-age and
-// length-for-age tables. We carry just the medians so the comparison stays
-// simple and deterministic — the parent always sees the central trend, not
-// noisy percentile ribbons. Doctors who want the full curves can read the
-// raw measurements out of the database.
+// length-for-age tables. We carry just the median + 3rd percentile so the
+// comparison stays simple and deterministic — the parent always sees the
+// central trend AND the lower healthy bound. Doctors who want the full
+// curves can read the raw measurements out of the database.
 //
 // Data is intentionally LITE — no third-party data files, no AI calls. Every
 // helper here runs in Cairo time so age math matches the rest of the app.
@@ -57,10 +58,55 @@ const GIRLS: Row[] = [
   { months: 36, weight_kg: 13.9, length_cm: 95.1, head_cm: 48.5 },
 ];
 
+// WHO 3rd percentile, boys — the lower bound of the typical range.
+// Below these values the pediatrician usually flags for follow-up.
+const BOYS_MIN: Row[] = [
+  { months: 0,  weight_kg: 2.5,  length_cm: 46.3, head_cm: 32.1 },
+  { months: 1,  weight_kg: 3.4,  length_cm: 51.1, head_cm: 34.9 },
+  { months: 2,  weight_kg: 4.4,  length_cm: 54.7, head_cm: 36.8 },
+  { months: 3,  weight_kg: 5.1,  length_cm: 57.6, head_cm: 38.1 },
+  { months: 4,  weight_kg: 5.6,  length_cm: 60.0, head_cm: 39.2 },
+  { months: 5,  weight_kg: 6.1,  length_cm: 61.9, head_cm: 40.1 },
+  { months: 6,  weight_kg: 6.4,  length_cm: 63.6, head_cm: 40.9 },
+  { months: 7,  weight_kg: 6.7,  length_cm: 65.1, head_cm: 41.5 },
+  { months: 8,  weight_kg: 7.0,  length_cm: 66.5, head_cm: 42.0 },
+  { months: 9,  weight_kg: 7.2,  length_cm: 67.7, head_cm: 42.5 },
+  { months: 10, weight_kg: 7.5,  length_cm: 69.0, head_cm: 42.9 },
+  { months: 11, weight_kg: 7.7,  length_cm: 70.2, head_cm: 43.2 },
+  { months: 12, weight_kg: 7.8,  length_cm: 71.3, head_cm: 43.5 },
+  { months: 15, weight_kg: 8.4,  length_cm: 74.5, head_cm: 44.2 },
+  { months: 18, weight_kg: 8.9,  length_cm: 77.5, head_cm: 44.7 },
+  { months: 21, weight_kg: 9.4,  length_cm: 80.1, head_cm: 45.2 },
+  { months: 24, weight_kg: 9.9,  length_cm: 82.5, head_cm: 45.5 },
+  { months: 36, weight_kg: 11.4, length_cm: 89.9, head_cm: 46.6 },
+];
+
+// WHO 3rd percentile, girls.
+const GIRLS_MIN: Row[] = [
+  { months: 0,  weight_kg: 2.4,  length_cm: 45.6, head_cm: 31.7 },
+  { months: 1,  weight_kg: 3.2,  length_cm: 50.0, head_cm: 34.2 },
+  { months: 2,  weight_kg: 4.0,  length_cm: 53.2, head_cm: 36.0 },
+  { months: 3,  weight_kg: 4.6,  length_cm: 55.8, head_cm: 37.2 },
+  { months: 4,  weight_kg: 5.1,  length_cm: 58.0, head_cm: 38.2 },
+  { months: 5,  weight_kg: 5.5,  length_cm: 59.9, head_cm: 39.0 },
+  { months: 6,  weight_kg: 5.8,  length_cm: 61.5, head_cm: 39.7 },
+  { months: 7,  weight_kg: 6.1,  length_cm: 63.0, head_cm: 40.4 },
+  { months: 8,  weight_kg: 6.3,  length_cm: 64.3, head_cm: 40.9 },
+  { months: 9,  weight_kg: 6.6,  length_cm: 65.6, head_cm: 41.3 },
+  { months: 10, weight_kg: 6.8,  length_cm: 66.8, head_cm: 41.7 },
+  { months: 11, weight_kg: 7.0,  length_cm: 68.0, head_cm: 42.0 },
+  { months: 12, weight_kg: 7.1,  length_cm: 69.2, head_cm: 42.3 },
+  { months: 15, weight_kg: 7.7,  length_cm: 72.4, head_cm: 43.0 },
+  { months: 18, weight_kg: 8.2,  length_cm: 75.4, head_cm: 43.5 },
+  { months: 21, weight_kg: 8.7,  length_cm: 78.0, head_cm: 44.0 },
+  { months: 24, weight_kg: 9.2,  length_cm: 80.5, head_cm: 44.3 },
+  { months: 36, weight_kg: 11.0, length_cm: 88.5, head_cm: 45.4 },
+];
+
 function pickTable(sex: Sex): Row[] {
   if (sex === 'male')   return BOYS;
   if (sex === 'female') return GIRLS;
-  // For 'other' / 'unspecified', average the two so we never bias one way.
+  // For 'other' / 'unspecified' (legacy rows), average the two so we never bias one way.
   return BOYS.map((b, i) => {
     const g = GIRLS[i]!;
     return {
@@ -72,7 +118,21 @@ function pickTable(sex: Sex): Row[] {
   });
 }
 
-/** Linear-interpolate the WHO median for a given age in months. */
+function pickMinTable(sex: Sex): Row[] {
+  if (sex === 'male')   return BOYS_MIN;
+  if (sex === 'female') return GIRLS_MIN;
+  return BOYS_MIN.map((b, i) => {
+    const g = GIRLS_MIN[i]!;
+    return {
+      months: b.months,
+      weight_kg: (b.weight_kg + g.weight_kg) / 2,
+      length_cm: (b.length_cm + g.length_cm) / 2,
+      head_cm:   (b.head_cm   + g.head_cm)   / 2,
+    };
+  });
+}
+
+/** Linear-interpolate a WHO value for a given age in months. */
 function interpolate(table: Row[], months: number, key: 'weight_kg'|'length_cm'|'head_cm'): number | null {
   if (months < 0) return null;
   if (months <= table[0]!.months) return table[0]![key];
@@ -94,6 +154,12 @@ export type WhoExpectation = {
   head_cm_median:   number | null;
 };
 
+export type WhoMinimum = {
+  weight_kg_min: number | null;
+  length_cm_min: number | null;
+  head_cm_min:   number | null;
+};
+
 export function whoMedianFor(ageDays: number, sex: Sex): WhoExpectation {
   const months = ageDays / 30.4375;
   const table = pickTable(sex);
@@ -101,6 +167,16 @@ export function whoMedianFor(ageDays: number, sex: Sex): WhoExpectation {
     weight_kg_median: interpolate(table, months, 'weight_kg'),
     length_cm_median: interpolate(table, months, 'length_cm'),
     head_cm_median:   interpolate(table, months, 'head_cm'),
+  };
+}
+
+export function whoMinFor(ageDays: number, sex: Sex): WhoMinimum {
+  const months = ageDays / 30.4375;
+  const table = pickMinTable(sex);
+  return {
+    weight_kg_min: interpolate(table, months, 'weight_kg'),
+    length_cm_min: interpolate(table, months, 'length_cm'),
+    head_cm_min:   interpolate(table, months, 'head_cm'),
   };
 }
 
@@ -236,6 +312,69 @@ export function milestoneFor(ageDays: number): Milestone {
 }
 
 // ---------------------------------------------------------------------------
+// Developmental milestone age windows — typical earliest, average and latest.
+// Used by the per-baby trackers (teething, speaking, crawling, walking) and
+// the "Milestones reference" card in growth insights.
+// Values are months unless noted; sources: AAP / WHO / NHS reference ranges.
+// ---------------------------------------------------------------------------
+
+export type MilestoneAgeRange = {
+  id: 'first_tooth' | 'crawling' | 'first_words' | 'walking' | 'first_sentence' | 'last_tooth';
+  label: string;
+  emoji: string;
+  /** Earliest typical month for this milestone. */
+  min_months: number;
+  /** Average / typical month. */
+  avg_months: number;
+  /** WHO/AAP "watch-for" upper bound — past this, talk to pediatrician. */
+  max_months: number;
+  hint: string;
+};
+
+export const MILESTONE_AGES: MilestoneAgeRange[] = [
+  { id: 'first_tooth',    label: 'First tooth',     emoji: '🦷',
+    min_months: 4,  avg_months: 7,  max_months: 12,
+    hint: 'Most babies cut their first tooth around 6–7 months. Anywhere from 4 to 12 is normal.' },
+  { id: 'crawling',       label: 'Crawling',        emoji: '🚼',
+    min_months: 6,  avg_months: 8,  max_months: 10,
+    hint: 'Many babies crawl by 8 months. Some skip crawling and go straight to cruising — that is OK.' },
+  { id: 'first_words',    label: 'First words',     emoji: '🗣️',
+    min_months: 9,  avg_months: 12, max_months: 14,
+    hint: '"Mama" / "Dada" with meaning typically appear around the first birthday.' },
+  { id: 'walking',        label: 'Walking',         emoji: '🚶',
+    min_months: 9,  avg_months: 12, max_months: 18,
+    hint: 'Most kids take their first independent steps between 12 and 15 months.' },
+  { id: 'last_tooth',     label: 'Full primary set',emoji: '😁',
+    min_months: 22, avg_months: 28, max_months: 33,
+    hint: 'All 20 baby teeth typically arrive between 2 and 3 years.' },
+  { id: 'first_sentence', label: 'First sentences', emoji: '💬',
+    min_months: 18, avg_months: 24, max_months: 30,
+    hint: 'Two-word combos ("more milk", "go car") usually emerge around the second birthday.' },
+];
+
+/**
+ * For a given milestone, classify where the baby sits relative to the typical
+ * age window. `actual_months` should be the age (or age at first occurrence)
+ * in months; if null, returns 'pending'.
+ */
+export function classifyMilestone(
+  range: MilestoneAgeRange,
+  actual_months: number | null,
+  current_age_months: number,
+): {
+  state: 'early' | 'on_time' | 'late' | 'pending' | 'overdue';
+  label: string;
+} {
+  if (actual_months != null) {
+    if (actual_months < range.min_months) return { state: 'early',   label: 'Early bird' };
+    if (actual_months > range.max_months) return { state: 'late',    label: 'Later than typical' };
+    return { state: 'on_time', label: 'Right on schedule' };
+  }
+  if (current_age_months > range.max_months) return { state: 'overdue', label: 'Past the typical window' };
+  return { state: 'pending', label: 'Not yet — and that\'s OK' };
+}
+
+// ---------------------------------------------------------------------------
 // Comparison helper — formats a "vs WHO median" line and a status hint.
 // ---------------------------------------------------------------------------
 
@@ -253,4 +392,14 @@ export function compareToMedian(actual: number | null, median: number | null): {
   if      (pct >  10) status = 'above';
   else if (pct < -10) status = 'below';
   return { delta, pct, status };
+}
+
+/** Compare an actual measurement against the WHO 3rd percentile (lower bound). */
+export function compareToMin(actual: number | null, min: number | null): {
+  delta: number | null;
+  status: 'above_min' | 'below_min' | 'unknown';
+} {
+  if (actual == null || min == null) return { delta: null, status: 'unknown' };
+  const delta = actual - min;
+  return { delta, status: delta >= 0 ? 'above_min' : 'below_min' };
 }

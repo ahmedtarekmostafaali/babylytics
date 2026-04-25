@@ -61,7 +61,7 @@ export const MedicationLogSchema = z.object({
 export const BabySchema = z.object({
   name: z.string().min(1).max(120),
   dob: z.string().min(1),
-  gender: z.enum(['male','female','other','unspecified']),
+  gender: z.enum(['male','female']),
   birth_weight_kg: z.coerce.number().min(0).max(10).nullable().optional(),
   birth_height_cm: z.coerce.number().min(0).max(80).nullable().optional(),
   feeding_factor: z.coerce.number().min(50).max(250).default(150),
@@ -100,6 +100,32 @@ export const ActivitySchema = z.object({
   location:      z.string().max(120).nullable().optional(),
   mood:          z.enum(['happy','calm','fussy','tired','curious','other']).nullable().optional(),
   notes:         z.string().max(2000).nullable().optional(),
+});
+
+export const TeethingSchema = z.object({
+  observed_at: z.string().min(1),
+  tooth_label: z.string().max(60).nullable().optional(),
+  event_type:  z.enum(['eruption','swelling','pain','fever','soothing','lost']),
+  pain_level:  z.coerce.number().int().min(0).max(10).nullable().optional(),
+  fever_c:     z.coerce.number().min(30).max(45).nullable().optional(),
+  soother_used:z.string().max(120).nullable().optional(),
+  notes:       z.string().max(2000).nullable().optional(),
+});
+
+export const SpeakingSchema = z.object({
+  observed_at:    z.string().min(1),
+  word_or_phrase: z.string().max(200).nullable().optional(),
+  category:       z.enum(['coo','babble','word','phrase','sentence','other']),
+  language:       z.string().max(20).nullable().optional(),
+  is_first_use:   z.boolean().optional(),
+  context:        z.string().max(500).nullable().optional(),
+  notes:          z.string().max(2000).nullable().optional(),
+});
+
+export const DevelopmentalMilestoneSchema = z.object({
+  milestone_id: z.enum(['first_tooth','crawling','first_words','walking','first_sentence']),
+  observed_at:  z.string().min(1),
+  notes:        z.string().max(1000).nullable().optional(),
 });
 
 export const TemperatureSchema = z.object({
@@ -260,7 +286,7 @@ export const MarkAsBornSchema = z.object({
   birth_weight_kg:  z.coerce.number().min(0).max(10).nullable().optional(),
   birth_height_cm:  z.coerce.number().min(0).max(80).nullable().optional(),
   head_circ_cm:     z.coerce.number().min(0).max(80).nullable().optional(),
-  gender:           z.enum(['male','female','other','unspecified']).nullable().optional(),
+  gender:           z.enum(['male','female']).nullable().optional(),
 });
 
 export const CarePlanSchema = z.object({

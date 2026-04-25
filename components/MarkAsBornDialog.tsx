@@ -23,7 +23,7 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
   const [open, setOpen]   = useState(false);
   const [name, setName]   = useState(babyName === 'Baby' && suggestedName ? suggestedName : babyName);
   const [dob, setDob]     = useState(nowLocalInput());
-  const [gender, setGender] = useState<'male'|'female'|'other'|'unspecified'>('unspecified');
+  const [gender, setGender] = useState<'male'|'female'>('female');
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [head, setHead]     = useState('');
@@ -56,7 +56,7 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
       p_birth_weight_kg: parsed.data.birth_weight_kg ?? null,
       p_birth_height_cm: parsed.data.birth_height_cm ?? null,
       p_head_circ_cm:    parsed.data.head_circ_cm ?? null,
-      p_gender: parsed.data.gender ?? 'unspecified',
+      p_gender: parsed.data.gender ?? 'female',
     });
     setSaving(false);
     if (error) { setErr(error.message); return; }
@@ -102,11 +102,10 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
               </div>
               <div>
                 <Label>Gender</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {[
                     { v: 'female', label: 'Female' },
                     { v: 'male',   label: 'Male' },
-                    { v: 'other',  label: 'Other' },
                   ].map(o => (
                     <button type="button" key={o.v} onClick={() => setGender(o.v as typeof gender)}
                       className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${

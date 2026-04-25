@@ -154,7 +154,7 @@ function PregnancyForm({ onBack, router }: { onBack: () => void; router: ReturnT
 function BornForm({ onBack, router }: { onBack: () => void; router: ReturnType<typeof useRouter> }) {
   const [name, setName] = useState('');
   const [dob, setDob] = useState('');
-  const [gender, setGender] = useState<'male'|'female'|'other'|'unspecified'>('unspecified');
+  const [gender, setGender] = useState<'male'|'female'>('female');
   const [birthWeight, setBirthWeight] = useState('');
   const [birthHeight, setBirthHeight] = useState('');
   const [factor, setFactor] = useState('150');
@@ -202,10 +202,8 @@ function BornForm({ onBack, router }: { onBack: () => void; router: ReturnType<t
           <div>
             <Label htmlFor="g">Gender</Label>
             <Select id="g" value={gender} onChange={e => setGender(e.target.value as typeof gender)}>
-              <option value="unspecified">Unspecified</option>
               <option value="female">Female</option>
               <option value="male">Male</option>
-              <option value="other">Other</option>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-3">

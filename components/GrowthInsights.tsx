@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { Scale, Ruler, Sparkles, TrendingUp, ArrowRight, Brain } from 'lucide-react';
 import { fmtKg, fmtCm } from '@/lib/units';
 import {
-  whoMedianFor, compareToMedian, spurtStateFor, milestoneFor, type Sex,
+  whoMedianFor, whoMinFor, compareToMedian, compareToMin,
+  spurtStateFor, milestoneFor, type Sex,
 } from '@/lib/growth-standards';
 
 type Props = {
@@ -20,17 +21,20 @@ type Props = {
  * the prior "Weekly insight" banner. All four cards self-hide when their
  * underlying data is missing — never an empty state.
  *
- * 1. Weight-for-age vs WHO median
- * 2. Length-for-age vs WHO median
+ * 1. Weight-for-age vs WHO median (+ minimum)
+ * 2. Length-for-age vs WHO median (+ minimum)
  * 3. Growth spurt window (current / next)
  * 4. Developmental milestone for current age bucket
  */
 export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heightCm, headCm }: Props) {
   const sexT = (sex as Sex) ?? 'unspecified';
   const median = whoMedianFor(ageDays, sexT);
-  const wCmp = compareToMedian(weightKg, median.weight_kg_median);
-  const hCmp = compareToMedian(heightCm, median.length_cm_median);
-  const spurt = spurtStateFor(ageDays);
+  const min    = whoMinFor(ageDays, sexT);
+  const wCmp   = compareToMedian(weightKg, median.weight_kg_median);
+  const wMin   = compareToMin(weightKg, min.weight_kg_min);
+  const hCmp   = compareToMedian(heightCm, median.length_cm_median);
+  const hMin   = compareToMin(heightCm, min.length_cm_min);
+  const spurt  = spurtStateFor(ageDays);
   const milestone = milestoneFor(ageDays);
 
   // First name only in headlines so the strip stays compact.
@@ -43,7 +47,7 @@ export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heigh
           <Sparkles className="h-3.5 w-3.5" />
         </span>
         <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Growth insights</h2>
-        <span className="text-[10px] text-ink-muted">vs WHO median</span>
+        <span className="text-[10px] text-ink-muted">vs WHO standards</span>
         <Link href={`/babies/${babyId}/measurements`}
           className="ml-auto inline-flex items-center gap-1 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-xs font-medium px-3 py-1 text-ink-strong">
           Log measurement <ArrowRight className="h-3 w-3" />
@@ -56,10 +60,18 @@ export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heigh
           {weightKg != null && median.weight_kg_median != null ? (
             <>
               <div className="text-2xl font-bold tabular-nums text-ink-strong">{fmtKg(weightKg)}</div>
-              <div className="text-[11px] text-ink-muted mt-0.5">
-                Median for age: <strong>{fmtKg(median.weight_kg_median)}</strong>
+              <div className="text-[11px] text-ink-muted mt-0.5 leading-snug">
+                Median: <strong className="text-ink">{fmtKg(median.weight_kg_median)}</strong>
+                {min.weight_kg_min != null && (
+                  <> · min: <strong className="text-ink">{fmtKg(min.weight_kg_min)}</strong></>
+                )}
               </div>
               <StatusLine status={wCmp.status} delta={wCmp.delta} unit="kg" />
+              {wMin.status === 'below_min' && (
+                <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-coral-100 text-coral-800 text-[11px] font-bold px-2 py-0.5">
+                  ⚠ below WHO min — talk to pediatrician
+                </div>
+              )}
             </>
           ) : weightKg != null ? (
             <>
@@ -67,7 +79,7 @@ export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heigh
               <div className="text-[11px] text-ink-muted mt-0.5">No reference yet for this age</div>
             </>
           ) : (
-            <Empty>Log a weight to see {first} vs WHO median.</Empty>
+            <Empty>Log a weight to see {first} vs WHO standards.</Empty>
           )}
         </InsightCard>
 
@@ -76,10 +88,18 @@ export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heigh
           {heightCm != null && median.length_cm_median != null ? (
             <>
               <div className="text-2xl font-bold tabular-nums text-ink-strong">{fmtCm(heightCm)}</div>
-              <div className="text-[11px] text-ink-muted mt-0.5">
-                Median for age: <strong>{fmtCm(median.length_cm_median)}</strong>
+              <div className="text-[11px] text-ink-muted mt-0.5 leading-snug">
+                Median: <strong className="text-ink">{fmtCm(median.length_cm_median)}</strong>
+                {min.length_cm_min != null && (
+                  <> · min: <strong className="text-ink">{fmtCm(min.length_cm_min)}</strong></>
+                )}
               </div>
               <StatusLine status={hCmp.status} delta={hCmp.delta} unit="cm" />
+              {hMin.status === 'below_min' && (
+                <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-coral-100 text-coral-800 text-[11px] font-bold px-2 py-0.5">
+                  ⚠ below WHO min — talk to pediatrician
+                </div>
+              )}
             </>
           ) : heightCm != null ? (
             <>
@@ -87,12 +107,15 @@ export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heigh
               <div className="text-[11px] text-ink-muted mt-0.5">No reference yet for this age</div>
             </>
           ) : (
-            <Empty>Log a height to see {first} vs WHO median.</Empty>
+            <Empty>Log a height to see {first} vs WHO standards.</Empty>
           )}
           {/* Bonus: head circumference if we have one */}
           {headCm != null && median.head_cm_median != null && (
             <div className="mt-2 pt-2 border-t border-slate-100 text-[11px] text-ink-muted">
               Head: <strong className="text-ink">{fmtCm(headCm)}</strong> · median <strong>{fmtCm(median.head_cm_median)}</strong>
+              {min.head_cm_min != null && (
+                <> · min <strong>{fmtCm(min.head_cm_min)}</strong></>
+              )}
             </div>
           )}
         </InsightCard>

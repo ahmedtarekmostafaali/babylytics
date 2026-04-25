@@ -2,7 +2,7 @@
 // `supabase gen types typescript --linked > lib/db.types.ts` and re-export.
 
 export type Role = 'owner' | 'editor' | 'viewer';
-export type Gender = 'male' | 'female' | 'other' | 'unspecified';
+export type Gender = 'male' | 'female';
 export type MilkType = 'breast' | 'formula' | 'mixed' | 'solid' | 'other';
 export type StoolSize = 'small' | 'medium' | 'large';
 export type OcrStatus = 'pending' | 'processing' | 'extracted' | 'reviewed' | 'confirmed' | 'failed';

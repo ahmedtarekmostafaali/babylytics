@@ -9,6 +9,7 @@ import { Comments } from '@/components/Comments';
 import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { GrowthInsights } from '@/components/GrowthInsights';
+import { MilestoneReferenceCard } from '@/components/MilestoneReference';
 import {
   ageInDays, dayWindow, fmtDate, fmtDateTime, fmtRelative, fmtTime,
   lastNDaysWindow, todayLocalDate, TIMEZONE,
@@ -93,7 +94,9 @@ export default async function BabyOverview({
   const age = ageInDays(baby.dob);
 
   const [
-    lastFeed, lastTemp, lastStool, lastDose, lastMeasurement, lastSleep,
+    lastFeed, lastTemp, lastStool, lastDose, lastMeasurement,
+    lastWeightRow, lastHeightRow, lastHeadRow,
+    lastSleep,
     currentWeight,
     todayFeeds, todayStool, todayMeds, todayTemps, todayMeasurements, todaySleeps,
     activeMeds, recentTaken,
@@ -119,6 +122,20 @@ export default async function BabyOverview({
     supabase.from('measurements')
       .select('id,measured_at,weight_kg,height_cm').eq('baby_id', babyId).is('deleted_at', null)
       .order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+    // Per-field latest non-null lookups. The single-row query above can return a
+    // measurement that has only weight (and null height_cm) — which is why the
+    // Growth Insights strip used to "stick" to an old length value when a parent
+    // logged a weight-only update. Fetch each field independently so the strip
+    // always shows the most recent non-null value for that field.
+    supabase.from('measurements')
+      .select('measured_at,weight_kg').eq('baby_id', babyId).is('deleted_at', null)
+      .not('weight_kg', 'is', null).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('measurements')
+      .select('measured_at,height_cm').eq('baby_id', babyId).is('deleted_at', null)
+      .not('height_cm', 'is', null).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('measurements')
+      .select('measured_at,head_circ_cm').eq('baby_id', babyId).is('deleted_at', null)
+      .not('head_circ_cm', 'is', null).order('measured_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('sleep_logs')
       .select('id,start_at,end_at,duration_min,location,quality').eq('baby_id', babyId).is('deleted_at', null)
       .order('start_at', { ascending: false }).limit(1).maybeSingle(),
@@ -202,6 +219,29 @@ export default async function BabyOverview({
     .select('baby_id', { count: 'exact', head: true })
     .eq('baby_id', babyId);
   const showPregnancyArchive = (hasPregnancyArchive ?? 0) > 0;
+
+  // Developmental milestones — used by the Milestones reference card. We pull
+  // both the explicit log table and derive fallbacks from teething/speaking
+  // logs so a parent who only logs in those trackers still sees the dot move.
+  const [logged, firstTooth, firstWord, firstSentence] = await Promise.all([
+    supabase.from('developmental_milestones')
+      .select('milestone_id,observed_at')
+      .eq('baby_id', babyId).is('deleted_at', null)
+      .order('observed_at', { ascending: true }),
+    supabase.from('teething_logs')
+      .select('observed_at').eq('baby_id', babyId).is('deleted_at', null)
+      .eq('event_type', 'eruption')
+      .order('observed_at', { ascending: true }).limit(1).maybeSingle(),
+    supabase.from('speaking_logs')
+      .select('observed_at').eq('baby_id', babyId).is('deleted_at', null)
+      .eq('is_first_use', true).in('category', ['word'])
+      .order('observed_at', { ascending: true }).limit(1).maybeSingle(),
+    supabase.from('speaking_logs')
+      .select('observed_at').eq('baby_id', babyId).is('deleted_at', null)
+      .eq('is_first_use', true).in('category', ['sentence','phrase'])
+      .order('observed_at', { ascending: true }).limit(1).maybeSingle(),
+  ]);
+  const loggedMilestones = ((logged.data ?? []) as { milestone_id: string; observed_at: string }[]) ?? [];
 
   // User-specific dashboard widget preferences. Empty set = show everything,
   // so existing behavior is preserved when the user has never customized.
@@ -604,10 +644,30 @@ export default async function BabyOverview({
         babyName={baby.name}
         ageDays={age}
         sex={baby.gender ?? 'unspecified'}
-        weightKg={(currentWeight.data as number | null) ?? lastMeasurement.data?.weight_kg ?? null}
-        heightCm={lastMeasurement.data?.height_cm ?? null}
-        headCm={null}
+        weightKg={
+          (currentWeight.data as number | null)
+            ?? (lastWeightRow.data?.weight_kg as number | null)
+            ?? lastMeasurement.data?.weight_kg
+            ?? null
+        }
+        heightCm={(lastHeightRow.data?.height_cm as number | null) ?? null}
+        headCm={(lastHeadRow.data?.head_circ_cm as number | null) ?? null}
       />
+
+      {/* Milestones reference — typical age windows for the big developmental
+            firsts (teething, crawling, walking, words, sentences). Self-hides
+            when the parent has unchecked it from dashboard preferences. */}
+      {show('milestones_reference') && (
+        <MilestoneReferenceCard
+          babyId={babyId}
+          ageDays={age}
+          dobIso={baby.dob ?? null}
+          logged={loggedMilestones}
+          firstToothFallback={(firstTooth.data?.observed_at as string | undefined) ?? null}
+          firstWordFallback={(firstWord.data?.observed_at as string | undefined) ?? null}
+          firstSentenceFallback={(firstSentence.data?.observed_at as string | undefined) ?? null}
+        />
+      )}
 
       {/* ═══ MAIN 3-COLUMN GRID ═══ */}
       <section className="grid gap-4 lg:grid-cols-3">

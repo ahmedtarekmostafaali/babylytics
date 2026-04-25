@@ -14,7 +14,7 @@ export type BabyEditValue = {
   id: string;
   name: string;
   dob: string;
-  gender: 'male'|'female'|'other'|'unspecified';
+  gender: 'male'|'female';
   birth_weight_kg: number | null;
   birth_height_cm: number | null;
   feeding_factor_ml_per_kg_per_day: number;
@@ -186,10 +186,8 @@ export function BabyEditForm({
       <div>
         <Label htmlFor="g">Gender</Label>
         <Select id="g" value={gender} onChange={e => setGender(e.target.value as typeof gender)}>
-          <option value="unspecified">Unspecified</option>
           <option value="female">Female</option>
           <option value="male">Male</option>
-          <option value="other">Other</option>
         </Select>
       </div>
       <div className="grid grid-cols-2 gap-3">

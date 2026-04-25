@@ -20,7 +20,7 @@ export type BabyProfileValue = {
   name: string;
   nickname?: string | null;
   dob: string;
-  gender: 'male'|'female'|'other'|'unspecified';
+  gender: 'male'|'female';
   birth_weight_kg: number | null;
   birth_height_cm: number | null;
   feeding_factor_ml_per_kg_per_day: number;
@@ -258,11 +258,10 @@ export function BabyProfileForm({
               <Input type="datetime-local" value={dob} onChange={e => setDob(e.target.value)} required />
             </Field>
             <Field label="Gender">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {[
                   { v: 'female', label: 'Female' },
                   { v: 'male',   label: 'Male' },
-                  { v: 'other',  label: 'Other' },
                 ].map(o => (
                   <button type="button" key={o.v} onClick={() => setGender(o.v as typeof gender)}
                     className={cn(
