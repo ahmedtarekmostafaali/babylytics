@@ -8,6 +8,7 @@ import { Sparkline } from '@/components/Sparkline';
 import { Comments } from '@/components/Comments';
 import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import { NotificationsBell } from '@/components/NotificationsBell';
+import { GrowthInsights } from '@/components/GrowthInsights';
 import {
   ageInDays, dayWindow, fmtDate, fmtDateTime, fmtRelative, fmtTime,
   lastNDaysWindow, todayLocalDate, TIMEZONE,
@@ -96,7 +97,7 @@ export default async function BabyOverview({
     currentWeight,
     todayFeeds, todayStool, todayMeds, todayTemps, todayMeasurements, todaySleeps,
     activeMeds, recentTaken,
-    weekFeeds, weekStool, weekTemps, weekSleeps, prevWeekFeeds,
+    weekFeeds, weekStool, weekTemps, weekSleeps, _prevWeekFeeds,
     weightSeries,
     upcomingVaccines,
     lowConf,
@@ -385,28 +386,9 @@ export default async function BabyOverview({
   const overdueCount = reminders.filter(r => r.isOverdue).length;
   const nextDose = reminders.find(r => r.nextAt);
 
-  // ───────── Insight banner: compare week-over-week feeding count
+  // Week feed count still used by the "Today's insights" InsightCells even
+  // though the prior week-over-week banner was replaced with GrowthInsights.
   const thisWeek = (weekFeeds.data ?? []).length;
-  const lastWeek = (prevWeekFeeds.data ?? []).length;
-  const pct = lastWeek > 0 ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : null;
-  // Match the tone to what actually happened. "Keep it up" when the count is
-  // zero is nonsense for a baby-tracker.
-  let insightText: string;
-  let insightPositive = true;
-  if (thisWeek === 0) {
-    insightText = lastWeek > 0
-      ? `No feedings logged this week — last week had ${lastWeek}. Tap Quick Add to catch up.`
-      : `No feedings logged yet. Tap Quick Add at the bottom to start tracking.`;
-    insightPositive = false;
-  } else if (pct == null) {
-    insightText = `You've logged ${thisWeek} feeding${thisWeek === 1 ? '' : 's'} this week.`;
-  } else if (pct >= 0) {
-    insightText   = `${baby.name}'s feeding frequency is up ${pct}% this week. Great job!`;
-    insightPositive = true;
-  } else {
-    insightText   = `${baby.name}'s feeding frequency is down ${Math.abs(pct)}% this week — check in if anything's off.`;
-    insightPositive = false;
-  }
 
   // ───────── Growth progress: latest vs birth
   const weightRows = (weightSeries.data ?? []) as { measured_at: string; weight_kg: number | null }[];
@@ -587,23 +569,19 @@ export default async function BabyOverview({
         />}
       </section>
 
-      {/* ═══ INSIGHT BANNER ═══ */}
-      <div className={`rounded-2xl border p-4 shadow-card flex items-center gap-3 ${
-        insightPositive
-          ? 'border-mint-200 bg-gradient-to-r from-mint-50 via-white to-brand-50'
-          : 'border-peach-200 bg-gradient-to-r from-peach-50 via-white to-coral-50'
-      }`}>
-        <div className={`h-10 w-10 grid place-items-center rounded-xl ${insightPositive ? 'bg-mint-500' : 'bg-peach-500'} text-white shrink-0`}>
-          <Sparkles className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Weekly insight</div>
-          <div className="font-medium text-ink-strong">{insightText}</div>
-        </div>
-        <Link href={`/babies/${babyId}/reports`} className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-xs font-medium px-3 py-1.5 text-ink-strong">
-          View report <ArrowRight className="h-3 w-3" />
-        </Link>
-      </div>
+      {/* ═══ GROWTH INSIGHTS STRIP ═══ replaces the old single-line "weekly
+            insight" banner. Compares baby to WHO median weight/length, shows
+            current/next growth spurt, surfaces the milestone for current age.
+            All four cards self-hide when their data is missing. */}
+      <GrowthInsights
+        babyId={babyId}
+        babyName={baby.name}
+        ageDays={age}
+        sex={baby.gender ?? 'unspecified'}
+        weightKg={(currentWeight.data as number | null) ?? lastMeasurement.data?.weight_kg ?? null}
+        heightCm={lastMeasurement.data?.height_cm ?? null}
+        headCm={null}
+      />
 
       {/* ═══ MAIN 3-COLUMN GRID ═══ */}
       <section className="grid gap-4 lg:grid-cols-3">
