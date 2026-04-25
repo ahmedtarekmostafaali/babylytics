@@ -95,9 +95,17 @@ export default async function DailyReport({
 
       {/* KPI grid — compact so it fits one page alongside the new temp tile */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <MiniKpi tint="peach" icon={Milk}    label="Feeds"    value={f.feed_count ?? 0} sub={`${fmtMl(f.total_feed_ml)}${f.feed_count ? ` · avg ${fmtMl(f.avg_feed_ml)}` : ''}`} />
+        <MiniKpi tint="peach" icon={Milk}    label="Feeds"    value={fmtMl(f.total_feed_ml)} sub={`${f.feed_count ?? 0} feed${f.feed_count === 1 ? '' : 's'}${f.feed_count ? ` · avg ${fmtMl(f.avg_feed_ml)}` : ''}`} />
         <MiniKpi tint="peach" icon={Target}  label="Target"   value={fmtMl(f.recommended_feed_ml)} sub={w ? `${fmtKg(w)} × ${baby.feeding_factor_ml_per_kg_per_day} ml/kg` : ''} />
-        <MiniKpi tint="peach" icon={Percent} label="Feeding %" value={fmtPct(f.feeding_percentage)} />
+        {(() => {
+          const remaining = Math.max(0, Math.round((f.recommended_feed_ml ?? 0) - (f.total_feed_ml ?? 0)));
+          const pct = Number(f.feeding_percentage ?? 0);
+          return (
+            <MiniKpi tint="peach" icon={Percent} label="Feeding %"
+              value={fmtPct(pct)}
+              sub={pct >= 100 ? 'goal hit ✓' : `${fmtMl(remaining)} left to goal`} />
+          );
+        })()}
         <MiniKpi tint="mint"  icon={Droplet} label="Stools"   value={s.stool_count ?? 0} sub={s.total_ml ? `${fmtMl(s.total_ml)} total` : ''} />
         <MiniKpi tint="lavender" icon={Pill} label="Doses"     value={`${m.taken ?? 0}/${m.total_doses ?? 0}`} sub={`${m.missed ?? 0} missed · ${fmtPct(m.adherence_pct)}`} />
 

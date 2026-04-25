@@ -110,6 +110,7 @@ export const AppointmentSchema = z.object({
   location:    z.string().max(200).nullable().optional(),
   status:      z.enum(['scheduled','completed','cancelled','missed','rescheduled']).default('scheduled'),
   notes:       z.string().max(2000).nullable().optional(),
+  conclusion:  z.string().max(4000).nullable().optional(),
 });
 
 // ----- Medical Profile schemas -----

@@ -18,6 +18,7 @@ export type AppointmentFormValue = {
   location?: string | null;
   status?: 'scheduled'|'completed'|'cancelled'|'missed'|'rescheduled';
   notes?: string | null;
+  conclusion?: string | null;
 };
 
 export function AppointmentForm({
@@ -35,6 +36,7 @@ export function AppointmentForm({
   const [location, setLocation] = useState(initial?.location ?? '');
   const [status, setStatus]     = useState<AppointmentFormValue['status']>(initial?.status ?? 'scheduled');
   const [notes, setNotes]       = useState(initial?.notes ?? '');
+  const [conclusion, setConclusion] = useState(initial?.conclusion ?? '');
 
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -52,6 +54,7 @@ export function AppointmentForm({
       location: location || null,
       status: status ?? 'scheduled',
       notes: notes || null,
+      conclusion: conclusion || null,
     });
     if (!parsed.success) { setErr(parsed.error.errors[0]?.message ?? 'invalid'); return; }
     setSaving(true);
@@ -126,9 +129,16 @@ export function AppointmentForm({
       </div>
 
       <div>
-        <Label>Notes</Label>
+        <Label>Prep notes (before the visit)</Label>
         <Textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-          placeholder="Questions to ask, prep notes, etc." />
+          placeholder="Questions to ask, prep notes, things to remember…" />
+      </div>
+
+      <div>
+        <Label>Doctor&apos;s conclusion (after the visit)</Label>
+        <Textarea rows={4} value={conclusion ?? ''} onChange={e => setConclusion(e.target.value)}
+          placeholder="What the doctor said, diagnosis, treatment plan, follow-up instructions, next appointment, prescriptions issued, etc." />
+        <p className="text-[11px] text-ink-muted mt-1">Fill this in after the appointment so it stays in the baby&apos;s record.</p>
       </div>
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}

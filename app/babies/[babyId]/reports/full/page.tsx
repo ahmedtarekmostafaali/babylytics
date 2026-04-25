@@ -111,9 +111,18 @@ export default async function FullReport({
       <section>
         <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Aggregated KPIs — {range.label}</h2>
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <KpiCard tint="peach"    icon={Milk}    label="Feeds"      value={f.feed_count ?? 0} sub={`${fmtMl(f.total_feed_ml)} total · avg ${fmtMl(f.avg_feed_ml)}`} />
+          <KpiCard tint="peach"    icon={Milk}    label="Feeds"      value={fmtMl(f.total_feed_ml)} sub={`${f.feed_count ?? 0} feed${f.feed_count === 1 ? '' : 's'} · avg ${fmtMl(f.avg_feed_ml)}`} />
           <KpiCard tint="peach"                   label="Recommended (daily)" value={fmtMl(f.recommended_feed_ml)} />
-          <KpiCard tint="peach"                   label="Feeding %"  value={fmtPct(f.feeding_percentage)} tone={Number(f.feeding_percentage) < 70 ? 'warning' : 'positive'} />
+          {(() => {
+            const remaining = Math.max(0, Math.round((f.recommended_feed_ml ?? 0) - (f.total_feed_ml ?? 0)));
+            const pct = Number(f.feeding_percentage ?? 0);
+            return (
+              <KpiCard tint="peach" label="Feeding %"
+                value={fmtPct(pct)}
+                sub={pct >= 100 ? 'goal hit ✓' : `${fmtMl(remaining)} left to goal`}
+                tone={pct < 70 ? 'warning' : 'positive'} />
+            );
+          })()}
           <KpiCard tint="mint"     icon={Droplet} label="Stools"     value={s.stool_count ?? 0} sub={`S:${s.small_count ?? 0} · M:${s.medium_count ?? 0} · L:${s.large_count ?? 0}`} />
           <KpiCard tint="lavender" icon={Pill}    label="Doses taken" value={m.taken ?? 0} sub={`of ${m.total_doses ?? 0} expected · ${m.missed ?? 0} missed`} />
           <KpiCard tint="lavender"                label="Adherence"  value={fmtPct(m.adherence_pct)} tone={Number(m.adherence_pct) < 80 ? 'warning' : 'positive'} />

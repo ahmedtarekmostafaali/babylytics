@@ -28,7 +28,7 @@ export default async function EditAppointment({
 
   const [{ data }, { data: docs }] = await Promise.all([
     supabase.from('appointments')
-      .select('id,doctor_id,scheduled_at,duration_min,purpose,location,status,notes')
+      .select('id,doctor_id,scheduled_at,duration_min,purpose,location,status,notes,conclusion')
       .eq('id', params.id).is('deleted_at', null).single(),
     supabase.from('doctors').select('id,name,specialty')
       .eq('baby_id', params.babyId).is('deleted_at', null)
@@ -58,7 +58,7 @@ export default async function EditAppointment({
             id: data.id, doctor_id: data.doctor_id, scheduled_at: data.scheduled_at,
             duration_min: data.duration_min, purpose: data.purpose, location: data.location,
             status: data.status as 'scheduled'|'completed'|'cancelled'|'missed'|'rescheduled',
-            notes: data.notes,
+            notes: data.notes, conclusion: data.conclusion,
           }}
         />
       </CardContent></Card>

@@ -519,10 +519,10 @@ export default async function BabyOverview({
         <LastCard
           tint="peach" icon={Milk}
           label="Today's feedings"
-          value={todayFeedCount === 0 ? 'No data' : `${todayFeedCount} feed${todayFeedCount === 1 ? '' : 's'}`}
+          value={todayFeedCount === 0 ? 'No data' : fmtMl(todayFeedVolume)}
           sub={todayFeedCount === 0
             ? 'log your first feed'
-            : `${fmtMl(todayFeedVolume)}${todayBreasts > 0 ? ` · ${todayBreasts} breast` : ''}`}
+            : `${todayFeedCount} feed${todayFeedCount === 1 ? '' : 's'}${todayBreasts > 0 ? ` · ${todayBreasts} breast` : ''}`}
           time={null}
           href={`/babies/${babyId}/feedings`}
           badge={todayFeedCount > 0 ? 'today' : undefined}
