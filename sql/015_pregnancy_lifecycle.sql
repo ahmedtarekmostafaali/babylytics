@@ -164,10 +164,10 @@ returns text language sql stable security definer set search_path = public as $$
   select case
     when b.lifecycle_stage = 'pregnancy' then 'pregnancy'
     when b.lifecycle_stage = 'archived'  then 'archived'
-    when b.dob is null                   then 'pregnancy'
-    when (current_date - b.dob) <= 28    then 'newborn'
-    when (current_date - b.dob) <= 365   then 'infant'
-    when (current_date - b.dob) <= 1095  then 'toddler'
+    when b.dob is null                       then 'pregnancy'
+    when (current_date - b.dob::date) <= 28  then 'newborn'
+    when (current_date - b.dob::date) <= 365 then 'infant'
+    when (current_date - b.dob::date) <= 1095 then 'toddler'
     else 'child'
   end
   from public.babies b where b.id = p_baby;
@@ -301,10 +301,10 @@ grant execute on function public.prenatal_summary(uuid) to authenticated;
 -- 8. Backfill lifecycle_stage for existing babies -----------------------------
 update public.babies
   set lifecycle_stage = case
-    when dob is null                  then 'pregnancy'
-    when (current_date - dob) <= 28   then 'newborn'
-    when (current_date - dob) <= 365  then 'infant'
-    when (current_date - dob) <= 1095 then 'toddler'
+    when dob is null                       then 'pregnancy'
+    when (current_date - dob::date) <= 28  then 'newborn'
+    when (current_date - dob::date) <= 365 then 'infant'
+    when (current_date - dob::date) <= 1095 then 'toddler'
     else 'child'
   end
   where lifecycle_stage = 'infant';
