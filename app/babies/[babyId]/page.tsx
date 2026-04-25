@@ -6,10 +6,12 @@ import { DayPicker } from '@/components/DayPicker';
 import { SummaryDonut } from '@/components/SummaryDonut';
 import { Sparkline } from '@/components/Sparkline';
 import { Comments } from '@/components/Comments';
+import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import {
   ageInDays, dayWindow, fmtDate, fmtDateTime, fmtRelative, fmtTime,
   lastNDaysWindow, todayLocalDate, TIMEZONE,
 } from '@/lib/dates';
+import { effectiveStage } from '@/lib/lifecycle';
 import { fmtKg, fmtMl } from '@/lib/units';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import {
@@ -43,11 +45,39 @@ export default async function BabyOverview({
 
   const { data: baby } = await supabase
     .from('babies')
-    .select('id,name,dob,gender,birth_weight_kg,feeding_factor_ml_per_kg_per_day,avatar_path')
+    .select('id,name,dob,gender,birth_weight_kg,feeding_factor_ml_per_kg_per_day,avatar_path,lifecycle_stage,edd,lmp')
     .eq('id', babyId).is('deleted_at', null).single();
   if (!baby) notFound();
 
   const avatarUrl = await signAvatarUrl(supabase, baby.avatar_path);
+
+  // Stage-aware fork — pregnancy gets a completely different dashboard.
+  const stage = effectiveStage(baby.lifecycle_stage as 'pregnancy'|'newborn'|'infant'|'toddler'|'child'|'archived'|null, baby.dob);
+  if (stage === 'pregnancy') {
+    const [{ data: m }, { data: summaryRow }, { data: lastUs }, { data: nextAppt }] = await Promise.all([
+      supabase.from('baby_users').select('role').eq('baby_id', babyId).eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '').maybeSingle(),
+      supabase.rpc('prenatal_summary', { p_baby: babyId }).single(),
+      supabase.from('ultrasounds').select('id,scanned_at,gestational_week,summary')
+        .eq('baby_id', babyId).is('deleted_at', null)
+        .order('scanned_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.rpc('next_appointment', { p_baby: babyId }).maybeSingle(),
+    ]);
+    const isParent = ['owner','parent'].includes((m?.role as string) ?? '');
+    return (
+      <PregnancyDashboard
+        babyId={babyId}
+        babyName={baby.name}
+        avatarUrl={avatarUrl}
+        edd={baby.edd}
+        lmp={baby.lmp}
+        summary={(summaryRow ?? {}) as Parameters<typeof PregnancyDashboard>[0]['summary']}
+        latestUltrasound={lastUs ? { id: lastUs.id, scanned_at: lastUs.scanned_at, gestational_week: lastUs.gestational_week, summary: lastUs.summary } : null}
+        nextAppointment={nextAppt ? { scheduled_at: nextAppt.scheduled_at, doctor_name: nextAppt.doctor_name, purpose: nextAppt.purpose } : null}
+        canEdit={isParent}
+      />
+    );
+  }
+
   const age = ageInDays(baby.dob);
 
   const [

@@ -9,13 +9,22 @@ import { BabyAvatar } from '@/components/BabyAvatar';
 import { Wordmark } from '@/components/Wordmark';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import { ageInDays } from '@/lib/dates';
+import { effectiveStage, fmtGestationalAge } from '@/lib/lifecycle';
 import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
-  Stethoscope, CalendarClock, HeartPulse,
+  Stethoscope, CalendarClock, HeartPulse, ScanLine, Activity, Heart,
 } from 'lucide-react';
 
-type BabyRow = { id: string; name: string; dob: string; avatar_path: string | null };
+type BabyRow = {
+  id: string;
+  name: string;
+  dob: string | null;
+  avatar_path: string | null;
+  lifecycle_stage?: 'pregnancy'|'newborn'|'infant'|'toddler'|'child'|'archived' | null;
+  edd?: string | null;
+  lmp?: string | null;
+};
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -38,7 +47,7 @@ export function Sidebar() {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
     supabase.from('babies')
-      .select('id,name,dob,avatar_path')
+      .select('id,name,dob,avatar_path,lifecycle_stage,edd,lmp')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .then(async ({ data }) => {
@@ -85,6 +94,8 @@ export function Sidebar() {
   const currentBaby = currentBabyId
     ? (babies.find(b => b.id === currentBabyId) ?? null)
     : null;
+  const stage = currentBaby ? effectiveStage(currentBaby.lifecycle_stage ?? null, currentBaby.dob) : null;
+  const isPregnancy = stage === 'pregnancy';
 
   async function logout() {
     const supabase = createClient();
@@ -133,7 +144,7 @@ export function Sidebar() {
             <BabyAvatar url={avatars[currentBaby.id] ?? null} size="md" />
             <div className="flex-1 min-w-0 text-left">
               <div className="font-semibold text-ink-strong truncate">{currentBaby.name}</div>
-              <div className="text-xs text-ink-muted">{prettyAge(currentBaby.dob)}</div>
+              <div className="text-xs text-ink-muted">{babyCardLabel(currentBaby)}</div>
             </div>
             <ChevronsUpDown className="h-4 w-4 text-ink-muted shrink-0" />
           </button>
@@ -165,9 +176,17 @@ export function Sidebar() {
 
         {currentBabyId && (
           <>
-            <NavGroup label="TRACK" collapsed={collapsed}>
-              <NavItem href={`/babies/${currentBabyId}`}               icon={Clock}     label="Overview"     active={pathname === `/babies/${currentBabyId}`}                       collapsed={collapsed} tint="brand" />
-              {canViewLogs && <>
+            <NavGroup label={isPregnancy ? 'PREGNANCY' : 'TRACK'} collapsed={collapsed}>
+              <NavItem href={`/babies/${currentBabyId}`}               icon={isPregnancy ? HeartPulse : Clock} label="Overview" active={pathname === `/babies/${currentBabyId}`} collapsed={collapsed} tint={isPregnancy ? 'lavender' : 'brand'} />
+              {isPregnancy && canViewLogs && <>
+                <NavItem href={`/babies/${currentBabyId}/prenatal/visits`}       icon={Stethoscope} label="Prenatal visits" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/visits`) ?? false} collapsed={collapsed} tint="lavender" />
+                <NavItem href={`/babies/${currentBabyId}/prenatal/ultrasounds`}  icon={ScanLine}    label="Ultrasounds"     active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/ultrasounds`) ?? false} collapsed={collapsed} tint="brand" />
+                <NavItem href={`/babies/${currentBabyId}/prenatal/kicks`}        icon={Activity}    label="Kick counter"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/kicks`) ?? false} collapsed={collapsed} tint="coral" />
+                <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}     label="Maternal vitals" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />
+                <NavItem href={`/babies/${currentBabyId}/medications`}           icon={Pill}        label="Medications"     active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="mint" />
+                {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`}  icon={CalendarClock} label="Appointments"  active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
+              </>}
+              {!isPregnancy && canViewLogs && <>
                 <NavItem href={`/babies/${currentBabyId}/feedings`}      icon={Milk}      label="Feedings"     active={pathname?.startsWith(`/babies/${currentBabyId}/feedings`) ?? false} collapsed={collapsed} tint="coral" />
                 <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}   label="Stool"        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />
                 <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}      label="Medications"  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="lavender" />
@@ -189,6 +208,9 @@ export function Sidebar() {
 
             {isParent && (
               <NavGroup label="SETTINGS" collapsed={collapsed}>
+                {isPregnancy && (
+                  <NavItem href={`/babies/${currentBabyId}/prenatal/profile`} icon={Heart} label="Pregnancy profile" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/profile`) ?? false} collapsed={collapsed} tint="coral" />
+                )}
                 <NavItem href={`/babies/${currentBabyId}/doctors`}    icon={Stethoscope} label="Doctors"     active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false}    collapsed={collapsed} tint="lavender" />
                 <NavItem href={`/babies/${currentBabyId}/caregivers`} icon={Users}       label="Caregivers"  active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`) ?? false} collapsed={collapsed} tint="mint" />
                 <NavItem href={`/babies/${currentBabyId}/edit`}       icon={UserCog}     label="Profile"     active={pathname?.startsWith(`/babies/${currentBabyId}/edit`) ?? false}       collapsed={collapsed} tint="brand" />
@@ -286,7 +308,8 @@ export function Sidebar() {
   );
 }
 
-function prettyAge(dobIso: string): string {
+function prettyAge(dobIso: string | null): string {
+  if (!dobIso) return '';
   const days = ageInDays(dobIso);
   if (days < 60) return `${days} days old`;
   const months = Math.floor(days / 30);
@@ -295,6 +318,15 @@ function prettyAge(dobIso: string): string {
   const years = Math.floor(months / 12);
   const remMonths = months - years * 12;
   return `${years} year${years === 1 ? '' : 's'}${remMonths ? `, ${remMonths} mo` : ''}`;
+}
+
+/** Stage-aware label for the sidebar baby card. */
+function babyCardLabel(b: BabyRow): string {
+  const stage = effectiveStage(b.lifecycle_stage ?? null, b.dob);
+  if (stage === 'pregnancy') {
+    return `Expecting · ${fmtGestationalAge(b.edd ?? null, b.lmp ?? null)}`;
+  }
+  return prettyAge(b.dob);
 }
 
 // ---- Subcomponents --------------------------------------------------------

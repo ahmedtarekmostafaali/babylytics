@@ -15,8 +15,10 @@ import {
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Baby profile' };
 
-function zodiac(dob: string): string {
+function zodiac(dob: string | null | undefined): string {
+  if (!dob) return '—';
   const d = new Date(dob);
+  if (Number.isNaN(d.getTime())) return '—';
   const m = d.getUTCMonth() + 1;
   const day = d.getUTCDate();
   const sign =

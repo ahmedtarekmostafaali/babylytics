@@ -175,6 +175,75 @@ export const MedicalConditionSchema = z.object({
   notes:        z.string().max(2000).nullable().optional(),
 });
 
+// ----- Pregnancy / lifecycle schemas -----
+export const PregnancyOnboardSchema = z.object({
+  name: z.string().max(120).nullable().optional(),
+  edd: z.string().nullable().optional(),
+  lmp: z.string().nullable().optional(),
+  conception_method: z.enum(['natural','ivf','iui','icsi','other']).nullable().optional(),
+}).refine(
+  v => !!v.edd || !!v.lmp,
+  { message: 'Enter either an EDD or an LMP date.', path: ['edd'] },
+);
+
+export const PregnancyProfileSchema = z.object({
+  mother_dob:               z.string().nullable().optional(),
+  mother_blood_type:        z.string().max(10).nullable().optional(),
+  gravida:                  z.coerce.number().int().min(0).max(30).nullable().optional(),
+  para:                     z.coerce.number().int().min(0).max(30).nullable().optional(),
+  pre_pregnancy_weight_kg:  z.coerce.number().min(20).max(300).nullable().optional(),
+  pre_pregnancy_height_cm:  z.coerce.number().min(100).max(250).nullable().optional(),
+  risk_factors:             z.string().max(2000).nullable().optional(),
+  notes:                    z.string().max(4000).nullable().optional(),
+});
+
+export const PrenatalVisitSchema = z.object({
+  visited_at:           z.string().min(1),
+  gestational_week:     z.coerce.number().int().min(0).max(45).nullable().optional(),
+  gestational_day:      z.coerce.number().int().min(0).max(6).nullable().optional(),
+  maternal_weight_kg:   z.coerce.number().min(20).max(300).nullable().optional(),
+  bp_systolic:          z.coerce.number().int().min(50).max(260).nullable().optional(),
+  bp_diastolic:         z.coerce.number().int().min(30).max(180).nullable().optional(),
+  fetal_heart_rate_bpm: z.coerce.number().int().min(50).max(250).nullable().optional(),
+  fundal_height_cm:     z.coerce.number().min(0).max(60).nullable().optional(),
+  doctor_id:            z.string().uuid().nullable().optional(),
+  file_id:              z.string().uuid().nullable().optional(),
+  notes:                z.string().max(4000).nullable().optional(),
+});
+
+export const UltrasoundSchema = z.object({
+  scanned_at:        z.string().min(1),
+  gestational_week:  z.coerce.number().int().min(0).max(45).nullable().optional(),
+  gestational_day:   z.coerce.number().int().min(0).max(6).nullable().optional(),
+  bpd_mm:            z.coerce.number().min(0).max(200).nullable().optional(),
+  hc_mm:             z.coerce.number().min(0).max(500).nullable().optional(),
+  ac_mm:             z.coerce.number().min(0).max(500).nullable().optional(),
+  fl_mm:             z.coerce.number().min(0).max(150).nullable().optional(),
+  efw_g:             z.coerce.number().min(0).max(8000).nullable().optional(),
+  fhr_bpm:           z.coerce.number().int().min(50).max(250).nullable().optional(),
+  placenta_position: z.string().max(120).nullable().optional(),
+  amniotic_fluid:    z.string().max(120).nullable().optional(),
+  sex_predicted:     z.enum(['male','female','undetermined']).nullable().optional(),
+  anomalies:         z.string().max(4000).nullable().optional(),
+  summary:           z.string().max(2000).nullable().optional(),
+  file_id:           z.string().uuid().nullable().optional(),
+});
+
+export const FetalMovementSchema = z.object({
+  counted_at:    z.string().min(1),
+  duration_min:  z.coerce.number().int().min(1).max(240),
+  movements:     z.coerce.number().int().min(0).max(999),
+  notes:         z.string().max(2000).nullable().optional(),
+});
+
+export const MarkAsBornSchema = z.object({
+  dob:              z.string().min(1),
+  birth_weight_kg:  z.coerce.number().min(0).max(10).nullable().optional(),
+  birth_height_cm:  z.coerce.number().min(0).max(80).nullable().optional(),
+  head_circ_cm:     z.coerce.number().min(0).max(80).nullable().optional(),
+  gender:           z.enum(['male','female','other','unspecified']).nullable().optional(),
+});
+
 export const CarePlanSchema = z.object({
   medical_plan: z.string().max(4000).nullable().optional(),
   feeding_plan: z.string().max(4000).nullable().optional(),

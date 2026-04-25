@@ -171,9 +171,15 @@ export function localDayKey(iso: string): string {
  * timezone. Was previously `floor(ms / 86400000)`, which is a 24-hour window
  * count and therefore returned the wrong number when the baby was born late
  * in the day or when DST shifted by an hour.
+ *
+ * Now null-safe — returns 0 for null/empty dob (pregnancy-stage babies). Most
+ * callers should also gate by `effectiveStage(...)` before reaching age math.
  */
-export function ageInDays(dob: string): number {
-  const dobP = partsIn(TIMEZONE, new Date(dob));
+export function ageInDays(dob: string | null | undefined): number {
+  if (!dob) return 0;
+  const parsed = new Date(dob);
+  if (Number.isNaN(parsed.getTime())) return 0;
+  const dobP = partsIn(TIMEZONE, parsed);
   const nowP = nowInTz();
   // Count days from dob's local-midnight to today's local-midnight.
   const dobMidnightUtc = Date.UTC(dobP.y, dobP.m - 1, dobP.day);
