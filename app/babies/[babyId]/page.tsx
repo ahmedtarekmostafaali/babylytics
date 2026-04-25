@@ -512,6 +512,32 @@ export default async function BabyOverview({
           href={`/babies/${babyId}/feedings`}
           badge={todayFeedCount > 0 ? 'today' : undefined}
         />}
+        {show('feeding_progress') && (() => {
+          const wForCalc = (currentWeight.data as number | null) ?? Number(baby.birth_weight_kg ?? 0);
+          const factor = Number(baby.feeding_factor_ml_per_kg_per_day ?? 150);
+          const recommended = wForCalc > 0 ? Math.round(wForCalc * factor) : 0;
+          const pct = recommended > 0 ? Math.round((todayFeedVolume / recommended) * 100) : 0;
+          const remaining = Math.max(0, recommended - todayFeedVolume);
+          const tone: 'coral' | 'peach' | 'mint' =
+            recommended === 0 ? 'peach' :
+            pct >= 100        ? 'mint'  :
+            pct >= 70         ? 'peach' : 'coral';
+          return (
+            <LastCard
+              tint={tone} icon={Milk}
+              label="Feeding %"
+              value={recommended > 0 ? `${pct}%` : '—'}
+              sub={recommended === 0
+                ? 'set weight to compute'
+                : pct >= 100
+                  ? `goal hit · ${fmtMl(recommended)}`
+                  : `${fmtMl(remaining)} left to goal`}
+              time={null}
+              href={`/babies/${babyId}/feedings`}
+              badge={recommended > 0 && pct >= 100 ? 'goal hit' : undefined}
+            />
+          );
+        })()}
         {show('last_sleep') && <LastCard
           tint="lavender" icon={Moon}
           label="Last sleep"
