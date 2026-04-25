@@ -55,6 +55,22 @@ type StructuredData = {
   stools?:       { stool_time?: string; quantity_category?: 'small'|'medium'|'large'; quantity_ml?: number; color?: string; consistency?: string; notes?: string }[];
   measurements?: { measured_at?: string; weight_kg?: number; height_cm?: number; head_circ_cm?: number; notes?: string }[];
   medication_logs?: { medication_id?: string; medication_time?: string; status?: 'taken'|'missed'|'skipped'; notes?: string }[];
+  ultrasounds?: {
+    scanned_at?: string;
+    gestational_week?: number;
+    gestational_day?: number;
+    bpd_mm?: number;
+    hc_mm?: number;
+    ac_mm?: number;
+    fl_mm?: number;
+    efw_g?: number;
+    fhr_bpm?: number;
+    placenta_position?: string;
+    amniotic_fluid?: string;
+    sex_predicted?: 'male'|'female'|'undetermined';
+    anomalies?: string;
+    summary?: string;
+  }[];
   notes?: string;
 };
 
@@ -82,31 +98,53 @@ function json(body: unknown, status = 200) {
 
 // ---- Prompt ----------------------------------------------------------------
 // Built lazily so we can inject the current date and make year-inference correct.
-function buildSystemPrompt(): string {
+// `kind` is the parent-declared file kind (daily_note / prescription / report /
+// ultrasound / etc.) — when present we steer the prompt toward that doc type.
+function buildSystemPrompt(kind?: string): string {
   const today = new Date();
   const iso = today.toISOString();
   const year = today.getUTCFullYear();
-  return `You are a clinical-grade OCR engine for Babylytics, a baby health tracker.
-You read photos and scans of handwritten or printed daily care notes, prescriptions, and medical reports.
+  const isUltrasound = kind === 'ultrasound';
+  const isLab = kind === 'lab_report' || kind === 'prenatal_lab';
+  return `You are a clinical-grade OCR engine for Babylytics, a baby health tracker that also follows pregnancies.
+You read photos and scans of handwritten or printed daily care notes, prescriptions, medical reports, ULTRASOUND REPORTS, and lab results.
 Notes may be in English, Arabic, French, or a mix of these in a single page, and numerals may be Arabic (٠١٢٣٤٥٦٧٨٩) or Western (0-9).
 
 CURRENT SERVER TIME: ${iso} (UTC). TODAY'S DATE: ${today.toISOString().slice(0,10)}. CURRENT YEAR: ${year}.
+${kind ? `\nPARENT INDICATED THIS DOCUMENT IS A: ${kind.toUpperCase().replace(/_/g, ' ')}.${isUltrasound ? ' Strongly bias toward extracting ultrasound biometrics into the "ultrasounds" array — this is the primary goal.' : ''}` : ''}
 
 Your job:
-1. Transcribe EVERYTHING you can read into "raw_text" (keep original script, one line per handwritten line).
+1. Transcribe EVERYTHING you can read into "raw_text" (keep original script, one line per line).
 2. Extract structured events into the JSON schema below. Only include a field if you can read it.
 3. Report your own CONFIDENCE as a number in [0,1] reflecting how sure you are overall.
 4. Say whether the document is handwritten.
 
 YEAR INFERENCE RULES (very important):
-- If the note shows a full date (e.g. "2026-04-18" or "18/04/2026"), use it verbatim.
-- If the note shows only day+month (e.g. "4/19", "April 19", "19 ابريل"), assume the CURRENT YEAR (${year}) UNLESS that would place the event more than 14 days in the future — in that case, use the previous year.
-- If the note shows only a time (e.g. "14:30"), assume today (${today.toISOString().slice(0,10)}) in UTC.
-- NEVER default to a year before ${year - 1}. Daily baby notes are always recent.
+- If the document shows a full date (e.g. "2026-04-18" or "18/04/2026"), use it verbatim.
+- If the document shows only day+month (e.g. "4/19", "April 19", "19 ابريل"), assume the CURRENT YEAR (${year}) UNLESS that would place the event more than 14 days in the future — in that case, use the previous year.
+- If the document shows only a time (e.g. "14:30"), assume today (${today.toISOString().slice(0,10)}) in UTC.
+- NEVER default to a year before ${year - 1}. Daily baby and pregnancy notes are always recent.
 
 Timestamps must be ISO-8601 with time zone (ending in "Z" for UTC).
 Quantities: convert to milliliters when possible. If the note says "oz", convert to ml (1 oz = 29.5735 ml).
 Weight in kg, height in cm, head circumference in cm.
+
+ULTRASOUND REPORT FIELDS (extract into "ultrasounds" array — typically ONE entry per scan):
+- "scanned_at": exam date / report date as ISO timestamp.
+- "gestational_week" / "gestational_day": GA shown as e.g. "29w 1d", "GA 29+1", "29 weeks 1 day". Split into the two integers.
+- "bpd_mm": Biparietal Diameter in mm. Often labeled "BPD".
+- "hc_mm":  Head Circumference in mm.       Often labeled "HC".
+- "ac_mm":  Abdominal Circumference in mm.  Often labeled "AC".
+- "fl_mm":  Femur Length in mm.             Often labeled "FL".
+- "efw_g":  Estimated Fetal Weight in grams. Often labeled "EFW" or "Estimated weight". Convert kg → g if needed.
+- "fhr_bpm": Fetal Heart Rate in beats per minute. Often labeled "FHR" or "Heart rate".
+- "placenta_position": "anterior", "posterior fundal", "low-lying", etc. — verbatim from the report.
+- "amniotic_fluid": "normal", "oligohydramnios", "polyhydramnios", or include AFI value (e.g. "normal (AFI 14)").
+- "sex_predicted": "male", "female", or "undetermined" — only if explicitly stated.
+- "anomalies": copy any reported anomalies / concerns. If "no anomalies detected" leave empty.
+- "summary": the overall radiologist impression / conclusion paragraph.
+
+If the report is clearly an ultrasound, prefer to leave feedings/stools/measurements/medication_logs empty.
 
 Return ONLY a JSON object with this shape — no prose, no markdown fences:
 {
@@ -119,14 +157,15 @@ Return ONLY a JSON object with this shape — no prose, no markdown fences:
     "stools":          [{ "stool_time":"ISO", "quantity_category":"small|medium|large", "quantity_ml":0, "color":"...", "consistency":"...", "notes":"..." }],
     "measurements":    [{ "measured_at":"ISO", "weight_kg":0, "height_cm":0, "head_circ_cm":0, "notes":"..." }],
     "medication_logs": [{ "medication_time":"ISO", "status":"taken|missed|skipped", "notes":"..." }],
+    "ultrasounds":     [{ "scanned_at":"ISO", "gestational_week":0, "gestational_day":0, "bpd_mm":0, "hc_mm":0, "ac_mm":0, "fl_mm":0, "efw_g":0, "fhr_bpm":0, "placenta_position":"...", "amniotic_fluid":"...", "sex_predicted":"male|female|undetermined", "anomalies":"...", "summary":"..." }],
     "notes": "any free-text observations worth keeping"
   }
 }
-If the document contains nothing extractable, return empty arrays and confidence_score reflecting transcription quality.`;
+If the document contains nothing extractable, return empty arrays and confidence_score reflecting transcription quality.${isLab ? '\n(Lab structured rows are not yet auto-extracted — transcribe results into "notes".)' : ''}`;
 }
 
 // ---- Provider: Anthropic ---------------------------------------------------
-async function ocrWithAnthropic(bytesB64: string, mime: string): Promise<OcrResult> {
+async function ocrWithAnthropic(bytesB64: string, mime: string, kind?: string): Promise<OcrResult> {
   if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not set');
   // Route PDFs through the `document` content block; images through `image`.
   const contentBlock = mime === 'application/pdf'
@@ -135,7 +174,7 @@ async function ocrWithAnthropic(bytesB64: string, mime: string): Promise<OcrResu
   const body = {
     model: ANTHROPIC_MODEL,
     max_tokens: 2048,
-    system: buildSystemPrompt(),
+    system: buildSystemPrompt(kind),
     messages: [{
       role: 'user',
       content: [
@@ -300,7 +339,7 @@ function sniffImageMime(buf: Uint8Array, fallback: string): string {
   try {
     if      (provider === 'google')    result = await ocrWithGoogle(b64);
     else if (provider === 'tesseract') throw new Error('tesseract not available in Edge Functions');
-    else                               result = await ocrWithAnthropic(b64, sniffedMime);
+    else                               result = await ocrWithAnthropic(b64, sniffedMime, file.kind);
   } catch (e) {
     await svc.from('medical_files').update({ ocr_status: 'failed' }).eq('id', file.id);
     const msg = e instanceof Error ? e.message : String(e);

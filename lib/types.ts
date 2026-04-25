@@ -6,7 +6,10 @@ export type Gender = 'male' | 'female' | 'other' | 'unspecified';
 export type MilkType = 'breast' | 'formula' | 'mixed' | 'solid' | 'other';
 export type StoolSize = 'small' | 'medium' | 'large';
 export type OcrStatus = 'pending' | 'processing' | 'extracted' | 'reviewed' | 'confirmed' | 'failed';
-export type FileKind = 'prescription' | 'report' | 'stool_image' | 'daily_note' | 'other';
+export type FileKind =
+  | 'prescription' | 'report' | 'stool_image' | 'daily_note' | 'other'
+  | 'admission_report' | 'discharge_report' | 'lab_report'
+  | 'ultrasound' | 'prenatal_lab' | 'maternal_vitals' | 'genetic_screening' | 'birth_plan';
 export type NotificationKind =
   | 'medication_due'
   | 'medication_missed'
@@ -142,6 +145,22 @@ export interface StructuredOcr {
   stools?:          { stool_time?: string; quantity_category?: StoolSize; quantity_ml?: number; color?: string; consistency?: string; notes?: string }[];
   measurements?:    { measured_at?: string; weight_kg?: number; height_cm?: number; head_circ_cm?: number; notes?: string }[];
   medication_logs?: { medication_id?: string; medication_time?: string; status?: 'taken'|'missed'|'skipped'; notes?: string }[];
+  ultrasounds?: {
+    scanned_at?: string;
+    gestational_week?: number;
+    gestational_day?: number;
+    bpd_mm?: number;
+    hc_mm?: number;
+    ac_mm?: number;
+    fl_mm?: number;
+    efw_g?: number;
+    fhr_bpm?: number;
+    placenta_position?: string;
+    amniotic_fluid?: string;
+    sex_predicted?: 'male' | 'female' | 'undetermined';
+    anomalies?: string;
+    summary?: string;
+  }[];
   notes?: string;
 }
 

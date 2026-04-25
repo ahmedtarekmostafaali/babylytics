@@ -5,18 +5,26 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import {
-  FileUp, FolderArchive, Loader2, FileText, Pill, Stethoscope, Droplet, Files,
+  FileUp, FolderArchive, Loader2, FileText, Pill, Stethoscope, Droplet, Files, ScanLine,
 } from 'lucide-react';
 import type { FileKind } from '@/lib/types';
 
 const BUCKET = 'medical-files';
 
 const KIND_DIR: Record<FileKind, string> = {
-  prescription: 'prescriptions',
-  report:       'reports',
-  stool_image:  'stool_images',
-  daily_note:   'daily_notes',
-  other:        'other',
+  prescription:      'prescriptions',
+  report:            'reports',
+  stool_image:       'stool_images',
+  daily_note:        'daily_notes',
+  other:             'other',
+  admission_report:  'admissions',
+  discharge_report:  'discharges',
+  lab_report:        'labs',
+  ultrasound:        'ultrasounds',
+  prenatal_lab:      'prenatal_labs',
+  maternal_vitals:   'maternal_vitals',
+  genetic_screening: 'genetic',
+  birth_plan:        'birth_plans',
 };
 
 function randomToken() {
@@ -29,6 +37,7 @@ const KIND_OPTIONS: { value: FileKind; label: string; sub: string; icon: React.C
   { value: 'daily_note',   label: 'Handwritten note',  sub: 'OCR-able',  icon: FileText,    ocrable: true },
   { value: 'prescription', label: 'Prescription',      sub: 'OCR-able',  icon: Pill,        ocrable: true },
   { value: 'report',       label: 'Medical report',    sub: 'OCR-able',  icon: Stethoscope, ocrable: true },
+  { value: 'ultrasound',   label: 'Ultrasound report', sub: 'OCR-able',  icon: ScanLine,    ocrable: true },
   { value: 'stool_image',  label: 'Stool image',       sub: 'reference', icon: Droplet,     ocrable: false },
   { value: 'other',        label: 'Other document',    sub: 'reference', icon: Files,       ocrable: false },
 ];

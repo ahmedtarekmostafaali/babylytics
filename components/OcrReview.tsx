@@ -14,6 +14,14 @@ type FeedingRow = { feeding_time: string; quantity_ml: string; milk_type: MilkTy
 type StoolRow   = { stool_time: string;   quantity_category: StoolSize | ''; quantity_ml: string; color: string; consistency: string; notes: string };
 type MeasRow    = { measured_at: string;  weight_kg: string; height_cm: string; head_circ_cm: string; notes: string };
 type MedLogRow  = { medication_id: string; medication_time: string; status: 'taken'|'missed'|'skipped'; notes: string };
+type UsRow      = {
+  scanned_at: string; gestational_week: string; gestational_day: string;
+  bpd_mm: string; hc_mm: string; ac_mm: string; fl_mm: string;
+  efw_g: string; fhr_bpm: string;
+  placenta_position: string; amniotic_fluid: string;
+  sex_predicted: 'male'|'female'|'undetermined'|'';
+  anomalies: string; summary: string;
+};
 
 type Med = { id: string; name: string };
 
@@ -83,6 +91,27 @@ export function OcrReview({
       notes: l.notes ?? '',
     }))
   );
+
+  const [ultrasounds, setUltrasounds] = useState<UsRow[]>(() =>
+    (initial.ultrasounds ?? []).map(u => ({
+      scanned_at: u.scanned_at ? isoToLocalInput(u.scanned_at) : nowLocalInput(),
+      gestational_week: u.gestational_week?.toString() ?? '',
+      gestational_day:  u.gestational_day?.toString()  ?? '',
+      bpd_mm: u.bpd_mm?.toString() ?? '',
+      hc_mm:  u.hc_mm?.toString()  ?? '',
+      ac_mm:  u.ac_mm?.toString()  ?? '',
+      fl_mm:  u.fl_mm?.toString()  ?? '',
+      efw_g:  u.efw_g?.toString()  ?? '',
+      fhr_bpm: u.fhr_bpm?.toString() ?? '',
+      placenta_position: u.placenta_position ?? '',
+      amniotic_fluid:    u.amniotic_fluid ?? '',
+      sex_predicted:     u.sex_predicted ?? '',
+      anomalies:         u.anomalies ?? '',
+      summary:           u.summary ?? '',
+    }))
+  );
+  const [savingUs, setSavingUs] = useState(false);
+  const [usMsg, setUsMsg] = useState<string | null>(null);
 
   const [freeNotes, setFreeNotes] = useState<string>(initial.notes ?? '');
   const [err, setErr] = useState<string | null>(null);
@@ -343,6 +372,122 @@ export function OcrReview({
           </div>
         ))}
       </Section>
+
+      {/* Ultrasounds — separate save (writes to public.ultrasounds, not logs) */}
+      {ultrasounds.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Ultrasound{ultrasounds.length === 1 ? '' : 's'} ({ultrasounds.length})</CardTitle>
+            <span className="text-[11px] uppercase tracking-wider text-lavender-700 bg-lavender-50 px-2 py-0.5 rounded-full">
+              saved separately
+            </span>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {ultrasounds.map((u, i) => (
+              <div key={i} className="rounded-xl border border-lavender-200 bg-lavender-50/30 p-4 space-y-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div>
+                    <Label htmlFor={`us-at-${i}`}>Scan time</Label>
+                    <Input id={`us-at-${i}`} type="datetime-local" disabled={readOnly}
+                      value={u.scanned_at}
+                      onChange={e => setUltrasounds(r => patch(r, i, { scanned_at: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>GA weeks</Label>
+                    <Input type="number" min={0} max={45} disabled={readOnly}
+                      value={u.gestational_week}
+                      onChange={e => setUltrasounds(r => patch(r, i, { gestational_week: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>GA days</Label>
+                    <Input type="number" min={0} max={6} disabled={readOnly}
+                      value={u.gestational_day}
+                      onChange={e => setUltrasounds(r => patch(r, i, { gestational_day: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div><Label>BPD (mm)</Label><Input type="number" step="0.1" disabled={readOnly} value={u.bpd_mm} onChange={e => setUltrasounds(r => patch(r, i, { bpd_mm: e.target.value }))} /></div>
+                  <div><Label>HC (mm)</Label> <Input type="number" step="0.1" disabled={readOnly} value={u.hc_mm}  onChange={e => setUltrasounds(r => patch(r, i, { hc_mm:  e.target.value }))} /></div>
+                  <div><Label>AC (mm)</Label> <Input type="number" step="0.1" disabled={readOnly} value={u.ac_mm}  onChange={e => setUltrasounds(r => patch(r, i, { ac_mm:  e.target.value }))} /></div>
+                  <div><Label>FL (mm)</Label> <Input type="number" step="0.1" disabled={readOnly} value={u.fl_mm}  onChange={e => setUltrasounds(r => patch(r, i, { fl_mm:  e.target.value }))} /></div>
+                  <div><Label>EFW (g)</Label> <Input type="number" step="1"   disabled={readOnly} value={u.efw_g}  onChange={e => setUltrasounds(r => patch(r, i, { efw_g:  e.target.value }))} /></div>
+                  <div><Label>FHR (bpm)</Label><Input type="number" min={50} max={250} disabled={readOnly} value={u.fhr_bpm} onChange={e => setUltrasounds(r => patch(r, i, { fhr_bpm: e.target.value }))} /></div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="md:col-span-1">
+                    <Label>Sex predicted</Label>
+                    <Select disabled={readOnly} value={u.sex_predicted}
+                      onChange={e => setUltrasounds(r => patch(r, i, { sex_predicted: (e.target.value || '') as UsRow['sex_predicted'] }))}>
+                      <option value="">—</option>
+                      <option value="female">female</option>
+                      <option value="male">male</option>
+                      <option value="undetermined">undetermined</option>
+                    </Select>
+                  </div>
+                  <div><Label>Placenta</Label><Input disabled={readOnly} value={u.placenta_position} onChange={e => setUltrasounds(r => patch(r, i, { placenta_position: e.target.value }))} /></div>
+                  <div><Label>Amniotic fluid</Label><Input disabled={readOnly} value={u.amniotic_fluid} onChange={e => setUltrasounds(r => patch(r, i, { amniotic_fluid: e.target.value }))} /></div>
+                </div>
+                <div>
+                  <Label>Anomalies</Label>
+                  <Textarea rows={2} disabled={readOnly} value={u.anomalies} onChange={e => setUltrasounds(r => patch(r, i, { anomalies: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Summary</Label>
+                  <Textarea rows={2} disabled={readOnly} value={u.summary} onChange={e => setUltrasounds(r => patch(r, i, { summary: e.target.value }))} />
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  {!readOnly && (
+                    <Button type="button" variant="ghost" size="sm"
+                      onClick={() => setUltrasounds(r => r.filter((_, j) => j !== i))}>
+                      remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {!readOnly && (
+              <div className="flex items-center justify-end gap-2">
+                {usMsg && <span className="text-xs text-mint-700">{usMsg}</span>}
+                <Button type="button" disabled={savingUs} onClick={async () => {
+                  setUsMsg(null);
+                  const rows = ultrasounds
+                    .filter(u => u.scanned_at)
+                    .map(u => ({
+                      baby_id: babyId,
+                      scanned_at: localInputToIso(u.scanned_at),
+                      gestational_week: u.gestational_week ? Number(u.gestational_week) : null,
+                      gestational_day:  u.gestational_day  ? Number(u.gestational_day)  : null,
+                      bpd_mm: u.bpd_mm ? Number(u.bpd_mm) : null,
+                      hc_mm:  u.hc_mm  ? Number(u.hc_mm)  : null,
+                      ac_mm:  u.ac_mm  ? Number(u.ac_mm)  : null,
+                      fl_mm:  u.fl_mm  ? Number(u.fl_mm)  : null,
+                      efw_g:  u.efw_g  ? Number(u.efw_g)  : null,
+                      fhr_bpm: u.fhr_bpm ? Number(u.fhr_bpm) : null,
+                      placenta_position: u.placenta_position || null,
+                      amniotic_fluid:    u.amniotic_fluid || null,
+                      sex_predicted:     u.sex_predicted || null,
+                      anomalies:         u.anomalies || null,
+                      summary:           u.summary || null,
+                      file_id: extracted.file_id,
+                    }));
+                  if (rows.length === 0) return;
+                  setSavingUs(true);
+                  const supabase = createClient();
+                  const userId = (await supabase.auth.getUser()).data.user?.id;
+                  const payload = rows.map(r => ({ ...r, created_by: userId }));
+                  const { error } = await supabase.from('ultrasounds').insert(payload);
+                  setSavingUs(false);
+                  if (error) { setUsMsg(`Error: ${error.message}`); return; }
+                  setUsMsg(`Saved ${rows.length} ultrasound${rows.length === 1 ? '' : 's'} ✓`);
+                  setTimeout(() => router.push(`/babies/${babyId}/prenatal/ultrasounds`), 800);
+                }}>
+                  {savingUs ? 'Saving…' : `Save ultrasound${ultrasounds.length === 1 ? '' : 's'}`}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader><CardTitle>Free-text notes (not saved to logs)</CardTitle></CardHeader>
