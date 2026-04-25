@@ -3,11 +3,12 @@ import { BabyAvatar } from '@/components/BabyAvatar';
 import { MarkAsBornDialog } from '@/components/MarkAsBornDialog';
 import {
   Stethoscope, ScanLine, Activity, HeartPulse, CalendarClock, Plus,
-  Sparkles, ArrowRight, Pill, Heart,
+  Sparkles, ArrowRight, Pill, Heart, Apple, BookOpen,
 } from 'lucide-react';
 import {
   fmtGestationalAge, eddDistanceDays, gestationalAge, trimester, bpCategory,
 } from '@/lib/lifecycle';
+import { weekInsight, gainStatus } from '@/lib/pregnancy_weeks';
 import { fmtDate } from '@/lib/dates';
 import { fmtKg } from '@/lib/units';
 
@@ -28,6 +29,7 @@ type Summary = {
 
 export function PregnancyDashboard({
   babyId, babyName, avatarUrl, edd, lmp, summary, latestUltrasound, nextAppointment, canEdit,
+  prePregnancyWeightKg, prePregnancyHeightCm,
 }: {
   babyId: string;
   babyName: string;
@@ -38,6 +40,8 @@ export function PregnancyDashboard({
   latestUltrasound: { id: string; scanned_at: string; gestational_week: number | null; summary: string | null } | null;
   nextAppointment: { scheduled_at: string; doctor_name: string | null; purpose: string | null } | null;
   canEdit: boolean;
+  prePregnancyWeightKg: number | null;
+  prePregnancyHeightCm: number | null;
 }) {
   const ga = gestationalAge(edd, lmp);
   const distance = eddDistanceDays(edd);
@@ -45,6 +49,14 @@ export function PregnancyDashboard({
   const bpCat = bpCategory(summary.latest_bp_systolic, summary.latest_bp_diastolic);
   const lateStage = ga ? ga.total_days >= 252 : false; // ≥ 36w → emphasize Mark as Born CTA
   const kicksLow = ga && ga.total_days >= 196 && (summary.kicks_today ?? 0) < 10; // ≥ 28w
+
+  const insight = ga ? weekInsight(ga.weeks) : null;
+  const gain = gainStatus(
+    summary.weight_gain_kg ?? null,
+    prePregnancyWeightKg,
+    prePregnancyHeightCm,
+    ga?.weeks ?? null,
+  );
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
@@ -98,6 +110,81 @@ export function PregnancyDashboard({
           tint="coral" icon={HeartPulse}
           sub="From last visit / scan" />
       </div>
+
+      {/* Insight cards: week-by-week + IOM weight gain band */}
+      {(insight || gain.band) && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {insight && (
+            <div className="rounded-2xl border border-lavender-200 bg-gradient-to-br from-lavender-50 via-white to-coral-50 p-5">
+              <div className="flex items-center gap-2">
+                <span className="h-7 w-7 rounded-lg grid place-items-center bg-lavender-100 text-lavender-700">
+                  <BookOpen className="h-3.5 w-3.5" />
+                </span>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-lavender-700">
+                  Week {insight.week} · Trimester {insight.trimester}
+                </div>
+              </div>
+              <div className="mt-2 text-sm font-semibold text-ink-strong inline-flex items-center gap-1.5">
+                <Apple className="h-4 w-4 text-coral-600" />
+                Baby is the size of {insight.size}.
+              </div>
+              <p className="mt-2 text-sm text-ink leading-relaxed">{insight.highlight}</p>
+              {insight.parent_tip && (
+                <p className="mt-2 text-xs text-mint-700 bg-mint-50/70 rounded-lg px-3 py-1.5 inline-flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3" /> {insight.parent_tip}
+                </p>
+              )}
+            </div>
+          )}
+
+          {gain.band && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex items-center gap-2">
+                <span className="h-7 w-7 rounded-lg grid place-items-center bg-mint-100 text-mint-700">
+                  <Heart className="h-3.5 w-3.5" />
+                </span>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-mint-700">
+                  Weight gain · {prettyCategory(gain.band.category)}
+                </div>
+                <span className="ml-auto text-[10px] uppercase tracking-wider text-ink-muted">
+                  IOM {gain.band.min_kg}–{gain.band.max_kg} kg total
+                </span>
+              </div>
+              <div className="mt-3">
+                <div className="text-3xl font-bold tabular-nums text-ink-strong">
+                  {summary.weight_gain_kg != null ? `+${summary.weight_gain_kg.toFixed(1)} kg` : '—'}
+                </div>
+                {gain.expected_min != null && gain.expected_max != null && (
+                  <div className="mt-1 text-xs text-ink-muted">
+                    Expected by week {ga?.weeks ?? '—'}: {gain.expected_min.toFixed(1)}–{gain.expected_max.toFixed(1)} kg
+                  </div>
+                )}
+                <div className="mt-3">
+                  <GainBar
+                    current={summary.weight_gain_kg ?? 0}
+                    min={gain.band.min_kg}
+                    max={gain.band.max_kg}
+                    expectedMin={gain.expected_min}
+                    expectedMax={gain.expected_max}
+                  />
+                </div>
+                <div className={`mt-2 text-xs font-semibold ${
+                  gain.status === 'high' ? 'text-coral-700' :
+                  gain.status === 'low'  ? 'text-peach-700' :
+                  gain.status === 'on_track' ? 'text-mint-700' : 'text-ink-muted'
+                }`}>
+                  {gain.status === 'on_track' && '✓ On track for your IOM band'}
+                  {gain.status === 'low'      && '↓ A little below — chat with your provider if it persists'}
+                  {gain.status === 'high'     && '↑ Above expected — your provider may want to discuss'}
+                  {gain.status === 'unknown'  && (summary.weight_gain_kg == null
+                    ? 'Log a prenatal visit with weight to see status'
+                    : 'Need pre-pregnancy weight & height for guidance')}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Kick + counts row */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
@@ -187,6 +274,39 @@ function prettyBp(cat: 'normal'|'elevated'|'hypertensive'): string {
     case 'elevated':     return 'Elevated';
     case 'hypertensive': return '⚠ Hypertensive';
   }
+}
+
+function prettyCategory(c: 'underweight'|'normal'|'overweight'|'obese'): string {
+  switch (c) {
+    case 'underweight': return 'Pre-preg BMI: under';
+    case 'normal':      return 'Pre-preg BMI: normal';
+    case 'overweight':  return 'Pre-preg BMI: over';
+    case 'obese':       return 'Pre-preg BMI: high';
+  }
+}
+
+/** Horizontal weight-gain bar with IOM band overlay. */
+function GainBar({ current, min, max, expectedMin, expectedMax }: {
+  current: number; min: number; max: number;
+  expectedMin: number | null; expectedMax: number | null;
+}) {
+  const scaleMax = Math.max(max + 5, current + 2, 2);
+  const pct = (v: number) => Math.max(0, Math.min(100, (v / scaleMax) * 100));
+  return (
+    <div className="relative h-3 rounded-full bg-slate-100 overflow-hidden">
+      {/* IOM total band */}
+      <div className="absolute inset-y-0 bg-mint-200/80"
+        style={{ left: `${pct(min)}%`, width: `${pct(max) - pct(min)}%` }} />
+      {/* Expected for current week — narrower band on top */}
+      {expectedMin != null && expectedMax != null && (
+        <div className="absolute inset-y-0 bg-mint-400"
+          style={{ left: `${pct(expectedMin)}%`, width: `${Math.max(1, pct(expectedMax) - pct(expectedMin))}%` }} />
+      )}
+      {/* Current gain marker */}
+      <div className="absolute -top-0.5 h-4 w-1 rounded-full bg-coral-600 shadow-sm"
+        style={{ left: `calc(${pct(Math.max(0, current))}% - 2px)` }} />
+    </div>
+  );
 }
 
 function Chip({ tint, children }: { tint: 'coral'|'mint'|'brand'|'peach'|'lavender'; children: React.ReactNode }) {

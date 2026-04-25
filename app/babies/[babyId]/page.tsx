@@ -54,17 +54,20 @@ export default async function BabyOverview({
   // Stage-aware fork — pregnancy gets a completely different dashboard.
   const stage = effectiveStage(baby.lifecycle_stage as 'pregnancy'|'newborn'|'infant'|'toddler'|'child'|'archived'|null, baby.dob);
   if (stage === 'pregnancy') {
-    const [{ data: m }, { data: summaryRow }, { data: lastUs }, { data: nextAppt }] = await Promise.all([
+    const [{ data: m }, { data: summaryRow }, { data: lastUs }, { data: nextAppt }, { data: pregProf }] = await Promise.all([
       supabase.from('baby_users').select('role').eq('baby_id', babyId).eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '').maybeSingle(),
       supabase.rpc('prenatal_summary', { p_baby: babyId }).single(),
       supabase.from('ultrasounds').select('id,scanned_at,gestational_week,summary')
         .eq('baby_id', babyId).is('deleted_at', null)
         .order('scanned_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.rpc('next_appointment', { p_baby: babyId }).maybeSingle(),
+      supabase.from('pregnancy_profile').select('pre_pregnancy_weight_kg,pre_pregnancy_height_cm')
+        .eq('baby_id', babyId).maybeSingle(),
     ]);
     const isParent = ['owner','parent'].includes((m?.role as string) ?? '');
     const appt = nextAppt as { scheduled_at: string; doctor_name: string | null; purpose: string | null } | null;
     const us = lastUs as { id: string; scanned_at: string; gestational_week: number | null; summary: string | null } | null;
+    const pp = pregProf as { pre_pregnancy_weight_kg: number | null; pre_pregnancy_height_cm: number | null } | null;
     return (
       <PregnancyDashboard
         babyId={babyId}
@@ -76,6 +79,8 @@ export default async function BabyOverview({
         latestUltrasound={us ? { id: us.id, scanned_at: us.scanned_at, gestational_week: us.gestational_week, summary: us.summary } : null}
         nextAppointment={appt ? { scheduled_at: appt.scheduled_at, doctor_name: appt.doctor_name, purpose: appt.purpose } : null}
         canEdit={isParent}
+        prePregnancyWeightKg={pp?.pre_pregnancy_weight_kg ?? null}
+        prePregnancyHeightCm={pp?.pre_pregnancy_height_cm ?? null}
       />
     );
   }
