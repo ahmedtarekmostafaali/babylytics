@@ -9,7 +9,8 @@ import { ExportButton } from '@/components/ExportButton';
 import { Wordmark } from '@/components/Wordmark';
 import { fmtDate, fmtDateTime, fmtRelative, parseRangeParam, ageInDays } from '@/lib/dates';
 import { fmtMl, fmtPct, fmtKg, fmtCm } from '@/lib/units';
-import { Milk, Droplet, Pill, Scale, Ruler, FileText, Activity, AlertTriangle } from 'lucide-react';
+import { Milk, Droplet, Pill, Scale, Ruler, FileText, Activity, AlertTriangle, SlidersHorizontal } from 'lucide-react';
+import { loadHiddenWidgets, showWidget } from '@/lib/dashboard-prefs';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,9 @@ export default async function FullReport({
     supabase.from('baby_users').select('user_id,role,created_at').eq('baby_id', babyId),
   ]);
 
+  const hidden = await loadHiddenWidgets(supabase, babyId, 'full_report');
+  const show = (id: string) => showWidget(hidden, id);
+
   const f = (feedingKpi.data ?? {}) as { total_feed_ml: number; avg_feed_ml: number; feed_count: number; recommended_feed_ml: number; feeding_percentage: number };
   const s = (stoolKpi.data   ?? {}) as { stool_count: number; total_ml: number; small_count: number; medium_count: number; large_count: number };
   const m = (medKpi.data     ?? {}) as { total_doses: number; taken: number; missed: number; remaining: number; adherence_pct: number };
@@ -68,6 +72,11 @@ export default async function FullReport({
           <p className="text-sm text-ink-muted">{baby.name} · {range.label}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href={`/babies/${babyId}/dashboard-settings`}
+            className="h-9 w-9 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
+            title="Customize report" aria-label="Customize report">
+            <SlidersHorizontal className="h-4 w-4 text-ink" />
+          </Link>
           <DateRangeFilter currentKey={range.key} />
           <ExportButton filenameHint={`${baby.name} — full ${range.label}`} />
         </div>
@@ -111,9 +120,9 @@ export default async function FullReport({
       <section>
         <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Aggregated KPIs — {range.label}</h2>
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <KpiCard tint="peach"    icon={Milk}    label="Feeds"      value={fmtMl(f.total_feed_ml)} sub={`${f.feed_count ?? 0} feed${f.feed_count === 1 ? '' : 's'} · avg ${fmtMl(f.avg_feed_ml)}`} />
-          <KpiCard tint="peach"                   label="Recommended (daily)" value={fmtMl(f.recommended_feed_ml)} />
-          {(() => {
+          {show('kpi_feeds') && <KpiCard tint="peach"    icon={Milk}    label="Feeds"      value={fmtMl(f.total_feed_ml)} sub={`${f.feed_count ?? 0} feed${f.feed_count === 1 ? '' : 's'} · avg ${fmtMl(f.avg_feed_ml)}`} />}
+          {show('kpi_target') && <KpiCard tint="peach"                   label="Recommended (daily)" value={fmtMl(f.recommended_feed_ml)} />}
+          {show('kpi_feeding_pct') && (() => {
             const remaining = Math.max(0, Math.round((f.recommended_feed_ml ?? 0) - (f.total_feed_ml ?? 0)));
             const pct = Number(f.feeding_percentage ?? 0);
             return (
@@ -123,11 +132,11 @@ export default async function FullReport({
                 tone={pct < 70 ? 'warning' : 'positive'} />
             );
           })()}
-          <KpiCard tint="mint"     icon={Droplet} label="Stools"     value={s.stool_count ?? 0} sub={`S:${s.small_count ?? 0} · M:${s.medium_count ?? 0} · L:${s.large_count ?? 0}`} />
-          <KpiCard tint="lavender" icon={Pill}    label="Doses taken" value={m.taken ?? 0} sub={`of ${m.total_doses ?? 0} expected · ${m.missed ?? 0} missed`} />
-          <KpiCard tint="lavender"                label="Adherence"  value={fmtPct(m.adherence_pct)} tone={Number(m.adherence_pct) < 80 ? 'warning' : 'positive'} />
-          <KpiCard tint="brand"    icon={Scale}   label="Weighings"  value={(measurements.data ?? []).length} />
-          <KpiCard tint="brand"    icon={FileText} label="Files uploaded" value={(files.data ?? []).length} />
+          {show('kpi_stools') && <KpiCard tint="mint"     icon={Droplet} label="Stools"     value={s.stool_count ?? 0} sub={`S:${s.small_count ?? 0} · M:${s.medium_count ?? 0} · L:${s.large_count ?? 0}`} />}
+          {show('kpi_doses') && <KpiCard tint="lavender" icon={Pill}    label="Doses taken" value={m.taken ?? 0} sub={`of ${m.total_doses ?? 0} expected · ${m.missed ?? 0} missed`} />}
+          {show('kpi_adherence') && <KpiCard tint="lavender"                label="Adherence"  value={fmtPct(m.adherence_pct)} tone={Number(m.adherence_pct) < 80 ? 'warning' : 'positive'} />}
+          {show('kpi_weighings') && <KpiCard tint="brand"    icon={Scale}   label="Weighings"  value={(measurements.data ?? []).length} />}
+          {show('kpi_files') && <KpiCard tint="brand"    icon={FileText} label="Files uploaded" value={(files.data ?? []).length} />}
         </div>
       </section>
 

@@ -12,12 +12,13 @@ import {
   lastNDaysWindow, todayLocalDate, TIMEZONE,
 } from '@/lib/dates';
 import { effectiveStage } from '@/lib/lifecycle';
+import { loadHiddenWidgets, showWidget } from '@/lib/dashboard-prefs';
 import { fmtKg, fmtMl } from '@/lib/units';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import {
   Milk, Moon, Droplet, Pill, Scale, Thermometer, Syringe, Bell,
   TrendingUp, ArrowUpRight, FileText, Sparkles, Plus, ClipboardList, ArrowRight, Activity,
-  Stethoscope, CalendarClock,
+  Stethoscope, CalendarClock, SlidersHorizontal,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -197,6 +198,11 @@ export default async function BabyOverview({
     .select('baby_id', { count: 'exact', head: true })
     .eq('baby_id', babyId);
   const showPregnancyArchive = (hasPregnancyArchive ?? 0) > 0;
+
+  // User-specific dashboard widget preferences. Empty set = show everything,
+  // so existing behavior is preserved when the user has never customized.
+  const hiddenWidgets = await loadHiddenWidgets(supabase, babyId, 'overview');
+  const show = (id: string) => showWidget(hiddenWidgets, id);
 
   const w = (currentWeight.data as number | null) ?? null;
 
@@ -441,6 +447,12 @@ export default async function BabyOverview({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link href={`/babies/${babyId}/dashboard-settings`}
+            className="h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
+            title="Customize dashboard"
+            aria-label="Customize dashboard">
+            <SlidersHorizontal className="h-4 w-4 text-ink" />
+          </Link>
           <DayPicker babyId={babyId} value={focusDate} />
           {(() => {
             const notifCount = (lowConf.data?.length ?? 0) + overdueCount;
@@ -508,15 +520,15 @@ export default async function BabyOverview({
 
       {/* ═══ ROW: Last X cards ═══ */}
       <section className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-        <LastCard
+        {show('last_feeding') && <LastCard
           tint="coral" icon={Milk}
           label="Last feeding"
           value={lastFeed.data ? (lastFeedBits[0] ?? '—') : 'No data'}
           sub={lastFeed.data ? lastFeedBits.slice(1).join(' · ') : 'tap to log'}
           time={lastFeed.data?.feeding_time ?? null}
           href={`/babies/${babyId}/feedings`}
-        />
-        <LastCard
+        />}
+        {show('todays_feedings') && <LastCard
           tint="peach" icon={Milk}
           label="Today's feedings"
           value={todayFeedCount === 0 ? 'No data' : fmtMl(todayFeedVolume)}
@@ -526,8 +538,8 @@ export default async function BabyOverview({
           time={null}
           href={`/babies/${babyId}/feedings`}
           badge={todayFeedCount > 0 ? 'today' : undefined}
-        />
-        <LastCard
+        />}
+        {show('last_sleep') && <LastCard
           tint="lavender" icon={Moon}
           label="Last sleep"
           value={
@@ -541,16 +553,16 @@ export default async function BabyOverview({
           time={lastSleep.data?.start_at ?? null}
           href={`/babies/${babyId}/sleep`}
           badge={lastSleep.data?.end_at == null ? 'live' : undefined}
-        />
-        <LastCard
+        />}
+        {show('last_stool') && <LastCard
           tint="mint" icon={Droplet}
           label="Last stool"
           value={lastStool.data ? (lastStool.data.quantity_category ?? 'logged') : 'No data'}
           sub={lastStool.data?.color ?? 'tap to log'}
           time={lastStool.data?.stool_time ?? null}
           href={`/babies/${babyId}/stool`}
-        />
-        <LastCard
+        />}
+        {show('todays_summary') && <LastCard
           tint="mint" icon={Droplet}
           label="Today's stool"
           value={todayStoolCount === 0 ? 'No data' : `${todayStoolCount} change${todayStoolCount === 1 ? '' : 's'}`}
@@ -560,8 +572,8 @@ export default async function BabyOverview({
           time={null}
           href={`/babies/${babyId}/stool`}
           badge={todayStoolCount > 0 ? 'today' : undefined}
-        />
-        <LastCard
+        />}
+        {show('last_dose') && <LastCard
           tint={nextDose?.isOverdue ? 'coral' : 'peach'} icon={Pill}
           label="Medications"
           value={nextDose?.name ?? (lastDose.data ? `Last: ${lastDose.data.status}` : 'No doses')}
@@ -573,15 +585,15 @@ export default async function BabyOverview({
           time={nextDose?.nextAt ?? lastDose.data?.medication_time ?? null}
           href={`/babies/${babyId}/medications`}
           badge={nextDose?.isOverdue ? 'overdue' : nextDose?.nextAt ? 'next dose' : undefined}
-        />
-        <LastCard
+        />}
+        {show('last_measurement') && <LastCard
           tint="brand" icon={Scale}
           label="Measurements"
           value={lastMeasurement.data?.weight_kg ? fmtKg(lastMeasurement.data.weight_kg) : 'No data'}
           sub={lastMeasurement.data?.height_cm ? `${lastMeasurement.data.height_cm} cm` : 'tap to log'}
           time={lastMeasurement.data?.measured_at ?? null}
           href={`/babies/${babyId}/measurements`}
-        />
+        />}
       </section>
 
       {/* ═══ INSIGHT BANNER ═══ */}

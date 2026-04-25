@@ -5,6 +5,8 @@ import { assertRole } from '@/lib/role-guard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { DayPicker } from '@/components/DayPicker';
 import { ExportButton } from '@/components/ExportButton';
+import { loadHiddenWidgets, showWidget } from '@/lib/dashboard-prefs';
+import { SlidersHorizontal } from 'lucide-react';
 import { Wordmark } from '@/components/Wordmark';
 import { BabyAvatar } from '@/components/BabyAvatar';
 import { signAvatarUrl } from '@/lib/baby-avatar';
@@ -58,6 +60,9 @@ export default async function DailyReport({
   const w = currentWeight.data as number | null;
   const todayMeasurement = (measurements.data ?? [])[0];
 
+  const hidden = await loadHiddenWidgets(supabase, babyId, 'daily_report');
+  const show = (id: string) => showWidget(hidden, id);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
       {/* Screen-only toolbar — marked no-export so the capture skips it. */}
@@ -68,6 +73,11 @@ export default async function DailyReport({
           <p className="text-sm text-ink-muted">{baby.name} · {fmtDate(isoDate)}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href={`/babies/${babyId}/dashboard-settings`}
+            className="h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
+            title="Customize report" aria-label="Customize report">
+            <SlidersHorizontal className="h-4 w-4 text-ink" />
+          </Link>
           <DayPicker babyId={babyId} value={isoDate} />
           <ExportButton filenameHint={`${baby.name} — daily ${fmtDate(isoDate)}`} />
         </div>
@@ -95,9 +105,9 @@ export default async function DailyReport({
 
       {/* KPI grid — compact so it fits one page alongside the new temp tile */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <MiniKpi tint="peach" icon={Milk}    label="Feeds"    value={fmtMl(f.total_feed_ml)} sub={`${f.feed_count ?? 0} feed${f.feed_count === 1 ? '' : 's'}${f.feed_count ? ` · avg ${fmtMl(f.avg_feed_ml)}` : ''}`} />
-        <MiniKpi tint="peach" icon={Target}  label="Target"   value={fmtMl(f.recommended_feed_ml)} sub={w ? `${fmtKg(w)} × ${baby.feeding_factor_ml_per_kg_per_day} ml/kg` : ''} />
-        {(() => {
+        {show('kpi_feeds') && <MiniKpi tint="peach" icon={Milk}    label="Feeds"    value={fmtMl(f.total_feed_ml)} sub={`${f.feed_count ?? 0} feed${f.feed_count === 1 ? '' : 's'}${f.feed_count ? ` · avg ${fmtMl(f.avg_feed_ml)}` : ''}`} />}
+        {show('kpi_target') && <MiniKpi tint="peach" icon={Target}  label="Target"   value={fmtMl(f.recommended_feed_ml)} sub={w ? `${fmtKg(w)} × ${baby.feeding_factor_ml_per_kg_per_day} ml/kg` : ''} />}
+        {show('kpi_feeding_pct') && (() => {
           const remaining = Math.max(0, Math.round((f.recommended_feed_ml ?? 0) - (f.total_feed_ml ?? 0)));
           const pct = Number(f.feeding_percentage ?? 0);
           return (
@@ -106,8 +116,8 @@ export default async function DailyReport({
               sub={pct >= 100 ? 'goal hit ✓' : `${fmtMl(remaining)} left to goal`} />
           );
         })()}
-        <MiniKpi tint="mint"  icon={Droplet} label="Stools"   value={s.stool_count ?? 0} sub={s.total_ml ? `${fmtMl(s.total_ml)} total` : ''} />
-        <MiniKpi tint="lavender" icon={Pill} label="Doses"     value={`${m.taken ?? 0}/${m.total_doses ?? 0}`} sub={`${m.missed ?? 0} missed · ${fmtPct(m.adherence_pct)}`} />
+        {show('kpi_stools') && <MiniKpi tint="mint"  icon={Droplet} label="Stools"   value={s.stool_count ?? 0} sub={s.total_ml ? `${fmtMl(s.total_ml)} total` : ''} />}
+        {show('kpi_doses') && <MiniKpi tint="lavender" icon={Pill} label="Doses"     value={`${m.taken ?? 0}/${m.total_doses ?? 0}`} sub={`${m.missed ?? 0} missed · ${fmtPct(m.adherence_pct)}`} />}
 
         {/* Temperature snapshot */}
         {(() => {
