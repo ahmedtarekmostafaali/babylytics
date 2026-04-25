@@ -9,19 +9,35 @@ import type { FileKind } from '@/lib/types';
 const BUCKET = 'medical-files';
 
 const KIND_DIR: Record<FileKind, string> = {
-  prescription: 'prescriptions',
-  report:       'reports',
-  stool_image:  'stool_images',
-  daily_note:   'daily_notes',
-  other:        'other',
+  prescription:      'prescriptions',
+  report:            'reports',
+  stool_image:       'stool_images',
+  daily_note:        'daily_notes',
+  other:             'other',
+  admission_report:  'admissions',
+  discharge_report:  'discharges',
+  lab_report:        'labs',
+  ultrasound:        'ultrasounds',
+  prenatal_lab:      'prenatal_labs',
+  maternal_vitals:   'maternal_vitals',
+  genetic_screening: 'genetic',
+  birth_plan:        'birth_plans',
 };
 
 const KIND_HINTS_HANDWRITTEN: Record<FileKind, boolean> = {
-  prescription: false,
-  report:       false,
-  stool_image:  false,
-  daily_note:   true,   // handwritten by default
-  other:        false,
+  prescription:      false,
+  report:            false,
+  stool_image:       false,
+  daily_note:        true,
+  other:             false,
+  admission_report:  false,
+  discharge_report:  false,
+  lab_report:        false,
+  ultrasound:        false,
+  prenatal_lab:      false,
+  maternal_vitals:   false,
+  genetic_screening: false,
+  birth_plan:        false,
 };
 
 function randomToken() {
