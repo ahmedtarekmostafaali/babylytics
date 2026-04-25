@@ -5,6 +5,7 @@ import { PageShell, PageHeader } from '@/components/PageHeader';
 import { SeedScheduleButton } from '@/components/SeedScheduleButton';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
 import { fmtDate, fmtDateTime, fmtRelative } from '@/lib/dates';
 import {
@@ -301,6 +302,8 @@ export default async function VaccinationsLog({
           </div>
         </>
       )}
+      <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
+        pageScope="vaccinations_list" title="Page comments" />
     </PageShell>
   );
 }

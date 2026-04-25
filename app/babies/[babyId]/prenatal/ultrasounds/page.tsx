@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { assertRole } from '@/lib/role-guard';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { Comments } from '@/components/Comments';
 import { fmtDate, fmtRelative } from '@/lib/dates';
 import { ScanLine, Plus, ArrowRight } from 'lucide-react';
 
@@ -81,6 +82,8 @@ export default async function UltrasoundsList({ params }: { params: { babyId: st
           })}
         </ul>
       )}
+      <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
+        pageScope="prenatal_ultrasounds_list" title="Page comments" />
     </PageShell>
   );
 }

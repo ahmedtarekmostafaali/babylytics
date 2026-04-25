@@ -6,6 +6,7 @@ import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
 import {
   parseRangeParam, fmtDate, fmtTime, fmtDateTime,
@@ -348,6 +349,8 @@ export default async function FeedingsLog({
           <LastNDaysHint />
         </div>
       </div>
+      <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
+        pageScope="feedings_list" title="Page comments" />
     </PageShell>
   );
 }

@@ -119,8 +119,7 @@ export default async function DailyReport({
         {show('kpi_stools') && <MiniKpi tint="mint"  icon={Droplet} label="Stools"   value={s.stool_count ?? 0} sub={s.total_ml ? `${fmtMl(s.total_ml)} total` : ''} />}
         {show('kpi_doses') && <MiniKpi tint="lavender" icon={Pill} label="Doses"     value={`${m.taken ?? 0}/${m.total_doses ?? 0}`} sub={`${m.missed ?? 0} missed · ${fmtPct(m.adherence_pct)}`} />}
 
-        {/* Temperature snapshot */}
-        {(() => {
+        {show('kpi_temperature') && (() => {
           const values = ((temps.data ?? []) as { temperature_c: number }[]).map(r => Number(r.temperature_c)).filter(Number.isFinite);
           const peak = values.length ? Math.max(...values) : null;
           const avg  = values.length ? (values.reduce((a, b) => a + b, 0) / values.length) : null;
@@ -130,8 +129,7 @@ export default async function DailyReport({
               sub={avg != null ? `avg ${avg.toFixed(1)} · ${values.length} readings` : 'no readings'} />
           );
         })()}
-        {/* combined growth card — only when some measurement was logged today */}
-        {todayMeasurement && (
+        {show('kpi_measurements') && todayMeasurement && (
           <MiniKpi tint="brand" icon={Scale} label="Growth"
             value={<span className="text-base leading-tight">
               {todayMeasurement.weight_kg ? `${fmtKg(todayMeasurement.weight_kg)}` : ''}
@@ -141,33 +139,33 @@ export default async function DailyReport({
             sub={`measured at ${fmtDateTime(todayMeasurement.measured_at).split(' · ')[1] ?? ''}`}
           />
         )}
-        {!todayMeasurement && (
+        {show('kpi_measurements') && !todayMeasurement && (
           <MiniKpi tint="brand" icon={Ruler} label="Growth" value="—" sub="no measurement today" />
         )}
       </section>
 
       {/* Timelines — use tight colored tiles */}
       <div className="grid md:grid-cols-2 gap-4">
-        <TimelineCard title="Feedings" tint="peach" items={(feedings.data ?? []).map(r => ({
+        {show('feed_log') && <TimelineCard title="Feedings" tint="peach" items={(feedings.data ?? []).map(r => ({
           time: fmtDateTime(r.feeding_time).split(' · ')[1] ?? '',
           line: `${fmtMl(r.quantity_ml)} · ${r.milk_type}${r.kcal ? ` · ${r.kcal} kcal` : ''}`,
           sub: r.notes ?? (r.source !== 'manual' ? `via ${r.source}` : undefined),
-        }))} />
+        }))} />}
 
-        <TimelineCard title="Stool" tint="mint" items={(stools.data ?? []).map(r => ({
+        {show('stool_log') && <TimelineCard title="Stool" tint="mint" items={(stools.data ?? []).map(r => ({
           time: fmtDateTime(r.stool_time).split(' · ')[1] ?? '',
           line: `${r.quantity_category ?? 'stool'}${r.quantity_ml ? ` · ${fmtMl(r.quantity_ml)}` : ''}${r.color ? ` · ${r.color}` : ''}${r.consistency ? ` · ${r.consistency}` : ''}${r.has_diaper_rash ? ' · rash' : ''}`,
           sub: r.notes ?? undefined,
-        }))} />
+        }))} />}
 
-        <TimelineCard title="Medication doses" tint="lavender" items={(doseLogs.data ?? []).map(l => {
+        {show('med_log') && <TimelineCard title="Medication doses" tint="lavender" items={(doseLogs.data ?? []).map(l => {
           const med = medNameById[l.medication_id];
           return {
             time: fmtDateTime(l.medication_time).split(' · ')[1] ?? '',
             line: `${med?.name ?? 'Medication'}${med?.dosage ? ` · ${med.dosage}` : ''} · ${l.status}`,
             sub: l.actual_dosage ? `actual: ${l.actual_dosage}` : (l.notes ?? undefined),
           };
-        })} />
+        })} />}
 
         <TimelineCard title="Measurements" tint="brand" items={(measurements.data ?? []).map(r => ({
           time: fmtDateTime(r.measured_at).split(' · ')[1] ?? '',
@@ -179,17 +177,17 @@ export default async function DailyReport({
           sub: r.notes ?? undefined,
         }))} />
 
-        <TimelineCard title="Temperature" tint="coral" items={(temps.data ?? []).map(r => ({
+        {show('temp_log') && <TimelineCard title="Temperature" tint="coral" items={(temps.data ?? []).map(r => ({
           time: fmtDateTime(r.measured_at).split(' · ')[1] ?? '',
           line: `${Number(r.temperature_c).toFixed(1)} °C · ${r.method}`,
           sub: r.notes ?? undefined,
-        }))} />
+        }))} />}
 
-        <TimelineCard title="Vaccinations" tint="lavender" items={(vaccines.data ?? []).map(v => ({
+        {show('vax_log') && <TimelineCard title="Vaccinations" tint="lavender" items={(vaccines.data ?? []).map(v => ({
           time: v.administered_at ? (fmtDateTime(v.administered_at).split(' · ')[1] ?? '') : '',
           line: `${v.vaccine_name}${v.dose_number && v.total_doses ? ` · dose ${v.dose_number}/${v.total_doses}` : ''}`,
           sub: v.notes ?? undefined,
-        }))} />
+        }))} />}
         </div>
 
         <footer className="pt-3 text-center text-[10px] text-ink-muted border-t border-slate-200">
@@ -199,11 +197,13 @@ export default async function DailyReport({
       {/* end #report-capture */}
 
       {/* Comments thread for this day — excluded from the export. */}
-      <div className="no-export">
-        <Comments babyId={babyId} target="babies" targetId={babyId}
-          scopeDate={isoDate}
-          title={`Notes for ${fmtDate(isoDate)}`} />
-      </div>
+      {show('comments') && (
+        <div className="no-export">
+          <Comments babyId={babyId} target="babies" targetId={babyId}
+            scopeDate={isoDate}
+            title={`Notes for ${fmtDate(isoDate)}`} />
+        </div>
+      )}
     </div>
   );
 }

@@ -26,7 +26,7 @@ type Row = {
  * New comments inherit the same scope_date automatically.
  */
 export function Comments({
-  babyId, target, targetId, title = 'Comments', scopeDate, canPost = true,
+  babyId, target, targetId, title = 'Comments', scopeDate, pageScope, canPost = true,
 }: {
   babyId: string;
   target: TargetTable;
@@ -34,6 +34,9 @@ export function Comments({
   title?: string;
   /** YYYY-MM-DD — if set, reads + writes are filtered/tagged with this date. */
   scopeDate?: string;
+  /** Optional list-page scope (e.g. "feedings_list"). Comments with the same
+   *  pageScope share a thread; null pageScope means per-row (legacy). */
+  pageScope?: string;
   /** If false, hides the compose form (viewer/nurse). Server RLS enforces too. */
   canPost?: boolean;
 }) {
@@ -56,6 +59,15 @@ export function Comments({
       .eq('target_table', target)
       .eq('target_id', targetId)
       .is('deleted_at', null);
+    if (pageScope) {
+      // Filter to this list-page thread only. Per-row threads (no pageScope)
+      // are NOT included so they don't bleed across.
+      q = q.eq('page_scope', pageScope);
+    } else {
+      // Per-row thread: explicitly exclude any list-page comments that share
+      // the same target_id (e.g. when targetId == babyId).
+      q = q.is('page_scope', null);
+    }
     if (scopeDate) {
       // Show comments tagged with this specific date plus any legacy comments
       // that were posted before scope_date existed (scope_date = NULL).
@@ -97,6 +109,7 @@ export function Comments({
         baby_id: babyId, target_table: target, target_id: targetId,
         body: body.trim(), author: auth.user.id,
         scope_date: scopeDate ?? null,
+        page_scope: pageScope ?? null,
       })
       .select('id,author,body,created_at,scope_date')
       .single();

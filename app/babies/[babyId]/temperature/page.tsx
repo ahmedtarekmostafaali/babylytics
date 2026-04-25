@@ -6,6 +6,7 @@ import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
 import { Sparkline } from '@/components/Sparkline';
 import {
@@ -265,6 +266,8 @@ export default async function TemperatureLog({
           </section>
         </div>
       </div>
+      <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
+        pageScope="temperature_list" title="Page comments" />
     </PageShell>
   );
 }

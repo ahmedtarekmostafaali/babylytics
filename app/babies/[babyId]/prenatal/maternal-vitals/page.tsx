@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { assertRole } from '@/lib/role-guard';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { Comments } from '@/components/Comments';
 import { fmtDate, fmtRelative } from '@/lib/dates';
 import { bpCategory } from '@/lib/lifecycle';
 import { Heart, Activity, Plus, Stethoscope } from 'lucide-react';
@@ -81,6 +82,8 @@ export default async function MaternalVitals({ params }: { params: { babyId: str
       <p className="text-xs text-ink-muted px-1">
         New readings are added by logging a <Link href={`/babies/${params.babyId}/prenatal/visits/new`} className="text-brand-600 hover:underline inline-flex items-center gap-1"><Stethoscope className="h-3 w-3" /> prenatal visit</Link>. Self-readings — leave the doctor field blank.
       </p>
+      <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
+        pageScope="prenatal_maternal_vitals_list" title="Page comments" />
     </PageShell>
   );
 }

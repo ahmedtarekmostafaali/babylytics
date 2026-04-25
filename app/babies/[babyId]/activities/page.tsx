@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { assertRole } from '@/lib/role-guard';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { Comments } from '@/components/Comments';
 import { fmtDateTime, fmtRelative, localDayKey, todayLocalDate } from '@/lib/dates';
 import { Activity, Plus, ArrowRight, MapPin } from 'lucide-react';
 
@@ -92,6 +93,8 @@ export default async function ActivitiesList({ params }: { params: { babyId: str
           ))}
         </ul>
       )}
+      <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
+        pageScope="activities_list" title="Page comments" />
     </PageShell>
   );
 }

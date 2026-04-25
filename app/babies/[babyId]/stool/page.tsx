@@ -6,6 +6,7 @@ import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate, yesterdayLocalDate, localDayKey,
@@ -247,6 +248,8 @@ export default async function StoolLog({
           </section>
         </div>
       </div>
+      <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
+        pageScope="stool_list" title="Page comments" />
     </PageShell>
   );
 }

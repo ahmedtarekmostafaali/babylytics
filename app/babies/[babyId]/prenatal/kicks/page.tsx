@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { assertRole } from '@/lib/role-guard';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { Comments } from '@/components/Comments';
 import { KickCounter } from '@/components/forms/KickCounter';
 import { fmtDateTime, fmtRelative } from '@/lib/dates';
 import { Activity } from 'lucide-react';
@@ -56,6 +57,8 @@ export default async function KicksPage({ params }: { params: { babyId: string }
           </ul>
         )}
       </section>
+      <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
+        pageScope="prenatal_kicks_list" title="Page comments" />
     </PageShell>
   );
 }

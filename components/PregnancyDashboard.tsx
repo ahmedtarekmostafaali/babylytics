@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { BabyAvatar } from '@/components/BabyAvatar';
 import { MarkAsBornDialog } from '@/components/MarkAsBornDialog';
+import { NotificationsBell } from '@/components/NotificationsBell';
 import {
   Stethoscope, ScanLine, Activity, HeartPulse, CalendarClock, Plus,
-  Sparkles, ArrowRight, Pill, Heart, Apple, BookOpen,
+  Sparkles, ArrowRight, Pill, Heart, Apple, BookOpen, SlidersHorizontal,
 } from 'lucide-react';
 import {
   fmtGestationalAge, eddDistanceDays, gestationalAge, trimester, bpCategory,
@@ -78,11 +79,15 @@ export function PregnancyDashboard({
               )}
             </div>
           </div>
-          {canEdit && (
-            <div className="ml-auto">
-              <MarkAsBornDialog babyId={babyId} babyName={babyName} />
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            <Link href={`/babies/${babyId}/dashboard-settings`}
+              className="h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
+              title="Customize dashboard" aria-label="Customize dashboard">
+              <SlidersHorizontal className="h-4 w-4 text-ink" />
+            </Link>
+            <NotificationsBell babyId={babyId} />
+            {canEdit && <MarkAsBornDialog babyId={babyId} babyName={babyName} />}
+          </div>
         </div>
 
         {lateStage && (
