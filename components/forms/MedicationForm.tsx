@@ -6,6 +6,7 @@ import { MedicationSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Section, TypeTile, QuickPill } from '@/components/forms/FormKit';
+import { useT } from '@/lib/i18n/client';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import {
   Save, Trash2, Pill, Droplet, Wind, SprayCan, Syringe, Circle, Stethoscope,
@@ -54,6 +55,7 @@ export function MedicationForm({
   doctors?: DoctorOption[];
 }) {
   const router = useRouter();
+  const t = useT();
   const [name, setName]     = useState(initial?.name ?? '');
   const [dosage, setDosage] = useState(initial?.dosage ?? '');
   const [route, setRoute]   = useState<Route>(initial?.route ?? 'oral');
@@ -140,38 +142,35 @@ export function MedicationForm({
   return (
     <form onSubmit={submit} className="space-y-8">
       {/* 1. Name */}
-      <Section n={1} title="Medication name">
+      <Section n={1} title={t('forms.med_name')}>
         <div className="relative">
           <Pill className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-lavender-500 pointer-events-none" />
           <Input required value={name} onChange={e => setName(e.target.value)}
-            placeholder="e.g. Amoxicillin, Paracetamol"
             className="h-14 pl-11 text-base" />
         </div>
       </Section>
 
       {/* 2. Dosage */}
-      <Section n={2} title="Dosage per dose">
+      <Section n={2} title={t('forms.med_dosage')}>
         <Input value={dosage ?? ''} onChange={e => setDosage(e.target.value)}
-          placeholder="e.g. 5 ml, 2.5 mg, 1 drop"
           className="h-12 text-base" />
-        <p className="mt-2 text-xs text-ink-muted">Include the unit so every caregiver is on the same page.</p>
       </Section>
 
       {/* 3. Route */}
-      <Section n={3} title="How is it given?">
+      <Section n={3} title={t('forms.med_route')}>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <TypeTile icon={Droplet}    label="Oral"      tint="lavender" active={route === 'oral'}      onClick={() => setRoute('oral')} sub="by mouth" />
-          <TypeTile icon={Circle}     label="Topical"   tint="mint"     active={route === 'topical'}   onClick={() => setRoute('topical')} sub="on skin" />
-          <TypeTile icon={Wind}       label="Inhaled"   tint="brand"    active={route === 'inhaled'}   onClick={() => setRoute('inhaled')} sub="breath" />
-          <TypeTile icon={SprayCan}   label="Nasal"     tint="peach"    active={route === 'nasal'}     onClick={() => setRoute('nasal')} sub="spray" />
-          <TypeTile icon={Circle}     label="Rectal"    tint="coral"    active={route === 'rectal'}    onClick={() => setRoute('rectal')} sub="suppository" />
-          <TypeTile icon={Syringe}    label="Injection" tint="lavender" active={route === 'injection'} onClick={() => setRoute('injection')} sub="shot" />
-          <TypeTile icon={Circle}     label="Other"     tint="mint"     active={route === 'other'}     onClick={() => setRoute('other')} sub="" />
+          <TypeTile icon={Droplet}    label={t('forms.med_route_oral')}      tint="lavender" active={route === 'oral'}      onClick={() => setRoute('oral')} sub={t('forms.med_route_oral_sub')} />
+          <TypeTile icon={Circle}     label={t('forms.med_route_topical')}   tint="mint"     active={route === 'topical'}   onClick={() => setRoute('topical')} sub={t('forms.med_route_topical_sub')} />
+          <TypeTile icon={Wind}       label={t('forms.med_route_inhaled')}   tint="brand"    active={route === 'inhaled'}   onClick={() => setRoute('inhaled')} sub={t('forms.med_route_inhaled_sub')} />
+          <TypeTile icon={SprayCan}   label={t('forms.med_route_nasal')}     tint="peach"    active={route === 'nasal'}     onClick={() => setRoute('nasal')} sub={t('forms.med_route_nasal_sub')} />
+          <TypeTile icon={Circle}     label={t('forms.med_route_rectal')}    tint="coral"    active={route === 'rectal'}    onClick={() => setRoute('rectal')} sub={t('forms.med_route_rectal_sub')} />
+          <TypeTile icon={Syringe}    label={t('forms.med_route_injection')} tint="lavender" active={route === 'injection'} onClick={() => setRoute('injection')} sub={t('forms.med_route_injection_sub')} />
+          <TypeTile icon={Circle}     label={t('forms.med_route_other')}     tint="mint"     active={route === 'other'}     onClick={() => setRoute('other')} sub="" />
         </div>
       </Section>
 
       {/* 4. Frequency */}
-      <Section n={4} title="How often?">
+      <Section n={4} title={t('forms.med_frequency')}>
         <div className="flex items-center gap-2 flex-wrap">
           {FREQ_PRESETS.map(p => (
             <QuickPill key={p.key}
@@ -187,44 +186,42 @@ export function MedicationForm({
             onClick={() => setFreqPreset('custom')}
             icon={<Clock className="h-3.5 w-3.5" />}
             tint="lavender">
-            Custom
+            {t('forms.med_freq_custom')}
           </QuickPill>
         </div>
         {freqPreset === 'custom' && (
           <div className="mt-3 flex items-center gap-2">
             <Input type="number" step="0.25" min={0.25} max={168}
               value={freqCustom} onChange={e => setFreqCustom(e.target.value)}
-              placeholder="e.g. 10"
               className="h-12 max-w-[160px]" />
-            <span className="text-sm text-ink-muted">hours between doses</span>
+            <span className="text-sm text-ink-muted">{t('forms.med_freq_custom_sub')}</span>
           </div>
         )}
       </Section>
 
       {/* 5. Duration */}
-      <Section n={5} title="When does it start — and stop?">
+      <Section n={5} title={t('forms.med_starts_at')}>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">Starts</div>
+            <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">{t('forms.med_starts')}</div>
             <Input type="datetime-local" required value={starts} onChange={e => setStarts(e.target.value)} />
           </div>
           <div>
-            <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">Ends <span className="text-ink-muted/70 font-normal">(optional)</span></div>
+            <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">{t('forms.med_ends')} <span className="text-ink-muted/70 font-normal">({t('forms.optional')})</span></div>
             <Input type="datetime-local" value={ends} onChange={e => setEnds(e.target.value)} />
           </div>
         </div>
         <div className="mt-3">
-          <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">Total doses <span className="text-ink-muted/70 font-normal">(optional)</span></div>
+          <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">{t('forms.med_total_doses')}</div>
           <Input type="number" step="1" min={0} max={9999}
             value={doses} onChange={e => setDoses(e.target.value)}
-            placeholder="e.g. 21"
             className="max-w-[160px]" />
-          <p className="mt-1 text-xs text-ink-muted">Stops reminders once you&apos;ve logged this many doses.</p>
+          <p className="mt-1 text-xs text-ink-muted">{t('forms.med_total_doses_sub')}</p>
         </div>
       </Section>
 
       {/* 6. Prescribed by */}
-      <Section n={6} title="Who prescribed it?" optional>
+      <Section n={6} title={t('forms.med_prescribed_by')} optional>
         {doctors.length === 0 ? (
           <div className="space-y-3">
             <div className="relative">
@@ -284,8 +281,8 @@ export function MedicationForm({
                   <Stethoscope className="h-4 w-4" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block font-semibold text-ink-strong">Other</span>
-                  <span className="block text-xs text-ink-muted">type a name</span>
+                  <span className="block font-semibold text-ink-strong">{t('forms.med_doctor_other')}</span>
+                  <span className="block text-xs text-ink-muted">{t('forms.med_doctor_other_sub')}</span>
                 </span>
               </button>
               <button type="button"
@@ -300,8 +297,8 @@ export function MedicationForm({
                   ×
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block font-semibold text-ink-strong">Skip</span>
-                  <span className="block text-xs text-ink-muted">don&apos;t attribute</span>
+                  <span className="block font-semibold text-ink-strong">{t('forms.med_doctor_skip')}</span>
+                  <span className="block text-xs text-ink-muted">{t('forms.med_doctor_skip_sub')}</span>
                 </span>
               </button>
             </div>
@@ -310,7 +307,7 @@ export function MedicationForm({
               <div className="relative mt-1">
                 <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
                 <Input value={presc ?? ''} onChange={e => setPresc(e.target.value)}
-                  placeholder="Doctor name"
+                  placeholder={t('forms.med_doctor_name')}
                   className="pl-10" />
               </div>
             )}
@@ -319,9 +316,8 @@ export function MedicationForm({
       </Section>
 
       {/* 7. Notes */}
-      <Section n={7} title="Add details" optional>
+      <Section n={7} title={t('forms.feed_add_details')} optional>
         <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-          placeholder="Instructions, reactions, storage tips…"
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
       </Section>
 
@@ -330,7 +326,7 @@ export function MedicationForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="flex-1 h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-lavender-500 to-brand-500">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Add medication'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.med_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving}

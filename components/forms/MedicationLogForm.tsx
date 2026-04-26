@@ -10,6 +10,7 @@ import { Section, TypeTile, WhenPicker } from '@/components/forms/FormKit';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Pill, Save, Check, XCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/client';
 
 type Status = 'taken'|'missed'|'skipped';
 type Med = { id: string; name: string; dosage: string | null; route: string };
@@ -32,6 +33,7 @@ export function MedicationLogForm({
   defaultMedId?: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const supabase = createClient();
   const [meds, setMeds] = useState<Med[]>([]);
   const [medsLoading, setMedsLoading] = useState(true);
@@ -85,16 +87,14 @@ export function MedicationLogForm({
 
   return (
     <form onSubmit={submit} className="space-y-8">
-      <Section n={1} title="Which medication?">
+      <Section n={1} title={t('forms.medlog_pick_med')}>
         {medsLoading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-ink-muted">Loading medications…</div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-ink-muted">{t('common.loading')}</div>
         ) : meds.length === 0 ? (
           <div className="rounded-2xl border border-peach-300 bg-peach-50 p-4 text-sm">
-            <p className="text-peach-900 font-medium">No medications set up yet.</p>
-            <p className="text-peach-800/80 mt-1">
-              <Link href={`/babies/${babyId}/medications/new`} className="underline font-semibold">Add one first</Link>,
-              then come back to log a dose.
-            </p>
+            <Link href={`/babies/${babyId}/medications/new`} className="underline font-semibold text-peach-900">
+              {t('trackers.meds_cta')}
+            </Link>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -114,7 +114,7 @@ export function MedicationLogForm({
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-ink-strong truncate">{m.name}</div>
                   <div className="text-xs text-ink-muted truncate">
-                    {m.dosage ? m.dosage : 'no dosage on file'}{m.route !== 'oral' ? ` · ${m.route}` : ''}
+                    {m.dosage ? m.dosage : '—'}{m.route !== 'oral' ? ` · ${m.route}` : ''}
                   </div>
                 </div>
               </button>
@@ -123,26 +123,25 @@ export function MedicationLogForm({
         )}
       </Section>
 
-      <Section n={2} title="Status">
+      <Section n={2} title={t('forms.medlog_status')}>
         <div className="grid grid-cols-3 gap-3">
-          <TypeTile icon={Check}         label="Taken"   tint="mint"  active={status === 'taken'}   onClick={() => setStatus('taken')} />
-          <TypeTile icon={AlertTriangle} label="Missed"  tint="coral" active={status === 'missed'}  onClick={() => setStatus('missed')} />
-          <TypeTile icon={XCircle}       label="Skipped" tint="peach" active={status === 'skipped'} onClick={() => setStatus('skipped')} />
+          <TypeTile icon={Check}         label={t('forms.medlog_taken')}   tint="mint"  active={status === 'taken'}   onClick={() => setStatus('taken')} />
+          <TypeTile icon={AlertTriangle} label={t('forms.medlog_missed')}  tint="coral" active={status === 'missed'}  onClick={() => setStatus('missed')} />
+          <TypeTile icon={XCircle}       label={t('forms.medlog_skipped')} tint="peach" active={status === 'skipped'} onClick={() => setStatus('skipped')} />
         </div>
       </Section>
 
-      <Section n={3} title="When?">
+      <Section n={3} title={t('forms.when')}>
         <WhenPicker time={time} onChange={setTime} tint="lavender" />
       </Section>
 
-      <Section n={4} title="Actual dosage" optional>
-        <Input placeholder={selectedMed?.dosage ? `Prescribed: ${selectedMed.dosage}` : 'e.g. 5 ml, 1 drop'}
+      <Section n={4} title={t('forms.medlog_actual_dose')} optional>
+        <Input placeholder={selectedMed?.dosage ?? ''}
           value={dose} onChange={e => setDose(e.target.value)} />
       </Section>
 
-      <Section n={5} title="Add details" optional>
+      <Section n={5} title={t('forms.feed_add_details')} optional>
         <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-          placeholder="Any reaction, refusal, or observation?"
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
       </Section>
 
@@ -151,7 +150,7 @@ export function MedicationLogForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving || medsLoading || (meds.length === 0 && !medId)}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-lavender-500 to-lavender-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log dose'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.medlog_log_cta')}
         </Button>
       </div>
     </form>
