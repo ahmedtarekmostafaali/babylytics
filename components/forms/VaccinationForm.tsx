@@ -7,6 +7,7 @@ import { Input, Label, Textarea } from '@/components/ui/Input';
 import { Section, TypeTile } from '@/components/forms/FormKit';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Clock, Syringe, Check, X } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 type Status = 'scheduled'|'administered'|'skipped'|'missed';
 
@@ -25,6 +26,8 @@ export type VaccinationFormValue = {
 };
 
 export function VaccinationForm({ babyId, initial }: { babyId: string; initial?: VaccinationFormValue }) {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const t = useT();
   const router = useRouter();
   const [name, setName]     = useState(initial?.vaccine_name ?? '');
   const [status, setStatus] = useState<Status>(initial?.status ?? 'scheduled');
@@ -79,60 +82,60 @@ export function VaccinationForm({ babyId, initial }: { babyId: string; initial?:
 
   return (
     <form onSubmit={submit} className="space-y-8">
-      <Section n={1} title="Status">
+      <Section n={1} title={t('forms.vax_status')}>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <TypeTile icon={Clock}   label="Scheduled"    tint="brand"    active={status === 'scheduled'}    onClick={() => setStatus('scheduled')} />
-          <TypeTile icon={Syringe} label="Administered" tint="mint"     active={status === 'administered'} onClick={() => setStatus('administered')} />
-          <TypeTile icon={X}       label="Skipped"      tint="peach"    active={status === 'skipped'}      onClick={() => setStatus('skipped')} />
-          <TypeTile icon={Check}   label="Missed"       tint="coral"    active={status === 'missed'}       onClick={() => setStatus('missed')} />
+          <TypeTile icon={Clock}   label={t('forms.vax_status_scheduled')}    tint="brand"    active={status === 'scheduled'}    onClick={() => setStatus('scheduled')} />
+          <TypeTile icon={Syringe} label={t('forms.vax_status_administered')} tint="mint"     active={status === 'administered'} onClick={() => setStatus('administered')} />
+          <TypeTile icon={X}       label={t('forms.vax_status_refused')}      tint="peach"    active={status === 'skipped'}      onClick={() => setStatus('skipped')} />
+          <TypeTile icon={Check}   label={t('forms.vax_status_missed')}       tint="coral"    active={status === 'missed'}       onClick={() => setStatus('missed')} />
         </div>
       </Section>
 
-      <Section n={2} title="Vaccine details">
+      <Section n={2} title={t('trackers.vax_title')}>
         <div className="grid sm:grid-cols-2 gap-3">
           <div className="sm:col-span-2">
-            <Label htmlFor="v">Vaccine name</Label>
-            <Input id="v" required placeholder="e.g. DTaP-IPV-Hib, MMR, Hepatitis B" value={name} onChange={e => setName(e.target.value)} />
+            <Label htmlFor="v">{t('forms.vax_name')}</Label>
+            <Input id="v" required value={name} onChange={e => setName(e.target.value)} />
           </div>
           <div>
-            <Label htmlFor="dn">Dose number</Label>
+            <Label htmlFor="dn">{t('forms.vax_dose_no')}</Label>
             <Input id="dn" type="number" min={1} max={10} value={dose} onChange={e => setDose(e.target.value)} />
           </div>
           <div>
-            <Label htmlFor="td">Total doses</Label>
+            <Label htmlFor="td">{t('forms.vax_total_doses')}</Label>
             <Input id="td" type="number" min={1} max={10} value={total} onChange={e => setTotal(e.target.value)} />
           </div>
         </div>
       </Section>
 
-      <Section n={3} title="When?">
+      <Section n={3} title={t('forms.when')}>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="sc">Scheduled</Label>
+            <Label htmlFor="sc">{t('forms.vax_scheduled')}</Label>
             <Input id="sc" type="datetime-local" value={scheduled} onChange={e => setScheduled(e.target.value)} />
           </div>
           {status === 'administered' && (
             <div>
-              <Label htmlFor="ad">Administered</Label>
+              <Label htmlFor="ad">{t('forms.vax_administered')}</Label>
               <Input id="ad" type="datetime-local" value={administered} onChange={e => setAdministered(e.target.value)} />
             </div>
           )}
         </div>
       </Section>
 
-      <Section n={4} title="Provider & notes" optional>
+      <Section n={4} title={t('forms.feed_add_details')} optional>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="prov">Provider / clinic</Label>
-            <Input id="prov" placeholder="e.g. Dr. Ali · Cairo Family Clinic" value={provider} onChange={e => setProvider(e.target.value)} />
+            <Label htmlFor="prov">{t('forms.vax_provider')}</Label>
+            <Input id="prov" value={provider} onChange={e => setProvider(e.target.value)} />
           </div>
           <div>
-            <Label htmlFor="batch">Batch number</Label>
-            <Input id="batch" placeholder="Lot #" value={batch} onChange={e => setBatch(e.target.value)} />
+            <Label htmlFor="batch">{t('forms.vax_lot')}</Label>
+            <Input id="batch" value={batch} onChange={e => setBatch(e.target.value)} />
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="no">Notes</Label>
-            <Textarea id="no" rows={3} placeholder="Any reactions, symptoms, or notes" value={notes ?? ''} onChange={e => setNotes(e.target.value)} />
+            <Label htmlFor="no">{t('forms.notes')}</Label>
+            <Textarea id="no" rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)} />
           </div>
         </div>
       </Section>
@@ -142,10 +145,10 @@ export function VaccinationForm({ babyId, initial }: { babyId: string; initial?:
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-lavender-500 to-lavender-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save vaccination'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.vax_save_cta')}
         </Button>
         {initial?.id && (
-          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">Delete</Button>
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">{t('forms.delete')}</Button>
         )}
       </div>
     </form>

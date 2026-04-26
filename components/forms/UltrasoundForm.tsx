@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Trash2, ScanLine } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type UltrasoundValue = {
   id?: string;
@@ -35,6 +36,7 @@ export function UltrasoundForm({
   initial?: UltrasoundValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [scannedAt, setScannedAt]   = useState(initial?.scanned_at ? isoToLocalInput(initial.scanned_at) : nowLocalInput());
   const [gw, setGw]                 = useState<string>(initial?.gestational_week?.toString() ?? '');
   const [gd, setGd]                 = useState<string>(initial?.gestational_day?.toString() ?? '');
@@ -109,75 +111,74 @@ export function UltrasoundForm({
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Scan time</Label>
+          <Label>{t('forms.us_date')}</Label>
           <Input type="datetime-local" value={scannedAt} onChange={e => setScannedAt(e.target.value)} required />
         </div>
         <div>
-          <Label>Sex predicted</Label>
+          <Label>{t('forms.us_sex')}</Label>
           <Select value={sex ?? ''} onChange={e => setSex((e.target.value || null) as UltrasoundValue['sex_predicted'])}>
-            <option value="">— Not specified —</option>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-            <option value="undetermined">Undetermined</option>
+            <option value="">—</option>
+            <option value="female">{t('overview.female')}</option>
+            <option value="male">{t('overview.male')}</option>
+            <option value="undetermined">{t('milestones_ref.state_pending')}</option>
           </Select>
         </div>
         <div>
-          <Label>Gestational age (weeks)</Label>
-          <Input type="number" min={0} max={45} value={gw} onChange={e => setGw(e.target.value)} placeholder="29" />
+          <Label>{t('forms.visit_ga_weeks')}</Label>
+          <Input type="number" min={0} max={45} value={gw} onChange={e => setGw(e.target.value)} />
         </div>
         <div>
-          <Label>Days into the week</Label>
-          <Input type="number" min={0} max={6} value={gd} onChange={e => setGd(e.target.value)} placeholder="1" />
+          <Label>{t('forms.visit_ga_days')}</Label>
+          <Input type="number" min={0} max={6} value={gd} onChange={e => setGd(e.target.value)} />
         </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 p-4 bg-slate-50/40">
-        <h4 className="text-sm font-bold text-ink-strong mb-3">Biometrics</h4>
+        <h4 className="text-sm font-bold text-ink-strong mb-3">{t('forms.us_summary')}</h4>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <Label>BPD (mm)</Label>
-            <Input type="number" step="0.1" value={bpd} onChange={e => setBpd(e.target.value)} placeholder="75.2" />
+            <Label>{t('forms.us_bpd')}</Label>
+            <Input type="number" step="0.1" value={bpd} onChange={e => setBpd(e.target.value)} />
           </div>
           <div>
-            <Label>HC (mm)</Label>
-            <Input type="number" step="0.1" value={hc} onChange={e => setHc(e.target.value)} placeholder="270.4" />
+            <Label>{t('forms.us_hc')}</Label>
+            <Input type="number" step="0.1" value={hc} onChange={e => setHc(e.target.value)} />
           </div>
           <div>
-            <Label>AC (mm)</Label>
-            <Input type="number" step="0.1" value={ac} onChange={e => setAc(e.target.value)} placeholder="245" />
+            <Label>{t('forms.us_ac')}</Label>
+            <Input type="number" step="0.1" value={ac} onChange={e => setAc(e.target.value)} />
           </div>
           <div>
-            <Label>FL (mm)</Label>
-            <Input type="number" step="0.1" value={fl} onChange={e => setFl(e.target.value)} placeholder="55.1" />
+            <Label>{t('forms.us_fl')}</Label>
+            <Input type="number" step="0.1" value={fl} onChange={e => setFl(e.target.value)} />
           </div>
           <div>
-            <Label>EFW (g)</Label>
-            <Input type="number" step="1" value={efw} onChange={e => setEfw(e.target.value)} placeholder="1350" />
+            <Label>{t('forms.us_efw')}</Label>
+            <Input type="number" step="1" value={efw} onChange={e => setEfw(e.target.value)} />
           </div>
           <div>
-            <Label>Fetal HR (bpm)</Label>
-            <Input type="number" min={50} max={250} value={fhr} onChange={e => setFhr(e.target.value)} placeholder="144" />
+            <Label>{t('forms.us_fhr')}</Label>
+            <Input type="number" min={50} max={250} value={fhr} onChange={e => setFhr(e.target.value)} />
           </div>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Placenta position</Label>
-          <Input value={placenta} onChange={e => setPlacenta(e.target.value)} placeholder="anterior fundal" />
+          <Label>{t('forms.us_placenta')}</Label>
+          <Input value={placenta} onChange={e => setPlacenta(e.target.value)} />
         </div>
         <div>
-          <Label>Amniotic fluid</Label>
-          <Input value={amniotic} onChange={e => setAmniotic(e.target.value)} placeholder="normal (AFI 14)" />
+          <Label>{t('forms.us_fluid')}</Label>
+          <Input value={amniotic} onChange={e => setAmniotic(e.target.value)} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Anomalies / concerns</Label>
+          <Label>{t('forms.us_anomalies')}</Label>
           <Textarea rows={2} value={anomalies} onChange={e => setAnomalies(e.target.value)} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Radiologist summary</Label>
-          <Textarea rows={3} value={summary} onChange={e => setSummary(e.target.value)}
-            placeholder="Growth on the 50th percentile, no anomalies." />
+          <Label>{t('forms.us_summary')}</Label>
+          <Textarea rows={3} value={summary} onChange={e => setSummary(e.target.value)} />
         </div>
       </div>
 
@@ -186,7 +187,7 @@ export function UltrasoundForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-brand-500 to-lavender-500">
-          <ScanLine className="h-4 w-4" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save ultrasound'}
+          <ScanLine className="h-4 w-4" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.us_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-12 rounded-2xl">

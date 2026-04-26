@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Trash2, Stethoscope } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type PrenatalVisitValue = {
   id?: string;
@@ -32,6 +33,7 @@ export function PrenatalVisitForm({
   initial?: PrenatalVisitValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [visitedAt, setVisitedAt] = useState(initial?.visited_at ? isoToLocalInput(initial.visited_at) : nowLocalInput());
   const [gw, setGw]               = useState<string>(initial?.gestational_week?.toString() ?? '');
   const [gd, setGd]               = useState<string>(initial?.gestational_day?.toString() ?? '');
@@ -98,52 +100,51 @@ export function PrenatalVisitForm({
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Visit time</Label>
+          <Label>{t('forms.visit_date')}</Label>
           <Input type="datetime-local" value={visitedAt} onChange={e => setVisitedAt(e.target.value)} required />
         </div>
         <div>
-          <Label>Doctor / midwife</Label>
+          <Label>{t('forms.visit_provider')}</Label>
           <Select value={doctorId ?? ''} onChange={e => setDoctorId(e.target.value || null)}>
-            <option value="">— Self / not specified —</option>
+            <option value="">—</option>
             {doctors.map(d => (
               <option key={d.id} value={d.id}>{d.name}{d.specialty ? ` · ${d.specialty}` : ''}</option>
             ))}
           </Select>
         </div>
         <div>
-          <Label>Gestational age (weeks)</Label>
-          <Input type="number" min={0} max={45} value={gw} onChange={e => setGw(e.target.value)} placeholder="28" />
+          <Label>{t('forms.visit_ga_weeks')}</Label>
+          <Input type="number" min={0} max={45} value={gw} onChange={e => setGw(e.target.value)} />
         </div>
         <div>
-          <Label>Days into the week</Label>
-          <Input type="number" min={0} max={6} value={gd} onChange={e => setGd(e.target.value)} placeholder="3" />
+          <Label>{t('forms.visit_ga_days')}</Label>
+          <Input type="number" min={0} max={6} value={gd} onChange={e => setGd(e.target.value)} />
         </div>
         <div>
-          <Label>Maternal weight (kg)</Label>
-          <Input type="number" step="0.1" min={20} max={300} value={weight} onChange={e => setWeight(e.target.value)} placeholder="68.4" />
+          <Label>{t('forms.visit_weight')}</Label>
+          <Input type="number" step="0.1" min={20} max={300} value={weight} onChange={e => setWeight(e.target.value)} />
         </div>
         <div>
-          <Label>Fundal height (cm)</Label>
-          <Input type="number" step="0.1" min={0} max={60} value={fundal} onChange={e => setFundal(e.target.value)} placeholder="28" />
+          <Label>{t('forms.visit_fundal_height')}</Label>
+          <Input type="number" step="0.1" min={0} max={60} value={fundal} onChange={e => setFundal(e.target.value)} />
         </div>
         <div>
-          <Label>BP systolic</Label>
-          <Input type="number" min={50} max={260} value={sys} onChange={e => setSys(e.target.value)} placeholder="118" />
+          <Label>{t('forms.visit_bp_sys')}</Label>
+          <Input type="number" min={50} max={260} value={sys} onChange={e => setSys(e.target.value)} />
         </div>
         <div>
-          <Label>BP diastolic</Label>
-          <Input type="number" min={30} max={180} value={dia} onChange={e => setDia(e.target.value)} placeholder="76" />
+          <Label>{t('forms.visit_bp_dia')}</Label>
+          <Input type="number" min={30} max={180} value={dia} onChange={e => setDia(e.target.value)} />
         </div>
         <div>
-          <Label>Fetal heart rate (bpm)</Label>
-          <Input type="number" min={50} max={250} value={fhr} onChange={e => setFhr(e.target.value)} placeholder="142" />
+          <Label>{t('forms.visit_fetal_hr')}</Label>
+          <Input type="number" min={50} max={250} value={fhr} onChange={e => setFhr(e.target.value)} />
         </div>
       </div>
 
       <div>
-        <Label>Notes</Label>
-        <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)}
-          placeholder="What was discussed, follow-up tests ordered, any concerns…" />
+        <Label>{t('forms.notes')}</Label>
+        <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} />
       </div>
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
@@ -151,7 +152,7 @@ export function PrenatalVisitForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-lavender-500 to-brand-500">
-          <Stethoscope className="h-4 w-4" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save visit'}
+          <Stethoscope className="h-4 w-4" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.visit_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-12 rounded-2xl">
