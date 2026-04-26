@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Trash2, GraduationCap, Clapperboard, Video, Tv, Tablet, Smartphone, Laptop, MoreHorizontal } from 'lucide-react';
 import { Section, Field, QuickPill, Stepper, WhenPicker, TypeTile } from '@/components/forms/FormKit';
+import { useT } from '@/lib/i18n/client';
 
 export type ScreenTimeValue = {
   id?: string;
@@ -43,6 +44,7 @@ export function ScreenTimeForm({
   initial?: ScreenTimeValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [startedAt, setStartedAt] = useState(initial?.started_at ? isoToLocalInput(initial.started_at) : nowLocalInput());
   const [duration, setDuration]   = useState<number>(initial?.duration_min ?? 15);
   const [content, setContent]     = useState<ScreenTimeValue['content_type']>(initial?.content_type ?? 'educational');
@@ -98,13 +100,13 @@ export function ScreenTimeForm({
   return (
     <form onSubmit={submit} className="space-y-8">
       {/* 1. Content type */}
-      <Section n={1} title="What were they watching?">
+      <Section n={1} title={t('forms.screen_what')}>
         <div className="space-y-3">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <TypeTile icon={GraduationCap} label="Educational"    tint="lavender" active={content === 'educational'}    onClick={() => setContent('educational')} />
-            <TypeTile icon={Clapperboard}  label="Entertainment"  tint="lavender" active={content === 'entertainment'}  onClick={() => setContent('entertainment')} />
-            <TypeTile icon={Video}         label="Video call"     tint="lavender" active={content === 'video_call'}     onClick={() => setContent('video_call')} />
-            <TypeTile icon={Tv}            label="Passive"        tint="lavender" active={content === 'passive'}        onClick={() => setContent('passive')} sub="TV in background" />
+            <TypeTile icon={GraduationCap} label={t('forms.screen_content_edu')}     tint="lavender" active={content === 'educational'}    onClick={() => setContent('educational')} />
+            <TypeTile icon={Clapperboard}  label={t('forms.screen_content_ent')}     tint="lavender" active={content === 'entertainment'}  onClick={() => setContent('entertainment')} />
+            <TypeTile icon={Video}         label={t('forms.screen_content_call')}    tint="lavender" active={content === 'video_call'}     onClick={() => setContent('video_call')} />
+            <TypeTile icon={Tv}            label={t('forms.screen_content_passive')} tint="lavender" active={content === 'passive'}        onClick={() => setContent('passive')} sub={t('forms.screen_content_passive_sub')} />
           </div>
           <button
             type="button"
@@ -115,15 +117,15 @@ export function ScreenTimeForm({
                 : 'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm text-ink hover:bg-slate-50'
             }
           >
-            Something else
+            {t('forms.feed_other')}
           </button>
         </div>
       </Section>
 
       {/* 2. Device + Duration */}
-      <Section n={2} title="On what device, and for how long?">
+      <Section n={2} title={t('forms.screen_device')}>
         <div className="space-y-4">
-          <Field label="Device">
+          <Field label={t('forms.screen_device_label')}>
             <div className="flex flex-wrap gap-2">
               {DEVICES.map(d => (
                 <QuickPill
@@ -140,7 +142,7 @@ export function ScreenTimeForm({
           </Field>
 
           <Stepper
-            label="Duration"
+            label={t('forms.act_duration')}
             value={duration}
             onChange={setDuration}
             unit="min"
@@ -153,17 +155,16 @@ export function ScreenTimeForm({
       </Section>
 
       {/* 3. When */}
-      <Section n={3} title="When?">
+      <Section n={3} title={t('forms.when')}>
         <WhenPicker time={startedAt} onChange={setStartedAt} tint="lavender" />
       </Section>
 
       {/* 4. Notes */}
-      <Section n={4} title="Add details" optional>
+      <Section n={4} title={t('forms.feed_add_details')} optional>
         <textarea
           rows={3}
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          placeholder="What was watched / who was on the call / mood after…"
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30"
         />
       </Section>
@@ -173,7 +174,7 @@ export function ScreenTimeForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-lavender-500 to-brand-500 hover:from-lavender-600 hover:to-brand-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save screen time'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.screen_log_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">
@@ -181,7 +182,7 @@ export function ScreenTimeForm({
           </Button>
         )}
       </div>
-      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
+      <p className="text-center text-xs text-ink-muted">{t('forms.fast_log')} <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }

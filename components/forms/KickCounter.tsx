@@ -7,6 +7,7 @@ import { FetalMovementSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
 import { Input, Label, Textarea } from '@/components/ui/Input';
 import { Play, Pause, RotateCcw, Plus, Save } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * Kick counter — live session timer + kick tally. Saves a single
@@ -15,6 +16,7 @@ import { Play, Pause, RotateCcw, Plus, Save } from 'lucide-react';
  */
 export function KickCounter({ babyId }: { babyId: string }) {
   const router = useRouter();
+  const t = useT();
 
   const [running, setRunning]   = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -77,52 +79,51 @@ export function KickCounter({ babyId }: { babyId: string }) {
     <div className="space-y-5">
       {/* Live counter card */}
       <div className="rounded-3xl border border-lavender-200 bg-gradient-to-br from-lavender-50 via-white to-coral-50 p-6 shadow-card">
-        <div className="text-[11px] uppercase tracking-wider text-ink-muted text-center">Session</div>
+        <div className="text-[11px] uppercase tracking-wider text-ink-muted text-center">{t('forms.kicks_session_label')}</div>
         <div className="mt-1 text-center text-5xl font-bold tabular-nums text-ink-strong">{mmss}</div>
         <div className="mt-1 text-center text-sm text-ink-muted">
-          {running ? 'Counting…' : elapsedMs ? 'Paused' : 'Tap a kick to begin'}
+          {running ? t('forms.kicks_counting') : elapsedMs ? t('forms.kicks_paused') : t('forms.kicks_tap_begin')}
         </div>
 
         <button type="button" onClick={tally}
           className="mt-6 w-full h-32 rounded-3xl bg-gradient-to-br from-coral-500 to-coral-600 text-white shadow-lg active:scale-95 transition select-none grid place-items-center">
           <div className="text-center">
             <div className="text-7xl font-bold leading-none">{kicks}</div>
-            <div className="mt-1 text-xs uppercase tracking-widest opacity-80">kicks · tap to count</div>
+            <div className="mt-1 text-xs uppercase tracking-widest opacity-80">{t('forms.kicks_kicks_label')}</div>
           </div>
         </button>
 
         <div className="mt-4 flex items-center gap-2 justify-center">
           {running ? (
             <Button type="button" variant="secondary" onClick={pause} className="rounded-full">
-              <Pause className="h-4 w-4" /> Pause
+              <Pause className="h-4 w-4" /> {t('forms.kicks_pause')}
             </Button>
           ) : (
             <Button type="button" variant="secondary" onClick={start} className="rounded-full">
-              <Play className="h-4 w-4" /> Resume
+              <Play className="h-4 w-4" /> {t('forms.kicks_resume')}
             </Button>
           )}
           <Button type="button" variant="ghost" onClick={reset} className="rounded-full">
-            <RotateCcw className="h-4 w-4" /> Reset
+            <RotateCcw className="h-4 w-4" /> {t('forms.kicks_reset')}
           </Button>
         </div>
 
         {lowMovement && (
           <p className="mt-3 text-center text-sm text-coral-700 bg-coral-50 rounded-xl border border-coral-200 px-3 py-2">
-            ⚠ Fewer than 5 kicks in {minutes} min. After 28 weeks, contact your provider if this continues.
+            {t('forms.kicks_low_warning', { minutes })}
           </p>
         )}
       </div>
 
       {/* Optional notes + save */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
-        <Label>Notes (optional)</Label>
-        <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)}
-          placeholder="Time of day, activity, position…" />
+        <Label>{t('forms.notes')}</Label>
+        <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
         {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
         {msg && <p className="text-sm text-mint-700 font-medium">{msg}</p>}
         <Button type="button" onClick={save} disabled={saving || elapsedMs === 0 && kicks === 0}
           className="w-full h-12 rounded-2xl bg-gradient-to-r from-lavender-500 to-coral-500">
-          <Save className="h-4 w-4" /> {saving ? 'Saving…' : 'Save session'}
+          <Save className="h-4 w-4" /> {saving ? t('forms.saving') : t('forms.kicks_save_session')}
         </Button>
       </div>
 
@@ -134,6 +135,7 @@ export function KickCounter({ babyId }: { babyId: string }) {
 
 function ManualKickLog({ babyId }: { babyId: string }) {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [kicks, setKicks] = useState('10');
   const [duration, setDuration] = useState('60');
@@ -167,36 +169,36 @@ function ManualKickLog({ babyId }: { babyId: string }) {
     return (
       <button onClick={() => setOpen(true)}
         className="w-full text-sm font-semibold text-brand-600 hover:text-brand-700 inline-flex items-center justify-center gap-1.5 py-2">
-        <Plus className="h-4 w-4" /> Log a session manually
+        <Plus className="h-4 w-4" /> {t('forms.kicks_manual_log_link')}
       </button>
     );
   }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
-      <h4 className="text-sm font-bold text-ink-strong">Manual kick log</h4>
+      <h4 className="text-sm font-bold text-ink-strong">{t('forms.kicks_manual_title')}</h4>
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
-          <Label>When</Label>
+          <Label>{t('forms.kicks_when')}</Label>
           <Input type="datetime-local" value={when} onChange={e => setWhen(e.target.value)} />
         </div>
         <div>
-          <Label>Kicks</Label>
+          <Label>{t('forms.kicks_kicks')}</Label>
           <Input type="number" min={0} max={999} value={kicks} onChange={e => setKicks(e.target.value)} />
         </div>
         <div>
-          <Label>Duration (min)</Label>
+          <Label>{t('forms.kicks_duration_min')}</Label>
           <Input type="number" min={1} max={240} value={duration} onChange={e => setDuration(e.target.value)} />
         </div>
       </div>
-      <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes…" />
+      <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('forms.notes')} />
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
       <div className="flex items-center gap-2">
         <Button type="button" onClick={save} disabled={saving} className="flex-1 rounded-full">
-          <Save className="h-4 w-4" /> {saving ? 'Saving…' : 'Save'}
+          <Save className="h-4 w-4" /> {saving ? t('forms.saving') : t('forms.save')}
         </Button>
         <button type="button" onClick={() => setOpen(false)}
-          className="text-sm text-ink-muted hover:text-ink-strong">Cancel</button>
+          className="text-sm text-ink-muted hover:text-ink-strong">{t('common.cancel')}</button>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { PregnancyProfileSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
 import { Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { Save, Heart } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type PregnancyProfileValue = {
   mother_dob?: string | null;
@@ -28,6 +29,7 @@ export function PregnancyProfileForm({
   initial?: PregnancyProfileValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [motherDob, setMotherDob]       = useState(initial?.mother_dob ?? '');
   const [bloodType, setBloodType]       = useState(initial?.mother_blood_type ?? '');
   const [gravida, setGravida]           = useState<string>(initial?.gravida?.toString() ?? '');
@@ -65,7 +67,7 @@ export function PregnancyProfileForm({
     });
     setSaving(false);
     if (error) { setErr(error.message); return; }
-    setMsg('Saved.');
+    setMsg(t('forms.preg_saved'));
     router.refresh();
   }
 
@@ -73,41 +75,40 @@ export function PregnancyProfileForm({
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Mother&apos;s date of birth</Label>
+          <Label>{t('forms.preg_mother_dob')}</Label>
           <Input type="date" value={motherDob} onChange={e => setMotherDob(e.target.value)} />
         </div>
         <div>
-          <Label>Mother&apos;s blood type</Label>
+          <Label>{t('forms.preg_mother_blood')}</Label>
           <Select value={bloodType} onChange={e => setBloodType(e.target.value)}>
-            {BLOOD_TYPES.map(t => <option key={t} value={t}>{t || '— Unknown —'}</option>)}
+            {BLOOD_TYPES.map(bt => <option key={bt} value={bt}>{bt || t('forms.preg_unknown')}</option>)}
           </Select>
         </div>
         <div>
-          <Label>Gravida (total pregnancies)</Label>
-          <Input type="number" min={0} max={30} value={gravida} onChange={e => setGravida(e.target.value)} placeholder="2" />
+          <Label>{t('forms.preg_gravida')}</Label>
+          <Input type="number" min={0} max={30} value={gravida} onChange={e => setGravida(e.target.value)} />
         </div>
         <div>
-          <Label>Para (births)</Label>
-          <Input type="number" min={0} max={30} value={para} onChange={e => setPara(e.target.value)} placeholder="1" />
+          <Label>{t('forms.preg_para')}</Label>
+          <Input type="number" min={0} max={30} value={para} onChange={e => setPara(e.target.value)} />
         </div>
         <div>
-          <Label>Pre-pregnancy weight (kg)</Label>
-          <Input type="number" step="0.1" min={20} max={300} value={preWeight} onChange={e => setPreWeight(e.target.value)} placeholder="62" />
+          <Label>{t('forms.preg_pre_weight')}</Label>
+          <Input type="number" step="0.1" min={20} max={300} value={preWeight} onChange={e => setPreWeight(e.target.value)} />
         </div>
         <div>
-          <Label>Height (cm)</Label>
-          <Input type="number" step="0.1" min={100} max={250} value={preHeight} onChange={e => setPreHeight(e.target.value)} placeholder="165" />
+          <Label>{t('forms.preg_pre_height')}</Label>
+          <Input type="number" step="0.1" min={100} max={250} value={preHeight} onChange={e => setPreHeight(e.target.value)} />
         </div>
       </div>
 
       <div>
-        <Label>Known risk factors</Label>
-        <Textarea rows={2} value={riskFactors} onChange={e => setRiskFactors(e.target.value)}
-          placeholder="e.g. gestational diabetes risk, previous preeclampsia, Rh negative, thyroid…" />
+        <Label>{t('forms.preg_risk_factors')}</Label>
+        <Textarea rows={2} value={riskFactors} onChange={e => setRiskFactors(e.target.value)} />
       </div>
 
       <div>
-        <Label>Notes</Label>
+        <Label>{t('forms.notes')}</Label>
         <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} />
       </div>
 
@@ -117,7 +118,7 @@ export function PregnancyProfileForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-coral-500 to-peach-500">
-          <Heart className="h-4 w-4" /> {saving ? 'Saving…' : 'Save profile'}
+          <Heart className="h-4 w-4" /> {saving ? t('forms.saving') : t('forms.preg_save_cta')}
         </Button>
       </div>
     </form>

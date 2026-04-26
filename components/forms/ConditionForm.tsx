@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { Trash2, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/client';
 
 export type ConditionFormValue = {
   id?: string;
@@ -49,6 +50,7 @@ export function ConditionForm({
   initial?: ConditionFormValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [name, setName]               = useState(initial?.name ?? '');
   const [icdCode, setIcdCode]         = useState(initial?.icd_code ?? '');
   const [diagnosedAt, setDiagnosedAt] = useState(initial?.diagnosed_at ?? '');
@@ -106,7 +108,7 @@ export function ConditionForm({
       {/* Quick presets — only on the new form, not edit. */}
       {!initial?.id && (
         <div>
-          <Label>Common conditions</Label>
+          <Label>{t('forms.cond_section_picks')}</Label>
           <div className="mt-2 flex flex-wrap gap-2">
             {PRESETS.map(p => (
               <button type="button" key={p.name} onClick={() => pickPreset(p)}
@@ -121,43 +123,40 @@ export function ConditionForm({
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-ink-muted mt-1">
-            Tap to autofill the name + ICD-10 code, or just type a custom one below.
-          </p>
+          <p className="text-[11px] text-ink-muted mt-1">{t('forms.cond_picks_help')}</p>
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Label>Condition</Label>
-          <Input value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Cow's milk protein allergy, Reflux (GERD)" />
+          <Label>{t('forms.cond_name')}</Label>
+          <Input value={name} onChange={e => setName(e.target.value)} required />
         </div>
         <div>
-          <Label>ICD-10 code (optional)</Label>
-          <Input value={icdCode} onChange={e => setIcdCode(e.target.value)} placeholder="e.g. K52.21" />
+          <Label>{t('forms.cond_icd')}</Label>
+          <Input value={icdCode} onChange={e => setIcdCode(e.target.value)} />
         </div>
         <div>
-          <Label>Diagnosed on</Label>
+          <Label>{t('forms.cond_diagnosed_at')}</Label>
           <Input type="date" value={diagnosedAt} onChange={e => setDiagnosedAt(e.target.value)} />
         </div>
         <div>
-          <Label>Status</Label>
+          <Label>{t('forms.cond_status')}</Label>
           <Select value={status} onChange={e => setStatus(e.target.value as ConditionFormValue['status'])}>
-            <option value="active">Active</option>
-            <option value="chronic">Chronic</option>
-            <option value="suspected">Suspected</option>
-            <option value="resolved">Resolved</option>
+            <option value="active">{t('forms.cond_status_active')}</option>
+            <option value="chronic">{t('forms.cond_status_chronic')}</option>
+            <option value="suspected">{t('forms.cond_status_suspected')}</option>
+            <option value="resolved">{t('forms.cond_status_resolved')}</option>
           </Select>
         </div>
         <div className="sm:col-span-2">
-          <Label>Treatment / management</Label>
-          <Textarea rows={3} value={treatment} onChange={e => setTreatment(e.target.value)}
-            placeholder="Current meds, lifestyle changes, monitoring schedule…" />
+          <Label>{t('forms.cond_treatment')}</Label>
+          <Textarea rows={3} value={treatment} onChange={e => setTreatment(e.target.value)} />
         </div>
       </div>
 
       <div>
-        <Label>Notes</Label>
+        <Label>{t('forms.notes')}</Label>
         <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
       </div>
 
@@ -166,7 +165,7 @@ export function ConditionForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-brand-500 to-mint-500">
-          <Activity className="h-4 w-4" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save condition'}
+          <Activity className="h-4 w-4" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.cond_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-12 rounded-2xl">

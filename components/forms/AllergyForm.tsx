@@ -7,6 +7,7 @@ import { AllergySchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
 import { Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { Trash2, AlertTriangle } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type AllergyFormValue = {
   id?: string;
@@ -26,6 +27,7 @@ export function AllergyForm({
   initial?: AllergyFormValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [allergen, setAllergen]   = useState(initial?.allergen ?? '');
   const [category, setCategory]   = useState<AllergyFormValue['category']>(initial?.category ?? 'food');
   const [reaction, setReaction]   = useState(initial?.reaction ?? '');
@@ -78,52 +80,51 @@ export function AllergyForm({
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Label>Allergen</Label>
-          <Input value={allergen} onChange={e => setAllergen(e.target.value)} required placeholder="e.g. Cow's milk protein, Penicillin, Peanuts" />
+          <Label>{t('forms.allergy_substance')}</Label>
+          <Input value={allergen} onChange={e => setAllergen(e.target.value)} required />
         </div>
         <div>
-          <Label>Category</Label>
+          <Label>{t('forms.allergy_category')}</Label>
           <Select value={category ?? ''} onChange={e => setCategory((e.target.value || null) as AllergyFormValue['category'])}>
-            <option value="">— Unknown —</option>
-            <option value="food">Food</option>
-            <option value="drug">Drug</option>
-            <option value="environmental">Environmental</option>
-            <option value="contact">Contact</option>
-            <option value="latex">Latex</option>
-            <option value="other">Other</option>
+            <option value="">{t('forms.preg_unknown')}</option>
+            <option value="food">{t('forms.allergy_cat_food')}</option>
+            <option value="drug">{t('forms.allergy_cat_drug')}</option>
+            <option value="environmental">{t('forms.allergy_cat_env')}</option>
+            <option value="contact">{t('forms.allergy_cat_contact')}</option>
+            <option value="latex">{t('forms.allergy_cat_latex')}</option>
+            <option value="other">{t('forms.allergy_cat_other')}</option>
           </Select>
         </div>
         <div>
-          <Label>Severity</Label>
+          <Label>{t('forms.allergy_severity')}</Label>
           <Select value={severity} onChange={e => setSeverity(e.target.value as AllergyFormValue['severity'])}>
-            <option value="mild">Mild</option>
-            <option value="moderate">Moderate</option>
-            <option value="severe">Severe</option>
-            <option value="life_threatening">Life-threatening (anaphylaxis)</option>
+            <option value="mild">{t('forms.allergy_severity_mild')}</option>
+            <option value="moderate">{t('forms.allergy_severity_moderate')}</option>
+            <option value="severe">{t('forms.allergy_severity_severe')}</option>
+            <option value="life_threatening">{t('forms.allergy_severity_anaphylactic')}</option>
           </Select>
         </div>
         <div className="sm:col-span-2">
-          <Label>Reaction</Label>
-          <Textarea rows={2} value={reaction} onChange={e => setReaction(e.target.value)}
-            placeholder="What happens — hives, vomiting, swelling, breathing difficulty…" />
+          <Label>{t('forms.allergy_reaction')}</Label>
+          <Textarea rows={2} value={reaction} onChange={e => setReaction(e.target.value)} />
         </div>
         <div>
-          <Label>Diagnosed on</Label>
+          <Label>{t('forms.cond_diagnosed_at')}</Label>
           <Input type="date" value={diagnosedAt} onChange={e => setDiagnosedAt(e.target.value)} />
         </div>
         <div>
-          <Label>Status</Label>
+          <Label>{t('forms.cond_status')}</Label>
           <Select value={status} onChange={e => setStatus(e.target.value as AllergyFormValue['status'])}>
-            <option value="active">Active</option>
-            <option value="suspected">Suspected</option>
-            <option value="resolved">Resolved</option>
+            <option value="active">{t('forms.cond_status_active')}</option>
+            <option value="suspected">{t('forms.cond_status_suspected')}</option>
+            <option value="resolved">{t('forms.cond_status_resolved')}</option>
           </Select>
         </div>
       </div>
 
       <div>
-        <Label>Notes</Label>
-        <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Treatment plan, EpiPen on hand, avoidance instructions…" />
+        <Label>{t('forms.notes')}</Label>
+        <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
       </div>
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
@@ -131,7 +132,7 @@ export function AllergyForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-coral-500 to-peach-500">
-          <AlertTriangle className="h-4 w-4" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save allergy'}
+          <AlertTriangle className="h-4 w-4" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.allergy_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-12 rounded-2xl">
