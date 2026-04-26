@@ -7,6 +7,8 @@ import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
 import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor } from '@/lib/i18n';
 import { fmtDate, fmtDateTime, fmtRelative } from '@/lib/dates';
 import {
   Syringe, Plus, Edit3, Sparkles, ArrowRight, Clock,
@@ -64,6 +66,7 @@ export default async function VaccinationsLog({
   searchParams: { tab?: Tab; id?: string };
 }) {
   const supabase = createClient();
+  const t = tFor((await loadUserPrefs(supabase)).language);
   const perms = await assertRole(params.babyId, { requireLogs: true });
 
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
@@ -95,24 +98,24 @@ export default async function VaccinationsLog({
   return (
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Health" eyebrowTint="lavender"
-        title="Vaccinations"
-        subtitle={`${rows.length} entries · ${done.length} administered · ${overdue.length} overdue`}
+        eyebrow={t('trackers.track_eyebrow')} eyebrowTint="lavender"
+        title={t('trackers.vax_title')}
+        subtitle={t('trackers.vax_sub')}
         right={
           perms.canWriteLogs ? (
             <div className="flex items-center gap-2 flex-wrap justify-end">
               {rows.length === 0 && <SeedScheduleButton babyId={params.babyId} />}
               {rows.length > 0 && (
                 <BulkDelete babyId={params.babyId} table="vaccinations" timeColumn="scheduled_at"
-                  visibleIds={rows.map(r => r.id)} kindLabel="vaccination entries" />
+                  visibleIds={rows.map(r => r.id)} kindLabel={t('trackers.vax_title').toLowerCase()} />
               )}
               <Link href={`/babies/${params.babyId}/vaccinations/new`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-                <Plus className="h-4 w-4" /> Add
+                <Plus className="h-4 w-4" /> {t('trackers.vax_cta')}
               </Link>
             </div>
           ) : (
-            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">{t('page.read_only')}</span>
           )
         } />
 
@@ -303,7 +306,7 @@ export default async function VaccinationsLog({
         </>
       )}
       <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
-        pageScope="vaccinations_list" title="Page comments" />
+        pageScope="vaccinations_list" title={t('page.page_comments')} />
     </PageShell>
   );
 }

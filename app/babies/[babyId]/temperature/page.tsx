@@ -8,6 +8,8 @@ import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
 import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor } from '@/lib/i18n';
 import { Sparkline } from '@/components/Sparkline';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate, yesterdayLocalDate, localDayKey,
@@ -63,6 +65,7 @@ export default async function TemperatureLog({
   searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
+  const t = tFor((await loadUserPrefs(supabase)).language);
   const range = parseRangeParam(searchParams);
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const activeStatuses = rawTypes.filter((t): t is TempStatus => (TEMP_STATUSES as readonly string[]).includes(t));
@@ -103,21 +106,21 @@ export default async function TemperatureLog({
   return (
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Temperature" eyebrowTint="coral"
-        title="Temperature Log"
-        subtitle={`All temperature readings for ${baby.name}.`}
+        eyebrow={t('trackers.track_eyebrow')} eyebrowTint="coral"
+        title={t('trackers.temp_title')}
+        subtitle={t('trackers.temp_sub')}
         right={
           perms.canWriteLogs ? (
             <div className="flex items-center gap-2">
               <BulkDelete babyId={params.babyId} table="temperature_logs" timeColumn="measured_at"
-                visibleIds={rows.map(r => r.id)} kindLabel="readings" />
+                visibleIds={rows.map(r => r.id)} kindLabel={t('trackers.temp_title').toLowerCase()} />
               <Link href={`/babies/${params.babyId}/temperature/new`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-coral-500 to-coral-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-                <Plus className="h-4 w-4" /> Log reading
+                <Plus className="h-4 w-4" /> {t('trackers.temp_cta')}
               </Link>
             </div>
           ) : (
-            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">{t('page.read_only')}</span>
           )
         } />
 
@@ -224,7 +227,7 @@ export default async function TemperatureLog({
                     </div>
                   )}
                   <div className="border-t border-slate-100 pt-3">
-                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Logged on</div>
+                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.logged_on')}</div>
                     <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
                   </div>
                 </div>
@@ -267,7 +270,7 @@ export default async function TemperatureLog({
         </div>
       </div>
       <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
-        pageScope="temperature_list" title="Page comments" />
+        pageScope="temperature_list" title={t('page.page_comments')} />
     </PageShell>
   );
 }

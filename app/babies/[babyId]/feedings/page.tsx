@@ -13,6 +13,8 @@ import {
   lastNDaysWindow, todayLocalDate, yesterdayLocalDate, localDayKey,
 } from '@/lib/dates';
 import { fmtMl } from '@/lib/units';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor } from '@/lib/i18n';
 import {
   Milk, Baby as BabyIcon, Cookie, Plus, Edit3, Sparkles,
   ArrowRight, Clock,
@@ -76,6 +78,7 @@ export default async function FeedingsLog({
 }) {
   const supabase = createClient();
   const range = parseRangeParam(searchParams);
+  const t = tFor((await loadUserPrefs(supabase)).language);
   // Kind filter — accepts a single `type=` or comma-separated list. Empty = all.
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean) as MilkType[];
   const activeTypes: MilkType[] = rawTypes.filter((t): t is MilkType => MILK_TYPES.includes(t));
@@ -117,21 +120,21 @@ export default async function FeedingsLog({
   return (
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Feedings" eyebrowTint="peach"
-        title="Feeding Log"
-        subtitle={`All recorded feedings for ${baby.name}.`}
+        eyebrow={t('trackers.track_eyebrow')} eyebrowTint="peach"
+        title={t('trackers.feedings_title')}
+        subtitle={t('trackers.feedings_sub')}
         right={
           perms.canWriteLogs ? (
             <div className="flex items-center gap-2">
               <BulkDelete babyId={params.babyId} table="feedings" timeColumn="feeding_time"
-                visibleIds={rows.map(r => r.id)} kindLabel="feedings" />
+                visibleIds={rows.map(r => r.id)} kindLabel={t('trackers.feedings_title').toLowerCase()} />
               <Link href={`/babies/${params.babyId}/feedings/new`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-peach-500 to-coral-500 hover:brightness-105 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-                <Plus className="h-4 w-4" /> Log feed
+                <Plus className="h-4 w-4" /> {t('trackers.feedings_cta')}
               </Link>
             </div>
           ) : (
-            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">{t('page.read_only')}</span>
           )
         } />
 
@@ -149,7 +152,7 @@ export default async function FeedingsLog({
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
           {groups.length === 0 && (
             <div className="p-10 text-center text-sm text-ink-muted">
-              No feedings in this window.
+              {t('page.no_in_window')}
             </div>
           )}
 
@@ -305,7 +308,7 @@ export default async function FeedingsLog({
                       )}
 
                       <div className="border-t border-slate-100 pt-3">
-                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Logged on</div>
+                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.logged_on')}</div>
                         <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
                       </div>
                     </>
@@ -350,7 +353,7 @@ export default async function FeedingsLog({
         </div>
       </div>
       <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
-        pageScope="feedings_list" title="Page comments" />
+        pageScope="feedings_list" title={t('page.page_comments')} />
     </PageShell>
   );
 }

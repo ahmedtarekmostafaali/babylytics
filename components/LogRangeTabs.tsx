@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Calendar, Check } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 type Range = '24h' | '7d' | '30d' | '90d' | 'custom';
 
@@ -27,6 +28,7 @@ export function LogRangeTabs({
   const router = useRouter();
   const pathname = usePathname() ?? '';
   const params = useSearchParams();
+  const t = useT();
   const active: Range = (current ?? (params?.get('range') as Range) ?? '24h') as Range;
 
   const initialStart = params?.get('start')?.slice(0, 10) ?? '';
@@ -61,10 +63,10 @@ export function LogRangeTabs({
   }
 
   const tabs: { key: Exclude<Range, 'custom'>; label: string }[] = [
-    { key: '24h', label: '24 h' },
-    { key: '7d',  label: '7 d' },
-    { key: '30d', label: '30 d' },
-    { key: '90d', label: '90 d' },
+    { key: '24h', label: t('trackers.range_24h') },
+    { key: '7d',  label: t('trackers.range_7d') },
+    { key: '30d', label: t('trackers.range_30d') },
+    { key: '90d', label: t('trackers.range_90d') },
   ];
 
   return (
@@ -89,22 +91,22 @@ export function LogRangeTabs({
             'inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-semibold transition',
             active === 'custom' || openCustom ? 'bg-lavender-500 text-white' : 'text-ink-muted hover:text-ink',
           )}>
-          <Calendar className="h-3.5 w-3.5" /> Custom
+          <Calendar className="h-3.5 w-3.5" /> {t('trackers.range_custom')}
         </button>
       </div>
 
       {openCustom && (
         <div className="inline-flex items-center gap-2 rounded-2xl bg-white border border-slate-200 p-2 shadow-sm flex-wrap">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted px-1">From</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted px-1">{t('trackers.range_from')}</span>
           <input type="date" value={from} onChange={e => setFrom(e.target.value)}
             className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-sm focus:outline-none focus:border-lavender-500" />
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted px-1">To</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted px-1">{t('trackers.range_to')}</span>
           <input type="date" value={to} onChange={e => setTo(e.target.value)}
             className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-sm focus:outline-none focus:border-lavender-500" />
           <button type="button" onClick={applyCustom}
             disabled={!from || !to}
             className="inline-flex items-center gap-1 rounded-lg bg-lavender-500 hover:bg-lavender-600 text-white text-xs font-semibold px-3 h-8 disabled:opacity-50">
-            <Check className="h-3.5 w-3.5" /> Apply
+            <Check className="h-3.5 w-3.5" /> {t('trackers.range_apply')}
           </button>
         </div>
       )}

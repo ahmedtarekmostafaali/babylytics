@@ -223,6 +223,87 @@ export const ar: Messages = {
     log_eyebrow:   'تسجيل',
   },
 
+  trackers: {
+    range_24h:    'آخر 24 ساعة',
+    range_7d:     '7 أيام',
+    range_30d:    '30 يوم',
+    range_90d:    '90 يوم',
+    range_custom: 'مخصص',
+    range_from:   'من',
+    range_to:     'إلى',
+    range_apply:  'تطبيق',
+    log_eyebrow:  'تسجيل',
+    add_eyebrow:  'إضافة',
+    edit_eyebrow: 'تعديل',
+    track_eyebrow:'تتبع',
+    no_in_window: 'لا يوجد شيء في هذه الفترة.',
+    no_X_in_window: 'لا توجد {what} في هذه الفترة.',
+    today_kw:     'اليوم',
+    yesterday_kw: 'الأمس',
+    pick_to_see:  'اختر عنصرًا من القائمة لرؤية التفاصيل.',
+    logged_on:    'سُجل في',
+    notes_label:  'ملاحظات',
+    cta_log:      'تسجيل {what}',
+    cta_add:      'إضافة {what}',
+    bulk_delete:  'حذف متعدد',
+
+    feedings_title: 'الرضعات',
+    feedings_sub:   'جميع الرضعات المسجلة.',
+    feedings_cta:   'تسجيل رضعة',
+    feeding_label:  'رضعة',
+    feed_count_n:   '{n} رضعة',
+    feed_total:     'الإجمالي',
+
+    stool_title:    'البراز',
+    stool_sub:      'جميع تغييرات الحفاض المسجلة.',
+    stool_cta:      'تسجيل تبرز',
+    stool_label:    'تبرز',
+
+    sleep_title:    'النوم',
+    sleep_sub:      'القيلولة والليل والجلسات الحالية.',
+    sleep_cta:      'تسجيل نوم',
+    sleep_label:    'نوم',
+
+    temp_title:     'درجة الحرارة',
+    temp_sub:       'كل قراءة.',
+    temp_cta:       'تسجيل حرارة',
+    temp_label:     'حرارة',
+
+    meas_title:     'القياسات',
+    meas_sub:       'الوزن والطول ومحيط الرأس.',
+    meas_cta:       'تسجيل قياس',
+    meas_label:     'قياس',
+
+    meds_title:     'الأدوية',
+    meds_sub:       'الوصفات النشطة وسجل الجرعات.',
+    meds_cta:       'إضافة دواء',
+    meds_log_cta:   'تسجيل جرعة',
+
+    vax_title:      'التطعيمات',
+    vax_sub:        'الجدول والسجل.',
+    vax_cta:        'إضافة تطعيم',
+
+    activities_title: 'الأنشطة',
+    activities_sub:   'جميع جلسات النشاط المسجلة.',
+    activities_cta:   'تسجيل نشاط',
+
+    teething_title: 'التسنين',
+    teething_sub:   'بزوغ الأسنان والألم والتهدئة — ما نجح ومتى.',
+    teething_cta:   'تسجيل تسنين',
+
+    speaking_title: 'الكلام',
+    speaking_sub:   'هديل، مناغاة، كلمات، جمل.',
+    speaking_cta:   'تسجيل كلام',
+
+    screen_title:   'وقت الشاشة',
+    screen_sub:     'التعرض اليومي للشاشة.',
+    screen_cta:     'تسجيل وقت شاشة',
+
+    labs_title:     'التحاليل والأشعة',
+    labs_sub:       'الدم، البول، البراز، الزراعة، الأشعة السينية، السونار، الرنين، المقطعية — كلها في مكان واحد.',
+    labs_cta:       'إضافة تحليل أو أشعة',
+  },
+
   auth: {
     sign_in: 'تسجيل الدخول',
     sign_up: 'إنشاء حساب',

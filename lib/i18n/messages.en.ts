@@ -237,6 +237,92 @@ export const en = {
     log_eyebrow:   'Log',
   },
 
+  // ── Tracker list pages (feedings, stool, sleep, etc.) ────────────
+  trackers: {
+    // Range filter
+    range_24h:    'Last 24h',
+    range_7d:     '7 days',
+    range_30d:    '30 days',
+    range_90d:    '90 days',
+    range_custom: 'Custom',
+    range_from:   'From',
+    range_to:     'To',
+    range_apply:  'Apply',
+    // Page-shell strings shared across every tracker
+    log_eyebrow:  'Log',
+    add_eyebrow:  'Add',
+    edit_eyebrow: 'Edit',
+    track_eyebrow:'Track',
+    no_in_window: 'Nothing in this window.',
+    no_X_in_window: 'No {what} in this window.',
+    today_kw:     'Today',
+    yesterday_kw: 'Yesterday',
+    pick_to_see:  'Pick an item from the list to see details.',
+    logged_on:    'Logged on',
+    notes_label:  'Notes',
+    // CTAs
+    cta_log:      'Log {what}',
+    cta_add:      'Add {what}',
+    bulk_delete:  'Bulk delete',
+
+    // Per-tracker titles + subtitles
+    feedings_title: 'Feedings',
+    feedings_sub:   'All recorded feeds.',
+    feedings_cta:   'Log feeding',
+    feeding_label:  'Feeding',
+    feed_count_n:   '{n} feeds',
+    feed_total:     'Total',
+
+    stool_title:    'Stool',
+    stool_sub:      'All recorded diaper changes.',
+    stool_cta:      'Log stool',
+    stool_label:    'Stool',
+
+    sleep_title:    'Sleep',
+    sleep_sub:      'Naps, nights, and ongoing sessions.',
+    sleep_cta:      'Log sleep',
+    sleep_label:    'Sleep',
+
+    temp_title:     'Temperature',
+    temp_sub:       'Every reading.',
+    temp_cta:       'Log temperature',
+    temp_label:     'Temperature',
+
+    meas_title:     'Measurements',
+    meas_sub:       'Weight, height, head circumference.',
+    meas_cta:       'Log measurement',
+    meas_label:     'Measurement',
+
+    meds_title:     'Medications',
+    meds_sub:       'Active prescriptions and dose log.',
+    meds_cta:       'Add medication',
+    meds_log_cta:   'Log a dose',
+
+    vax_title:      'Vaccinations',
+    vax_sub:        'Schedule and history.',
+    vax_cta:        'Add vaccination',
+
+    activities_title: 'Activities',
+    activities_sub:   'All recorded activity sessions.',
+    activities_cta:   'Log activity',
+
+    teething_title: 'Teething',
+    teething_sub:   'Eruptions, pain, soothing — what worked and when.',
+    teething_cta:   'Log teething',
+
+    speaking_title: 'Speaking',
+    speaking_sub:   'Coos, babbles, words, sentences.',
+    speaking_cta:   'Log speech',
+
+    screen_title:   'Screen time',
+    screen_sub:     'Daily screen exposure.',
+    screen_cta:     'Log screen time',
+
+    labs_title:     'Labs & Scans',
+    labs_sub:       'Blood, urine, stool, cultures, X-ray, ultrasound, MRI, CT — all in one place.',
+    labs_cta:       'Add lab or scan',
+  },
+
   // ── Auth ────────────────────────────────────────────────────────
   auth: {
     sign_in: 'Sign in',

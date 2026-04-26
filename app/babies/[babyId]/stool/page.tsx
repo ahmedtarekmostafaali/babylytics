@@ -8,6 +8,8 @@ import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
 import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor } from '@/lib/i18n';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate, yesterdayLocalDate, localDayKey,
 } from '@/lib/dates';
@@ -57,6 +59,7 @@ export default async function StoolLog({
   searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
+  const t = tFor((await loadUserPrefs(supabase)).language);
   const range = parseRangeParam(searchParams);
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const activeSizes = rawTypes.filter((t): t is StoolSize => (STOOL_SIZES as readonly string[]).includes(t));
@@ -94,21 +97,21 @@ export default async function StoolLog({
   return (
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Stool & diaper" eyebrowTint="mint"
-        title="Stool Log"
-        subtitle={`All recorded diaper changes for ${baby.name}.`}
+        eyebrow={t('trackers.track_eyebrow')} eyebrowTint="mint"
+        title={t('trackers.stool_title')}
+        subtitle={t('trackers.stool_sub')}
         right={
           perms.canWriteLogs ? (
             <div className="flex items-center gap-2">
               <BulkDelete babyId={params.babyId} table="stool_logs" timeColumn="stool_time"
-                visibleIds={rows.map(r => r.id)} kindLabel="stool logs" />
+                visibleIds={rows.map(r => r.id)} kindLabel={t('trackers.stool_title').toLowerCase()} />
               <Link href={`/babies/${params.babyId}/stool/new`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-mint-500 to-mint-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-                <Plus className="h-4 w-4" /> Log stool
+                <Plus className="h-4 w-4" /> {t('trackers.stool_cta')}
               </Link>
             </div>
           ) : (
-            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">{t('page.read_only')}</span>
           )
         } />
 
@@ -124,7 +127,7 @@ export default async function StoolLog({
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
           {groups.length === 0 && (
-            <div className="p-10 text-center text-sm text-ink-muted">No stool logs in this window.</div>
+            <div className="p-10 text-center text-sm text-ink-muted">{t('page.no_in_window')}</div>
           )}
           {groups.map(g => (
             <section key={g.k}>
@@ -214,7 +217,7 @@ export default async function StoolLog({
                   </div>
                 )}
                 <div className="border-t border-slate-100 pt-3">
-                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Logged on</div>
+                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.logged_on')}</div>
                   <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
                 </div>
               </div>
@@ -249,7 +252,7 @@ export default async function StoolLog({
         </div>
       </div>
       <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
-        pageScope="stool_list" title="Page comments" />
+        pageScope="stool_list" title={t('page.page_comments')} />
     </PageShell>
   );
 }
