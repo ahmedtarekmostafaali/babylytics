@@ -35,6 +35,21 @@ type LabPanelRow = {
 
 type Med = { id: string; name: string };
 
+// "New medication detected on a prescription". Saved as a medications row on
+// confirm; if the parent links this prescription to dose logs they can pick
+// the new med from the dropdown after the row is created.
+type NewMedRow = {
+  name: string;
+  dosage: string;
+  route: 'oral'|'topical'|'inhaled'|'nasal'|'rectal'|'injection'|'other';
+  frequency_hours: string;          // string for input control
+  total_doses: string;
+  starts_at: string;                // datetime-local
+  ends_at: string;                  // datetime-local
+  prescribed_by: string;
+  notes: string;
+};
+
 export function OcrReview({
   extracted,
   meds,
@@ -102,6 +117,25 @@ export function OcrReview({
     }))
   );
 
+  // Medications detected on a prescription scan. We keep a separate list so
+  // the parent can review the structured fields (name, dose, route, every-X
+  // hours) before we insert a `medications` row. On confirm these are
+  // inserted first; the saved IDs are then used to backfill any dose logs
+  // that referenced the medication by name.
+  const [newMeds, setNewMeds] = useState<NewMedRow[]>(() =>
+    (initial.medications ?? []).map(m => ({
+      name:            m.name ?? '',
+      dosage:          m.dosage ?? '',
+      route:           (m.route ?? 'oral') as NewMedRow['route'],
+      frequency_hours: m.frequency_hours != null ? String(m.frequency_hours) : '',
+      total_doses:     m.total_doses     != null ? String(m.total_doses)     : '',
+      starts_at:       m.starts_at ? isoToLocalInput(m.starts_at) : nowLocalInput(),
+      ends_at:         m.ends_at   ? isoToLocalInput(m.ends_at)   : '',
+      prescribed_by:   m.prescribed_by ?? '',
+      notes:           m.notes ?? '',
+    }))
+  );
+
   const [ultrasounds, setUltrasounds] = useState<UsRow[]>(() =>
     (initial.ultrasounds ?? []).map(u => ({
       scanned_at: u.scanned_at ? isoToLocalInput(u.scanned_at) : nowLocalInput(),
@@ -153,8 +187,8 @@ export function OcrReview({
   const readOnly = extracted.status === 'confirmed' || extracted.status === 'discarded';
 
   const hasAny = useMemo(
-    () => feedings.length + stools.length + measurements.length + medLogs.length > 0,
-    [feedings, stools, measurements, medLogs]
+    () => feedings.length + stools.length + measurements.length + medLogs.length + newMeds.length > 0,
+    [feedings, stools, measurements, medLogs, newMeds]
   );
 
   // ---- add/remove helpers ---------------------------------------------------
@@ -162,6 +196,10 @@ export function OcrReview({
   function addStool()      { setStools  (r => [...r, { stool_time: nowLocalInput(), quantity_category: 'medium', quantity_ml: '', color: '', consistency: '', notes: '' }]); }
   function addMeasurement(){ setMeasurements(r => [...r, { measured_at: nowLocalInput(), weight_kg: '', height_cm: '', head_circ_cm: '', notes: '' }]); }
   function addMedLog()     { setMedLogs(r => [...r, { medication_id: meds[0]?.id ?? '', medication_time: nowLocalInput(), status: 'taken', notes: '' }]); }
+  function addNewMed()     { setNewMeds(r => [...r, {
+    name: '', dosage: '', route: 'oral', frequency_hours: '', total_doses: '',
+    starts_at: nowLocalInput(), ends_at: '', prescribed_by: '', notes: '',
+  }]); }
 
   // ---- confirm --------------------------------------------------------------
   async function onConfirm() {
@@ -206,9 +244,14 @@ export function OcrReview({
       notes: freeNotes || undefined,
     };
 
+    // Filter out blank "new medication" rows. We require a name at minimum;
+    // a dosage is strongly recommended but not enforced at this layer.
+    const newMedsToInsert = newMeds.filter(m => m.name.trim());
+
     if (
       payload.feedings.length === 0 && payload.stools.length === 0 &&
-      payload.measurements.length === 0 && payload.medication_logs.length === 0
+      payload.measurements.length === 0 && payload.medication_logs.length === 0 &&
+      newMedsToInsert.length === 0
     ) {
       setSaving(false);
       setErr('Nothing to save — add at least one row, or discard the extraction.');
@@ -216,13 +259,69 @@ export function OcrReview({
     }
 
     const supabase = createClient();
+
+    // 1. Insert any new medications detected on the prescription FIRST so we
+    //    have IDs to reference in dose logs (or for the parent to pick later).
+    let createdMeds: { id: string; name: string }[] = [];
+    if (newMedsToInsert.length > 0) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const rows = newMedsToInsert.map(m => ({
+        baby_id:         extracted.baby_id,
+        name:            m.name.trim(),
+        dosage:          m.dosage || null,
+        route:           m.route,
+        frequency_hours: m.frequency_hours ? Number(m.frequency_hours) : null,
+        total_doses:     m.total_doses     ? Number(m.total_doses)     : null,
+        starts_at:       localInputToIso(m.starts_at),
+        ends_at:         m.ends_at ? localInputToIso(m.ends_at) : null,
+        prescribed_by:   m.prescribed_by || null,
+        notes:           m.notes || null,
+        created_by:      user?.id ?? null,
+      }));
+      const { data: inserted, error: medErr } = await supabase
+        .from('medications')
+        .insert(rows)
+        .select('id,name');
+      if (medErr) {
+        setSaving(false);
+        setErr(`Could not create medication: ${medErr.message}`);
+        return;
+      }
+      createdMeds = (inserted ?? []) as { id: string; name: string }[];
+    }
+
+    // 2. If any dose logs in the payload reference a placeholder medication_id
+    //    that matches a newly-inserted medication name, swap in the real ID.
+    //    (The current row UI requires picking from existing meds, so this only
+    //    matters if the OCR extractor populated medication_logs by name.)
+    if (createdMeds.length > 0 && payload.medication_logs.length > 0) {
+      const byName = new Map(createdMeds.map(m => [m.name.toLowerCase(), m.id]));
+      payload.medication_logs = payload.medication_logs.map(l => {
+        // Heuristic: if medication_id starts with "name:" treat the rest as
+        // the name to look up. Otherwise pass through unchanged.
+        if (typeof l.medication_id === 'string' && l.medication_id.startsWith('name:')) {
+          const lookup = byName.get(l.medication_id.slice(5).toLowerCase());
+          if (lookup) return { ...l, medication_id: lookup };
+        }
+        return l;
+      });
+    }
+
+    // 3. Hand off to the existing confirm RPC for everything else.
     const { error } = await supabase.rpc('confirm_extracted_text', {
       p_extracted: extracted.id,
       p_payload: payload,
     });
     setSaving(false);
     if (error) { setErr(error.message); return; }
-    router.push(`/babies/${babyId}`);
+
+    if (createdMeds.length > 0) {
+      // Bounce to the medications list so the parent can confirm what was
+      // created and edit doctor / schedule details.
+      router.push(`/babies/${babyId}/medications`);
+    } else {
+      router.push(`/babies/${babyId}`);
+    }
     router.refresh();
   }
 
@@ -369,6 +468,74 @@ export function OcrReview({
             <div className="md:col-span-5 flex items-end gap-3">
               <Input placeholder="notes" disabled={readOnly} value={m.notes} onChange={e => setMeasurements(r => patch(r, i, { notes: e.target.value }))} />
               {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setMeasurements(r => r.filter((_, j) => j !== i))}>remove</Button>}
+            </div>
+          </div>
+        ))}
+      </Section>
+
+      {/* Medications detected on a prescription. These create rows in the
+          `medications` table on confirm — not just dose logs. */}
+      <Section title={`New medications from prescription (${newMeds.length})`} onAdd={readOnly ? undefined : addNewMed}>
+        {newMeds.length === 0 && <Empty>No medications detected. Add one if this scan is a prescription.</Empty>}
+        {newMeds.map((m, i) => (
+          <div key={i} className="grid gap-3 md:grid-cols-6 items-end border-b border-slate-100 pb-3">
+            <div className="md:col-span-2">
+              <Label htmlFor={`nm${i}`}>Medication name</Label>
+              <Input id={`nm${i}`} disabled={readOnly} value={m.name} placeholder="e.g. Amoxicillin"
+                onChange={e => setNewMeds(r => patch(r, i, { name: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor={`nd${i}`}>Dosage</Label>
+              <Input id={`nd${i}`} disabled={readOnly} value={m.dosage} placeholder="5 ml"
+                onChange={e => setNewMeds(r => patch(r, i, { dosage: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor={`nr${i}`}>Route</Label>
+              <Select id={`nr${i}`} disabled={readOnly} value={m.route}
+                onChange={e => setNewMeds(r => patch(r, i, { route: e.target.value as NewMedRow['route'] }))}>
+                <option value="oral">oral</option>
+                <option value="topical">topical</option>
+                <option value="inhaled">inhaled</option>
+                <option value="nasal">nasal</option>
+                <option value="rectal">rectal</option>
+                <option value="injection">injection</option>
+                <option value="other">other</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor={`nf${i}`}>Every (hours)</Label>
+              <Input id={`nf${i}`} type="number" min={0.25} max={168} step={0.25} disabled={readOnly}
+                value={m.frequency_hours} placeholder="8"
+                onChange={e => setNewMeds(r => patch(r, i, { frequency_hours: e.target.value }))} />
+            </div>
+            <div>
+              <Label htmlFor={`nt${i}`}>Total doses</Label>
+              <Input id={`nt${i}`} type="number" min={0} step={1} disabled={readOnly}
+                value={m.total_doses} placeholder="21"
+                onChange={e => setNewMeds(r => patch(r, i, { total_doses: e.target.value }))} />
+            </div>
+            <div className="md:col-span-3">
+              <Label htmlFor={`ns${i}`}>Starts</Label>
+              <Input id={`ns${i}`} type="datetime-local" disabled={readOnly} value={m.starts_at}
+                onChange={e => setNewMeds(r => patch(r, i, { starts_at: e.target.value }))} />
+            </div>
+            <div className="md:col-span-3">
+              <Label htmlFor={`ne${i}`}>Ends (optional)</Label>
+              <Input id={`ne${i}`} type="datetime-local" disabled={readOnly} value={m.ends_at}
+                onChange={e => setNewMeds(r => patch(r, i, { ends_at: e.target.value }))} />
+            </div>
+            <div className="md:col-span-3">
+              <Label htmlFor={`np${i}`}>Prescribed by</Label>
+              <Input id={`np${i}`} disabled={readOnly} value={m.prescribed_by} placeholder="Dr. ……"
+                onChange={e => setNewMeds(r => patch(r, i, { prescribed_by: e.target.value }))} />
+            </div>
+            <div className="md:col-span-3">
+              <Label htmlFor={`nn${i}`}>Notes</Label>
+              <Input id={`nn${i}`} disabled={readOnly} value={m.notes}
+                onChange={e => setNewMeds(r => patch(r, i, { notes: e.target.value }))} />
+            </div>
+            <div className="md:col-span-6 flex justify-end">
+              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setNewMeds(r => r.filter((_, j) => j !== i))}>remove</Button>}
             </div>
           </div>
         ))}

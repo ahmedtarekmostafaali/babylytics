@@ -179,6 +179,19 @@ export interface StructuredOcr {
     }[];
   }[];
   lab_requests?: string[];
+  /** Medications detected on a prescription. Allows the OCR review screen
+   *  to create the medication row(s) directly, not just dose logs. */
+  medications?: {
+    name?: string;
+    dosage?: string;                 // e.g. "5 ml", "1 tablet"
+    route?: 'oral'|'topical'|'inhaled'|'nasal'|'rectal'|'injection'|'other';
+    frequency_hours?: number;        // every N hours
+    total_doses?: number;
+    starts_at?: string;
+    ends_at?: string;
+    prescribed_by?: string;
+    notes?: string;
+  }[];
   notes?: string;
 }
 

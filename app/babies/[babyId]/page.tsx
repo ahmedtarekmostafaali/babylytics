@@ -10,6 +10,8 @@ import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { GrowthInsights } from '@/components/GrowthInsights';
 import { MilestoneReferenceCard } from '@/components/MilestoneReference';
+import { FeedPaceCard } from '@/components/FeedPaceCard';
+import { compareTodayVsRollingAvg } from '@/lib/feed-kpis';
 import {
   ageInDays, dayWindow, fmtDate, fmtDateTime, fmtRelative, fmtTime,
   lastNDaysWindow, todayLocalDate, TIMEZONE,
@@ -247,6 +249,17 @@ export default async function BabyOverview({
   // so existing behavior is preserved when the user has never customized.
   const hiddenWidgets = await loadHiddenWidgets(supabase, babyId, 'overview');
   const show = (id: string) => showWidget(hiddenWidgets, id);
+
+  // Feed-pace comparison: today's accumulated ml vs the past-7-day average
+  // accumulated ml at the same time-of-day. Filter today's rows out of the
+  // 7-day window before passing in so they don't pollute the baseline.
+  const allWeekFeeds = (weekFeeds.data ?? []) as { feeding_time: string; quantity_ml: number | string | null }[];
+  const historyFeeds = allWeekFeeds.filter(r => {
+    const k = r.feeding_time.slice(0, 10);   // crude UTC-day key, fine for filtering since today's row already lives in todayFeeds
+    return k !== focusDate;
+  });
+  const todayFeedsForKpi = ((todayFeeds.data ?? []) as { feeding_time: string; quantity_ml: number | string | null }[]);
+  const feedPace = compareTodayVsRollingAvg(todayFeedsForKpi, historyFeeds);
 
   const w = (currentWeight.data as number | null) ?? null;
 
@@ -552,6 +565,7 @@ export default async function BabyOverview({
           href={`/babies/${babyId}/feedings`}
           badge={todayFeedCount > 0 ? 'today' : undefined}
         />}
+        {show('feed_pace') && <FeedPaceCard cmp={feedPace} />}
         {show('feeding_progress') && (() => {
           const wForCalc = (currentWeight.data as number | null) ?? Number(baby.birth_weight_kg ?? 0);
           const factor = Number(baby.feeding_factor_ml_per_kg_per_day ?? 150);

@@ -23,6 +23,7 @@ export const OVERVIEW_WIDGETS: WidgetDef[] = [
   { id: 'last_feeding',     label: 'Last feeding',     description: 'Most recent feed, time + amount.',         group: 'Latest activity' },
   { id: 'todays_feedings',  label: "Today's feedings", description: "Total ml + count of today's feeds.",      group: 'Latest activity' },
   { id: 'feeding_progress', label: 'Feeding % + remaining', description: 'Today\'s feeds vs daily target — % hit and ml left to goal.', group: 'Latest activity' },
+  { id: 'feed_pace',        label: 'Feed pace vs 7-day avg', description: 'Today\'s ml so far vs the same time-of-day average across the past 7 days.', group: 'Latest activity' },
   { id: 'last_sleep',       label: 'Last sleep',       description: 'Most recent sleep session or live status.', group: 'Latest activity' },
   { id: 'last_stool',       label: 'Last stool',       description: 'Most recent stool size + color.',          group: 'Latest activity' },
   { id: 'last_temp',        label: 'Last temperature', description: 'Most recent reading + method.',            group: 'Latest activity' },
