@@ -113,12 +113,13 @@ export default async function MedicationsLog({
     if (step <= 0) continue;
     const startMs = new Date(m.starts_at).getTime();
     const endMs   = m.ends_at ? new Date(m.ends_at).getTime() : Number.POSITIVE_INFINITY;
-    // First scheduled dose at or after today's start
-    let t = startMs;
-    if (t < todayStartMs) t += Math.ceil((todayStartMs - t) / step) * step;
-    for (; t < todayEndMs && t <= endMs; t += step) {
+    // First scheduled dose at or after today's start. Renamed from `t`
+    // (which would shadow the i18n translator at the top of this file).
+    let cursorMs = startMs;
+    if (cursorMs < todayStartMs) cursorMs += Math.ceil((todayStartMs - cursorMs) / step) * step;
+    for (; cursorMs < todayEndMs && cursorMs <= endMs; cursorMs += step) {
       todayDueTotal += 1;
-      if (t <= nowMs) todayDueByNow += 1;
+      if (cursorMs <= nowMs) todayDueByNow += 1;
     }
   }
   const todayLogged  = todayTaken + todayMissed + todaySkipped;

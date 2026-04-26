@@ -150,8 +150,10 @@ export default async function TemperatureLog({
               </div>
               <ul className="divide-y divide-slate-100">
                 {g.list.map(r => {
-                  const t = Number(r.temperature_c);
-                  const st = statusOf(t);
+                  // Local var renamed from `t` to `tempC` so it doesn't shadow
+                  // the i18n translator hoisted at the top of the page.
+                  const tempC = Number(r.temperature_c);
+                  const st = statusOf(tempC);
                   const active = selected?.id === r.id;
                   return (
                     <li key={r.id}>
@@ -164,7 +166,7 @@ export default async function TemperatureLog({
                           <Thermometer className="h-5 w-5" />
                         </span>
                         <div className="min-w-0">
-                          <div className="font-semibold text-ink-strong truncate">{t.toFixed(1)} °C · <span className="capitalize text-ink-muted font-normal">{r.method}</span></div>
+                          <div className="font-semibold text-ink-strong truncate">{tempC.toFixed(1)} °C · <span className="capitalize text-ink-muted font-normal">{r.method}</span></div>
                           {r.notes && <div className="text-xs text-ink-muted truncate">{r.notes}</div>}
                         </div>
                         <div className="flex items-center gap-2">
@@ -197,8 +199,9 @@ export default async function TemperatureLog({
             {!selected ? (
               <div className="p-8 text-center text-sm text-ink-muted">Pick a reading from the list.</div>
             ) : (() => {
-              const t = Number(selected.temperature_c);
-              const st = statusOf(t);
+              // Renamed `t` → `tempC` so it doesn't shadow the i18n translator.
+              const tempC = Number(selected.temperature_c);
+              const st = statusOf(tempC);
               const tintBg = { mint: 'bg-mint-50', peach: 'bg-peach-50', coral: 'bg-coral-50', brand: 'bg-brand-50' }[st.tint];
               return (
                 <div className="p-5 space-y-4">
@@ -207,7 +210,7 @@ export default async function TemperatureLog({
                       <Thermometer className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-ink-strong">{t.toFixed(1)} °C</div>
+                      <div className="font-bold text-ink-strong">{tempC.toFixed(1)} °C</div>
                       <div className="text-xs text-ink-muted flex items-center gap-1">
                         <Clock className="h-3 w-3" /> {fmtDateTime(selected.measured_at)}
                       </div>
