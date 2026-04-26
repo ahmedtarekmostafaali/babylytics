@@ -5,6 +5,7 @@ import {
   whoMedianFor, whoMinFor, compareToMedian, compareToMin,
   spurtStateFor, milestoneFor, type Sex,
 } from '@/lib/growth-standards';
+import { tFor, type Lang } from '@/lib/i18n';
 
 type Props = {
   babyId: string;
@@ -14,6 +15,8 @@ type Props = {
   weightKg: number | null;
   heightCm: number | null;
   headCm:   number | null;
+  /** Language for translated labels. Defaults to English when omitted. */
+  lang?: Lang;
 };
 
 /**
@@ -26,7 +29,8 @@ type Props = {
  * 3. Growth spurt window (current / next)
  * 4. Developmental milestone for current age bucket
  */
-export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heightCm, headCm }: Props) {
+export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heightCm, headCm, lang = 'en' }: Props) {
+  const t = tFor(lang);
   const sexT = (sex as Sex) ?? 'unspecified';
   const median = whoMedianFor(ageDays, sexT);
   const min    = whoMinFor(ageDays, sexT);
@@ -46,75 +50,75 @@ export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heigh
         <span className="h-7 w-7 rounded-lg grid place-items-center bg-gradient-to-br from-mint-500 to-brand-500 text-white">
           <Sparkles className="h-3.5 w-3.5" />
         </span>
-        <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Growth insights</h2>
-        <span className="text-[10px] text-ink-muted">vs WHO standards</span>
+        <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">{t('growth.title')}</h2>
+        <span className="text-[10px] text-ink-muted">{t('growth.vs_who')}</span>
         <Link href={`/babies/${babyId}/measurements`}
           className="ml-auto inline-flex items-center gap-1 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-xs font-medium px-3 py-1 text-ink-strong">
-          Log measurement <ArrowRight className="h-3 w-3" />
+          {t('growth.log_measurement')} <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
 
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {/* 1. Weight */}
-        <InsightCard tint="brand" icon={Scale} label="Weight">
+        <InsightCard tint="brand" icon={Scale} label={t('growth.weight')}>
           {weightKg != null && median.weight_kg_median != null ? (
             <>
               <div className="text-2xl font-bold tabular-nums text-ink-strong">{fmtKg(weightKg)}</div>
               <div className="text-[11px] text-ink-muted mt-0.5 leading-snug">
-                Median: <strong className="text-ink">{fmtKg(median.weight_kg_median)}</strong>
+                {t('growth.median')}: <strong className="text-ink">{fmtKg(median.weight_kg_median)}</strong>
                 {min.weight_kg_min != null && (
-                  <> · min: <strong className="text-ink">{fmtKg(min.weight_kg_min)}</strong></>
+                  <> · {t('growth.min')}: <strong className="text-ink">{fmtKg(min.weight_kg_min)}</strong></>
                 )}
               </div>
-              <StatusLine status={wCmp.status} delta={wCmp.delta} unit="kg" />
+              <StatusLine status={wCmp.status} delta={wCmp.delta} unit="kg" t={t} />
               {wMin.status === 'below_min' && (
                 <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-coral-100 text-coral-800 text-[11px] font-bold px-2 py-0.5">
-                  ⚠ below WHO min — talk to pediatrician
+                  ⚠ {t('growth.below_who_min')}
                 </div>
               )}
             </>
           ) : weightKg != null ? (
             <>
               <div className="text-2xl font-bold tabular-nums text-ink-strong">{fmtKg(weightKg)}</div>
-              <div className="text-[11px] text-ink-muted mt-0.5">No reference yet for this age</div>
+              <div className="text-[11px] text-ink-muted mt-0.5">{t('growth.no_reference_yet')}</div>
             </>
           ) : (
-            <Empty>Log a weight to see {first} vs WHO standards.</Empty>
+            <Empty>{t('growth.log_weight_to_see', { first })}</Empty>
           )}
         </InsightCard>
 
         {/* 2. Length / height */}
-        <InsightCard tint="mint" icon={Ruler} label="Length / height">
+        <InsightCard tint="mint" icon={Ruler} label={t('growth.length_height')}>
           {heightCm != null && median.length_cm_median != null ? (
             <>
               <div className="text-2xl font-bold tabular-nums text-ink-strong">{fmtCm(heightCm)}</div>
               <div className="text-[11px] text-ink-muted mt-0.5 leading-snug">
-                Median: <strong className="text-ink">{fmtCm(median.length_cm_median)}</strong>
+                {t('growth.median')}: <strong className="text-ink">{fmtCm(median.length_cm_median)}</strong>
                 {min.length_cm_min != null && (
-                  <> · min: <strong className="text-ink">{fmtCm(min.length_cm_min)}</strong></>
+                  <> · {t('growth.min')}: <strong className="text-ink">{fmtCm(min.length_cm_min)}</strong></>
                 )}
               </div>
-              <StatusLine status={hCmp.status} delta={hCmp.delta} unit="cm" />
+              <StatusLine status={hCmp.status} delta={hCmp.delta} unit="cm" t={t} />
               {hMin.status === 'below_min' && (
                 <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-coral-100 text-coral-800 text-[11px] font-bold px-2 py-0.5">
-                  ⚠ below WHO min — talk to pediatrician
+                  ⚠ {t('growth.below_who_min')}
                 </div>
               )}
             </>
           ) : heightCm != null ? (
             <>
               <div className="text-2xl font-bold tabular-nums text-ink-strong">{fmtCm(heightCm)}</div>
-              <div className="text-[11px] text-ink-muted mt-0.5">No reference yet for this age</div>
+              <div className="text-[11px] text-ink-muted mt-0.5">{t('growth.no_reference_yet')}</div>
             </>
           ) : (
-            <Empty>Log a height to see {first} vs WHO standards.</Empty>
+            <Empty>{t('growth.log_height_to_see', { first })}</Empty>
           )}
           {/* Bonus: head circumference if we have one */}
           {headCm != null && median.head_cm_median != null && (
             <div className="mt-2 pt-2 border-t border-slate-100 text-[11px] text-ink-muted">
-              Head: <strong className="text-ink">{fmtCm(headCm)}</strong> · median <strong>{fmtCm(median.head_cm_median)}</strong>
+              {t('growth.head')}: <strong className="text-ink">{fmtCm(headCm)}</strong> · {t('growth.median').toLowerCase()} <strong>{fmtCm(median.head_cm_median)}</strong>
               {min.head_cm_min != null && (
-                <> · min <strong>{fmtCm(min.head_cm_min)}</strong></>
+                <> · {t('growth.min')} <strong>{fmtCm(min.head_cm_min)}</strong></>
               )}
             </div>
           )}
@@ -124,28 +128,28 @@ export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heigh
         <InsightCard
           tint={spurt.state === 'in' ? 'coral' : spurt.state === 'soon' ? 'peach' : 'lavender'}
           icon={TrendingUp}
-          label={spurt.state === 'in' ? 'Growth spurt now' : spurt.state === 'soon' ? 'Growth spurt soon' : 'Next growth spurt'}>
+          label={spurt.state === 'in' ? t('growth.growth_spurt_now') : spurt.state === 'soon' ? t('growth.growth_spurt_soon') : t('growth.next_growth_spurt')}>
           <div className="text-lg font-bold text-ink-strong leading-tight">
             {spurt.label}
           </div>
           <div className="text-[11px] text-ink-muted mt-1 leading-snug">{spurt.sub}</div>
           {spurt.state === 'soon' && spurt.days_until != null && (
             <div className="text-[11px] text-peach-700 mt-1.5 font-semibold">
-              ~{spurt.days_until} day{spurt.days_until === 1 ? '' : 's'} away
+              {t('growth.days_away', { n: spurt.days_until, s: spurt.days_until === 1 ? '' : 's' })}
             </div>
           )}
           {spurt.state === 'after' && spurt.days_since != null && (
             <div className="text-[11px] text-ink-muted mt-1.5">
-              {spurt.days_since} days since the last one
+              {t('growth.days_since_last', { n: spurt.days_since })}
             </div>
           )}
         </InsightCard>
 
         {/* 4. Milestone */}
-        <InsightCard tint="lavender" icon={Brain} label={`Milestones · ${milestone.age_label}`}>
+        <InsightCard tint="lavender" icon={Brain} label={`${t('growth.milestones')} · ${milestone.age_label}`}>
           <div className="text-sm font-bold text-ink-strong leading-snug">{milestone.headline}</div>
           <div className="text-[11px] text-ink-muted mt-1 leading-snug">
-            <strong className="text-ink">Watch for:</strong> {milestone.watch_for}
+            <strong className="text-ink">{t('growth.watch_for')}:</strong> {milestone.watch_for}
           </div>
         </InsightCard>
       </div>
@@ -192,30 +196,31 @@ function InsightCard({
   );
 }
 
-function StatusLine({ status, delta, unit }: {
+function StatusLine({ status, delta, unit, t }: {
   status: 'on_track' | 'above' | 'below' | 'unknown';
   delta: number | null;
   unit: string;
+  t: ReturnType<typeof tFor>;
 }) {
   if (status === 'unknown' || delta == null) return null;
   const sign = delta >= 0 ? '+' : '';
   if (status === 'on_track') {
     return (
       <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-mint-50 text-mint-700 text-[11px] font-bold px-2 py-0.5">
-        ✓ on track ({sign}{delta.toFixed(1)} {unit})
+        ✓ {t('growth.on_track')} ({sign}{delta.toFixed(1)} {unit})
       </div>
     );
   }
   if (status === 'above') {
     return (
       <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-peach-50 text-peach-700 text-[11px] font-bold px-2 py-0.5">
-        ↑ above median ({sign}{delta.toFixed(1)} {unit})
+        ↑ {t('growth.above_median')} ({sign}{delta.toFixed(1)} {unit})
       </div>
     );
   }
   return (
     <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-coral-50 text-coral-700 text-[11px] font-bold px-2 py-0.5">
-      ↓ below median ({delta.toFixed(1)} {unit})
+      ↓ {t('growth.below_median')} ({delta.toFixed(1)} {unit})
     </div>
   );
 }

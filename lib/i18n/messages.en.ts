@@ -163,6 +163,80 @@ export const en = {
     quick_measurement:'Measurement',
   },
 
+  // ── Growth Insights strip ────────────────────────────────────────
+  growth: {
+    title:                'Growth insights',
+    vs_who:               'vs WHO standards',
+    log_measurement:      'Log measurement',
+    weight:               'Weight',
+    length_height:        'Length / height',
+    growth_spurt_now:     'Growth spurt now',
+    growth_spurt_soon:    'Growth spurt soon',
+    next_growth_spurt:    'Next growth spurt',
+    median:               'Median',
+    min:                  'min',
+    median_for_age:       'Median for age',
+    no_reference_yet:     'No reference yet for this age',
+    log_weight_to_see:    'Log a weight to see {first} vs WHO standards.',
+    log_height_to_see:    'Log a height to see {first} vs WHO standards.',
+    head:                 'Head',
+    on_track:             'on track',
+    above_median:         'above median',
+    below_median:         'below median',
+    below_who_min:        'below WHO min — talk to pediatrician',
+    days_away:            '~{n} day{s} away',
+    days_since_last:      '{n} days since the last one',
+    milestones:           'Milestones',
+    watch_for:            'Watch for',
+    age_label:            'Age',
+  },
+
+  // ── Feed pace card ───────────────────────────────────────────────
+  feedpace: {
+    title:           'Feed pace',
+    today_so_far:    'Today so far',
+    seven_day_avg:   '7-day avg',
+    by_time:         'by {time}',
+    baseline_forming:'Baseline forming…',
+    on_pace:         'on pace',
+    ahead:           '+{ml} ({pct}%) ahead',
+    behind:          '{ml} ({pct}%) behind',
+  },
+
+  // ── Milestone reference card ─────────────────────────────────────
+  milestones_ref: {
+    title:           'Milestone reference',
+    log:             'Log',
+    intro:           'Typical age window (min · avg · max). Wide variation is normal — these are reference points, not a scoreboard.',
+    state_early:     'early',
+    state_on_time:   'on time',
+    state_late:      'late',
+    state_overdue:   'watch',
+    state_pending:   'pending',
+    logged_at:       'logged @ {months}m',
+    label_first_tooth:    'First tooth',
+    label_crawling:       'Crawling',
+    label_first_words:    'First words',
+    label_walking:        'Walking',
+    label_last_tooth:     'Full primary set',
+    label_first_sentence: 'First sentences',
+  },
+
+  // ── Page chrome / shared list-page bits ──────────────────────────
+  page: {
+    overview:      'Overview',
+    back:          'Back',
+    add:           'Add',
+    edit:          'Edit',
+    read_only:     'Read-only',
+    no_in_window:  'Nothing in this window.',
+    showing_recent_500: 'Showing most recent 500 entries. Narrow the range to see more.',
+    page_comments: 'Page comments',
+    track_eyebrow: 'Track',
+    care_eyebrow:  'Care',
+    log_eyebrow:   'Log',
+  },
+
   // ── Auth ────────────────────────────────────────────────────────
   auth: {
     sign_in: 'Sign in',

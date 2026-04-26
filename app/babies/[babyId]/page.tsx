@@ -580,7 +580,7 @@ export default async function BabyOverview({
           href={`/babies/${babyId}/feedings`}
           badge={todayFeedCount > 0 ? t('overview.today') : undefined}
         />}
-        {show('feed_pace') && <FeedPaceCard cmp={feedPace} />}
+        {show('feed_pace') && <FeedPaceCard cmp={feedPace} lang={userPrefs.language} />}
         {show('feeding_progress') && (() => {
           const wForCalc = (currentWeight.data as number | null) ?? Number(baby.birth_weight_kg ?? 0);
           const factor = Number(baby.feeding_factor_ml_per_kg_per_day ?? 150);
@@ -681,6 +681,7 @@ export default async function BabyOverview({
         }
         heightCm={(lastHeightRow.data?.height_cm as number | null) ?? null}
         headCm={(lastHeadRow.data?.head_circ_cm as number | null) ?? null}
+        lang={userPrefs.language}
       />
 
       {/* Milestones reference — typical age windows for the big developmental
@@ -695,6 +696,7 @@ export default async function BabyOverview({
           firstToothFallback={(firstTooth.data?.observed_at as string | undefined) ?? null}
           firstWordFallback={(firstWord.data?.observed_at as string | undefined) ?? null}
           firstSentenceFallback={(firstSentence.data?.observed_at as string | undefined) ?? null}
+          lang={userPrefs.language}
         />
       )}
 

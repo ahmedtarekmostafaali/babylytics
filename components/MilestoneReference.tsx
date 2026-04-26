@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { GraduationCap, ArrowRight, Check, Clock, AlertTriangle } from 'lucide-react';
 import { MILESTONE_AGES, classifyMilestone, type MilestoneAgeRange } from '@/lib/growth-standards';
+import { tFor, type Lang } from '@/lib/i18n';
 
 type LoggedMilestone = {
   milestone_id: string;
@@ -19,6 +20,7 @@ type Props = {
   firstSentenceFallback?: string | null;
   /** dob ISO so we can compute age-at-occurrence. */
   dobIso: string | null;
+  lang?: Lang;
 };
 
 /**
@@ -31,8 +33,9 @@ type Props = {
  */
 export function MilestoneReferenceCard({
   babyId, ageDays, logged, firstToothFallback,
-  firstWordFallback, firstSentenceFallback, dobIso,
+  firstWordFallback, firstSentenceFallback, dobIso, lang = 'en',
 }: Props) {
+  const t = tFor(lang);
   const dobMs = dobIso ? new Date(dobIso).getTime() : null;
   const currentMonths = ageDays / 30.4375;
 
@@ -64,15 +67,15 @@ export function MilestoneReferenceCard({
         <span className="h-7 w-7 rounded-lg grid place-items-center bg-lavender-500 text-white">
           <GraduationCap className="h-3.5 w-3.5" />
         </span>
-        <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Milestone reference</div>
+        <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">{t('milestones_ref.title')}</div>
         <Link href={`/babies/${babyId}/teething`}
           className="ml-auto inline-flex items-center gap-1 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-[11px] font-medium px-2.5 py-0.5 text-ink-strong">
-          Log <ArrowRight className="h-2.5 w-2.5" />
+          {t('milestones_ref.log')} <ArrowRight className="h-2.5 w-2.5" />
         </Link>
       </div>
 
       <p className="text-[11px] text-ink-muted mb-3 leading-snug">
-        Typical age window (min · avg · max). Wide variation is normal — these are reference points, not a scoreboard.
+        {t('milestones_ref.intro')}
       </p>
 
       <ul className="space-y-2">
@@ -80,22 +83,29 @@ export function MilestoneReferenceCard({
           const occurredIso = byId.get(m.id);
           const occurredMonths = ageAtMonths(occurredIso);
           const cls = classifyMilestone(m, occurredMonths, currentMonths);
+          // Localised milestone label, falling back to the English label
+          // shipped in growth-standards.ts.
+          const localisedLabel = (() => {
+            const k = `milestones_ref.label_${m.id}`;
+            const v = t(k);
+            return v === k ? m.label : v;
+          })();
 
           return (
             <li key={m.id} className="rounded-xl bg-white/70 border border-lavender-100 px-3 py-2">
               <div className="flex items-center gap-2">
                 <span className="text-lg leading-none">{m.emoji}</span>
-                <div className="font-bold text-sm text-ink-strong flex-1">{m.label}</div>
-                <Badge state={cls.state} />
+                <div className="font-bold text-sm text-ink-strong flex-1">{localisedLabel}</div>
+                <Badge state={cls.state} t={t} />
               </div>
 
               <div className="mt-1.5 flex items-center gap-2 text-[11px]">
-                <Tick label={`${m.min_months}m`} sub="min" />
+                <Tick label={`${m.min_months}m`} sub={t('growth.min')} />
                 <Tick label={`${m.avg_months}m`} sub="avg" highlight />
                 <Tick label={`${m.max_months}m`} sub="max" />
                 {occurredMonths != null && (
                   <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-lavender-100 text-lavender-800 text-[11px] font-bold px-2 py-0.5">
-                    logged @ {occurredMonths.toFixed(1)}m
+                    {t('milestones_ref.logged_at', { months: occurredMonths.toFixed(1) })}
                   </span>
                 )}
               </div>
@@ -118,38 +128,38 @@ function Tick({ label, sub, highlight }: { label: string; sub: string; highlight
   );
 }
 
-function Badge({ state }: { state: 'early'|'on_time'|'late'|'pending'|'overdue' }) {
+function Badge({ state, t }: { state: 'early'|'on_time'|'late'|'pending'|'overdue'; t: ReturnType<typeof tFor> }) {
   if (state === 'on_time') {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-mint-50 text-mint-700 text-[10px] font-bold px-2 py-0.5">
-        <Check className="h-2.5 w-2.5" /> on time
+        <Check className="h-2.5 w-2.5" /> {t('milestones_ref.state_on_time')}
       </span>
     );
   }
   if (state === 'early') {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 text-[10px] font-bold px-2 py-0.5">
-        <Check className="h-2.5 w-2.5" /> early
+        <Check className="h-2.5 w-2.5" /> {t('milestones_ref.state_early')}
       </span>
     );
   }
   if (state === 'late') {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-peach-50 text-peach-700 text-[10px] font-bold px-2 py-0.5">
-        late
+        {t('milestones_ref.state_late')}
       </span>
     );
   }
   if (state === 'overdue') {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-coral-50 text-coral-700 text-[10px] font-bold px-2 py-0.5">
-        <AlertTriangle className="h-2.5 w-2.5" /> watch
+        <AlertTriangle className="h-2.5 w-2.5" /> {t('milestones_ref.state_overdue')}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-ink-muted text-[10px] font-bold px-2 py-0.5">
-      <Clock className="h-2.5 w-2.5" /> pending
+      <Clock className="h-2.5 w-2.5" /> {t('milestones_ref.state_pending')}
     </span>
   );
 }
