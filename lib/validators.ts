@@ -102,6 +102,16 @@ export const ActivitySchema = z.object({
   notes:         z.string().max(2000).nullable().optional(),
 });
 
+export const ShoppingItemSchema = z.object({
+  scope:    z.enum(['baby','pregnancy']).default('baby'),
+  name:     z.string().min(1).max(200),
+  category: z.string().max(80).nullable().optional(),
+  quantity: z.string().max(80).nullable().optional(),
+  priority: z.enum(['low','normal','high']).default('normal'),
+  notes:    z.string().max(1000).nullable().optional(),
+  is_done:  z.boolean().optional(),
+});
+
 export const TeethingSchema = z.object({
   observed_at: z.string().min(1),
   tooth_label: z.string().max(60).nullable().optional(),
@@ -180,7 +190,11 @@ export const DischargeSchema = z.object({
 });
 
 export const LabPanelSchema = z.object({
-  panel_kind: z.enum(['blood','urine','stool','culture','imaging','genetic','other']),
+  panel_kind: z.enum([
+    'blood','urine','stool','culture','genetic','other',
+    'imaging',                                  // legacy bucket
+    'xray','mri','ct','ultrasound','ekg',
+  ]),
   panel_name: z.string().min(1).max(200),
   sample_at:  z.string().nullable().optional(),
   result_at:  z.string().min(1),

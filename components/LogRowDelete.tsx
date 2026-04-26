@@ -19,7 +19,8 @@ export function LogRowDelete({
     | 'measurements' | 'temperature_logs' | 'vaccinations' | 'sleep_logs'
     | 'screen_time_logs' | 'activity_logs' | 'lab_panels'
     | 'prenatal_visits' | 'ultrasounds' | 'fetal_movements'
-    | 'teething_logs' | 'speaking_logs' | 'developmental_milestones';
+    | 'teething_logs' | 'speaking_logs' | 'developmental_milestones'
+    | 'shopping_list_items';
   id: string;
   label?: string;
 }) {

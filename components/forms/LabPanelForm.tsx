@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 
 export type LabPanelFormValue = {
   id?: string;
-  panel_kind: 'blood'|'urine'|'stool'|'culture'|'imaging'|'genetic'|'other';
+  panel_kind: 'blood'|'urine'|'stool'|'culture'|'imaging'|'genetic'|'other'|'xray'|'mri'|'ct'|'ultrasound'|'ekg';
   panel_name: string;
   sample_at?: string | null;
   result_at: string;
@@ -34,14 +34,22 @@ export type LabItem = {
   flag?: 'low'|'high'|'critical'|'positive'|'negative'|null;
 };
 
-const PANEL_KINDS: { value: LabPanelFormValue['panel_kind']; label: string }[] = [
-  { value: 'blood',   label: 'Blood'         },
-  { value: 'urine',   label: 'Urine'         },
-  { value: 'stool',   label: 'Stool'         },
-  { value: 'culture', label: 'Culture'       },
-  { value: 'imaging', label: 'Imaging'       },
-  { value: 'genetic', label: 'Genetic'       },
-  { value: 'other',   label: 'Other'         },
+// Two flavours of "what is this": traditional analytical labs (blood, urine,
+// stool, culture, genetic) and imaging studies / scans. We keep them in a
+// single picker with a soft visual divider so the UI stays one form.
+const PANEL_KINDS: { value: LabPanelFormValue['panel_kind']; label: string; group: 'lab'|'scan' }[] = [
+  { value: 'blood',      label: 'Blood',          group: 'lab'  },
+  { value: 'urine',      label: 'Urine',          group: 'lab'  },
+  { value: 'stool',      label: 'Stool',          group: 'lab'  },
+  { value: 'culture',    label: 'Culture',        group: 'lab'  },
+  { value: 'genetic',    label: 'Genetic',        group: 'lab'  },
+  { value: 'xray',       label: 'X-ray',          group: 'scan' },
+  { value: 'ultrasound', label: 'Ultrasound',     group: 'scan' },
+  { value: 'mri',        label: 'MRI',            group: 'scan' },
+  { value: 'ct',         label: 'CT scan',        group: 'scan' },
+  { value: 'ekg',        label: 'EKG / ECG',      group: 'scan' },
+  { value: 'imaging',    label: 'Other imaging',  group: 'scan' },
+  { value: 'other',      label: 'Other',          group: 'lab'  },
 ];
 
 export function LabPanelForm({

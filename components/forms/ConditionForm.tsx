@@ -7,6 +7,7 @@ import { MedicalConditionSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
 import { Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { Trash2, Activity } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export type ConditionFormValue = {
   id?: string;
@@ -17,6 +18,29 @@ export type ConditionFormValue = {
   treatment?: string | null;
   notes?: string | null;
 };
+
+// Common pediatric conditions surfaced as one-tap pills. ICD-10 codes are
+// approximate — the parent or doctor can refine on edit. The list errs on the
+// side of "things parents in our pilot ask about" rather than a comprehensive
+// medical taxonomy.
+const PRESETS: { name: string; icd: string; emoji: string }[] = [
+  { name: "Cow's milk protein allergy",  icd: 'K52.21', emoji: '🥛' },
+  { name: 'Lactose intolerance',         icd: 'E73.9',  emoji: '🥛' },
+  { name: 'Eczema (atopic dermatitis)',  icd: 'L20.9',  emoji: '🧴' },
+  { name: 'Reflux (GERD)',               icd: 'K21.9',  emoji: '🍼' },
+  { name: 'Colic',                       icd: 'R10.83', emoji: '😢' },
+  { name: 'Asthma',                      icd: 'J45.9',  emoji: '🌬️' },
+  { name: 'Bronchiolitis',               icd: 'J21.9',  emoji: '🫁' },
+  { name: 'Otitis media (ear infection)',icd: 'H66.9',  emoji: '👂' },
+  { name: 'Iron-deficiency anemia',      icd: 'D50.9',  emoji: '🩸' },
+  { name: 'Vitamin D deficiency',        icd: 'E55.9',  emoji: '☀️' },
+  { name: 'Jaundice (neonatal)',         icd: 'P59.9',  emoji: '🟡' },
+  { name: 'Diaper rash',                 icd: 'L22',    emoji: '👶' },
+  { name: 'Thrush (oral candidiasis)',   icd: 'B37.0',  emoji: '🍼' },
+  { name: 'Constipation',                icd: 'K59.0',  emoji: '💩' },
+  { name: 'Egg allergy',                 icd: 'Z91.012',emoji: '🥚' },
+  { name: 'Peanut allergy',              icd: 'Z91.010',emoji: '🥜' },
+];
 
 export function ConditionForm({
   babyId, initial,
@@ -34,6 +58,11 @@ export function ConditionForm({
 
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function pickPreset(p: typeof PRESETS[number]) {
+    setName(p.name);
+    if (!icdCode) setIcdCode(p.icd);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,14 +103,38 @@ export function ConditionForm({
 
   return (
     <form onSubmit={submit} className="space-y-5">
+      {/* Quick presets — only on the new form, not edit. */}
+      {!initial?.id && (
+        <div>
+          <Label>Common conditions</Label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {PRESETS.map(p => (
+              <button type="button" key={p.name} onClick={() => pickPreset(p)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
+                  name === p.name
+                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-ink',
+                )}>
+                <span className="text-base leading-none">{p.emoji}</span>
+                {p.name}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-ink-muted mt-1">
+            Tap to autofill the name + ICD-10 code, or just type a custom one below.
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <Label>Condition</Label>
-          <Input value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Asthma, Reflux (GERD), Iron deficiency anemia" />
+          <Input value={name} onChange={e => setName(e.target.value)} required placeholder="e.g. Cow's milk protein allergy, Reflux (GERD)" />
         </div>
         <div>
           <Label>ICD-10 code (optional)</Label>
-          <Input value={icdCode} onChange={e => setIcdCode(e.target.value)} placeholder="e.g. J45.9" />
+          <Input value={icdCode} onChange={e => setIcdCode(e.target.value)} placeholder="e.g. K52.21" />
         </div>
         <div>
           <Label>Diagnosed on</Label>

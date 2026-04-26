@@ -14,10 +14,21 @@ import {
 import { FlaskConical, Plus, Edit3, ArrowRight, Clock, AlertTriangle } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Labs' };
+export const metadata = { title: 'Labs & Scans' };
 
-type PanelKind = 'blood' | 'urine' | 'stool' | 'culture' | 'imaging' | 'genetic' | 'other';
-const PANEL_KINDS: PanelKind[] = ['blood', 'urine', 'stool', 'culture', 'imaging', 'genetic', 'other'];
+type PanelKind = 'blood' | 'urine' | 'stool' | 'culture' | 'imaging' | 'genetic' | 'other'
+  | 'xray' | 'mri' | 'ct' | 'ultrasound' | 'ekg';
+const PANEL_KINDS: PanelKind[] = [
+  'blood', 'urine', 'stool', 'culture', 'genetic',
+  'xray', 'ultrasound', 'mri', 'ct', 'ekg', 'imaging',
+  'other',
+];
+
+const PANEL_LABEL: Record<PanelKind, string> = {
+  blood: 'Blood', urine: 'Urine', stool: 'Stool', culture: 'Culture', genetic: 'Genetic',
+  xray: 'X-ray', mri: 'MRI', ct: 'CT scan', ultrasound: 'Ultrasound', ekg: 'EKG',
+  imaging: 'Imaging', other: 'Other',
+};
 
 type Panel = {
   id: string;
@@ -84,8 +95,8 @@ export default async function LabsList({
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel="Overview"
         eyebrow="Track" eyebrowTint="peach"
-        title="Labs & analysis"
-        subtitle="Blood, urine, stool, cultures, imaging — all in one place."
+        title="Labs & Scans"
+        subtitle="Blood, urine, stool, cultures, X-ray, ultrasound, MRI, CT — all in one place."
         right={
           perms.canWriteLogs ? (
             <div className="flex items-center gap-2">
@@ -93,7 +104,7 @@ export default async function LabsList({
                 visibleIds={rows.map(r => r.id)} kindLabel="lab panels" />
               <Link href={`/babies/${params.babyId}/medical-profile/labs/new`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-peach-500 to-coral-500 hover:brightness-105 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-                <Plus className="h-4 w-4" /> Add lab result
+                <Plus className="h-4 w-4" /> Add lab or scan
               </Link>
             </div>
           ) : (
@@ -103,8 +114,8 @@ export default async function LabsList({
 
       <div className="flex items-center gap-3 flex-wrap">
         <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
-        <LogTypeFilter label="Panel"
-          options={PANEL_KINDS.map(t => ({ key: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+        <LogTypeFilter label="Type"
+          options={PANEL_KINDS.map(t => ({ key: t, label: PANEL_LABEL[t] }))}
           activeKeys={activeTypes}
           baseHref={`/babies/${params.babyId}/labs`}
           extraParams={{ range: range.key }} />
@@ -133,7 +144,8 @@ export default async function LabsList({
                 {g.list.map(p => {
                   const active = selected?.id === p.id;
                   const tint = p.abnormal ? 'bg-coral-100 text-coral-600' : 'bg-peach-100 text-peach-600';
-                  const subline = [p.panel_kind, p.lab_name].filter(Boolean).join(' · ');
+                  const kindLabel = PANEL_LABEL[p.panel_kind as PanelKind] ?? p.panel_kind;
+                  const subline = [kindLabel, p.lab_name].filter(Boolean).join(' · ');
                   return (
                     <li key={p.id}>
                       <Link href={`/babies/${params.babyId}/labs?range=${range.key}&id=${p.id}`}
@@ -148,7 +160,7 @@ export default async function LabsList({
                         </span>
                         <div className="min-w-0">
                           <div className="font-semibold text-ink-strong truncate">{p.panel_name}</div>
-                          {subline && <div className="text-xs text-ink-muted truncate capitalize">{subline}</div>}
+                          {subline && <div className="text-xs text-ink-muted truncate">{subline}</div>}
                         </div>
                         <div className="flex items-center gap-2">
                           {p.abnormal && (
@@ -203,8 +215,8 @@ export default async function LabsList({
                       <Clock className="h-3 w-3" /> {fmtDateTime(selected.result_at)}
                     </div>
                   </div>
-                  <span className="rounded-full px-2.5 py-1 text-xs font-semibold bg-peach-50 text-peach-700 capitalize">
-                    {selected.panel_kind}
+                  <span className="rounded-full px-2.5 py-1 text-xs font-semibold bg-peach-50 text-peach-700">
+                    {PANEL_LABEL[selected.panel_kind as PanelKind] ?? selected.panel_kind}
                   </span>
                 </div>
 
