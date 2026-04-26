@@ -29,11 +29,12 @@ export function TemperatureForm({ babyId, initial }: { babyId: string; initial?:
   const [err, setErr]       = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const t = Number(temp);
-  const tone = t >= 38 ? 'coral' : t >= 37.5 ? 'peach' : t < 36 ? 'brand' : 'mint';
-  const tip = t >= 38 ? 'Fever range — consider contacting your pediatrician.'
-            : t >= 37.5 ? 'Slightly elevated. Re-check in 30 minutes.'
-            : t < 36  ? 'Below normal. Warm up gently.'
+  // Renamed from `t` to `tempNum` because `t` is the translator hook above.
+  const tempNum = Number(temp);
+  const tone = tempNum >= 38 ? 'coral' : tempNum >= 37.5 ? 'peach' : tempNum < 36 ? 'brand' : 'mint';
+  const tip = tempNum >= 38 ? 'Fever range — consider contacting your pediatrician.'
+            : tempNum >= 37.5 ? 'Slightly elevated. Re-check in 30 minutes.'
+            : tempNum < 36  ? 'Below normal. Warm up gently.'
             : 'Normal range.';
   const tintBar = { coral: 'text-coral-700 bg-coral-50', peach: 'text-peach-700 bg-peach-50', mint: 'text-mint-700 bg-mint-50', brand: 'text-brand-700 bg-brand-50' }[tone];
 
