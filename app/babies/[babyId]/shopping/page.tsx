@@ -5,7 +5,7 @@ import { PageShell, PageHeader } from '@/components/PageHeader';
 import { Comments } from '@/components/Comments';
 import { ShoppingItemRow } from '@/components/ShoppingItemRow';
 import { ShoppingCart, Plus, Baby, Heart } from 'lucide-react';
-import { effectiveStage } from '@/lib/lifecycle';
+import { effectiveStage, type LifecycleStage } from '@/lib/lifecycle';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Shopping list' };
@@ -40,7 +40,7 @@ export default async function ShoppingList({
   const { data: baby } = await supabase.from('babies')
     .select('name,dob,lifecycle_stage')
     .eq('id', params.babyId).single();
-  const stage = baby ? effectiveStage(baby.lifecycle_stage as string | null, baby.dob as string | null) : null;
+  const stage = baby ? effectiveStage(baby.lifecycle_stage as LifecycleStage | null, baby.dob as string | null) : null;
   const isPregnancy = stage === 'pregnancy';
 
   const scope = searchParams.scope ?? (isPregnancy ? 'pregnancy' : 'baby');
