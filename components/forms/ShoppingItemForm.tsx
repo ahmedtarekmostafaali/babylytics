@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Save, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Section, Field, QuickPill } from '@/components/forms/FormKit';
+import { useT } from '@/lib/i18n/client';
 
 export type ShoppingItemValue = {
   id?: string;
@@ -37,6 +38,7 @@ export function ShoppingItemForm({
   initial?: ShoppingItemValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [name, setName]         = useState(initial?.name ?? '');
   const [category, setCategory] = useState(initial?.category ?? '');
   const [quantity, setQuantity] = useState(initial?.quantity ?? '');
@@ -90,21 +92,19 @@ export function ShoppingItemForm({
 
   return (
     <form onSubmit={submit} className="space-y-8">
-      <Section n={1} title="What do you need?">
-        <Field label="Item name">
+      <Section n={1} title={t('forms.shop_what')}>
+        <Field label={t('forms.shop_item_name')}>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
             required
-            placeholder={scope === 'pregnancy' ? 'e.g. Prenatal vitamins, Hospital robe' : 'e.g. Pampers size 3, Avent bottles'}
             className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30"
           />
         </Field>
-        <Field label="Quantity (optional)">
+        <Field label={t('forms.shop_quantity')}>
           <input
             value={quantity}
             onChange={e => setQuantity(e.target.value)}
-            placeholder='e.g. "2 boxes", "size 3", "1 pack of 24"'
             className={cn(
               'h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base',
               'focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30',
@@ -113,7 +113,7 @@ export function ShoppingItemForm({
         </Field>
       </Section>
 
-      <Section n={2} title="Category" optional>
+      <Section n={2} title={t('forms.shop_category')} optional>
         <div className="flex flex-wrap gap-2">
           {categoryOptions.map(c => (
             <QuickPill key={c} active={category === c} onClick={() => setCategory(c)} tint="mint">
@@ -123,7 +123,7 @@ export function ShoppingItemForm({
         </div>
       </Section>
 
-      <Section n={3} title="Priority">
+      <Section n={3} title={t('forms.shop_priority')}>
         <div className="grid grid-cols-3 gap-2">
           {PRIORITIES.map(p => (
             <button type="button" key={p.value} onClick={() => setPriority(p.value)}
@@ -133,19 +133,18 @@ export function ShoppingItemForm({
                   ? `border-${p.tint}-500 bg-${p.tint}-50 text-${p.tint}-700`
                   : 'border-slate-200 bg-white hover:bg-slate-50 text-ink',
               )}>
-              {p.label}
+              {t(`forms.shop_priority_${p.value}`)}
             </button>
           ))}
         </div>
       </Section>
 
-      <Section n={4} title="Notes" optional>
-        <Field label="Notes">
+      <Section n={4} title={t('forms.notes')} optional>
+        <Field label={t('forms.notes')}>
           <textarea
             rows={3}
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="Brand preference, where to buy, etc."
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30"
           />
         </Field>
@@ -156,7 +155,7 @@ export function ShoppingItemForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-mint-500 to-brand-500 hover:from-mint-600 hover:to-brand-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Add to list'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.shop_log_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">

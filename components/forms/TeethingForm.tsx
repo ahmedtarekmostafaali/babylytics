@@ -9,6 +9,7 @@ import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Section, Field, QuickPill, Stepper, WhenPicker } from '@/components/forms/FormKit';
+import { useT } from '@/lib/i18n/client';
 
 export type TeethingValue = {
   id?: string;
@@ -50,6 +51,7 @@ export function TeethingForm({
   initial?: TeethingValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [observedAt, setObservedAt] = useState(initial?.observed_at ? isoToLocalInput(initial.observed_at) : nowLocalInput());
   const [toothLabel, setToothLabel] = useState(initial?.tooth_label ?? '');
   const [eventType,  setEventType]  = useState<TeethingValue['event_type']>(initial?.event_type ?? 'eruption');
@@ -108,7 +110,7 @@ export function TeethingForm({
   return (
     <form onSubmit={submit} className="space-y-8">
       {/* 1. Event type */}
-      <Section n={1} title="What happened?">
+      <Section n={1} title={t('forms.teething_what')}>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {EVENTS.map(ev => (
             <button type="button" key={ev.value} onClick={() => setEventType(ev.value)}
@@ -119,27 +121,26 @@ export function TeethingForm({
                   : 'border-slate-200 bg-white hover:bg-slate-50 text-ink',
               )}>
               <span className="text-xl leading-none">{ev.emoji}</span>
-              <span className="leading-tight">{ev.label}</span>
+              <span className="leading-tight">{t(`forms.teething_event_${ev.value}`)}</span>
             </button>
           ))}
         </div>
       </Section>
 
       {/* 2. Tooth label */}
-      <Section n={2} title="Which tooth?" optional>
+      <Section n={2} title={t('forms.teething_which')} optional>
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {SUGGESTED_TEETH.map(t => (
-              <QuickPill key={t} active={toothLabel === t} onClick={() => setToothLabel(t)} tint="peach">
-                {t}
+            {SUGGESTED_TEETH.map(tooth => (
+              <QuickPill key={tooth} active={toothLabel === tooth} onClick={() => setToothLabel(tooth)} tint="peach">
+                {tooth}
               </QuickPill>
             ))}
           </div>
-          <Field label="Tooth (or describe)">
+          <Field label={t('forms.teething_which')}>
             <input
               value={toothLabel}
               onChange={e => setToothLabel(e.target.value)}
-              placeholder="e.g. lower central left, first molar"
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
             />
           </Field>
@@ -147,10 +148,10 @@ export function TeethingForm({
       </Section>
 
       {/* 3. Symptoms */}
-      <Section n={3} title="Symptoms" optional>
+      <Section n={3} title={t('forms.teething_symptoms')} optional>
         <div className="space-y-4">
           <Stepper
-            label="Pain level (0–10)"
+            label={t('forms.teething_pain')}
             value={painLevel}
             onChange={setPainLevel}
             unit=""
@@ -159,7 +160,7 @@ export function TeethingForm({
             max={10}
             badge={{ text: 'PAIN', tint: 'peach' }}
           />
-          <Field label="Fever (°C)">
+          <Field label={t('forms.teething_fever')}>
             <input
               type="number"
               step="0.1"
@@ -167,7 +168,6 @@ export function TeethingForm({
               max={45}
               value={feverC}
               onChange={e => setFeverC(e.target.value)}
-              placeholder="e.g. 37.8"
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
             />
           </Field>
@@ -175,7 +175,7 @@ export function TeethingForm({
       </Section>
 
       {/* 4. Care */}
-      <Section n={4} title="What helped?" optional>
+      <Section n={4} title={t('forms.teething_what_helped')} optional>
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
             {SUGGESTED_SOOTHERS.map(s => (
@@ -184,11 +184,10 @@ export function TeethingForm({
               </QuickPill>
             ))}
           </div>
-          <Field label="Soother used">
+          <Field label={t('forms.teething_soother')}>
             <input
               value={soother}
               onChange={e => setSoother(e.target.value)}
-              placeholder="e.g. cold ring, paracetamol, gum massage"
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
             />
           </Field>
@@ -196,18 +195,17 @@ export function TeethingForm({
       </Section>
 
       {/* 5. When */}
-      <Section n={5} title="When?">
+      <Section n={5} title={t('forms.when')}>
         <WhenPicker time={observedAt} onChange={setObservedAt} tint="peach" />
       </Section>
 
       {/* 6. Notes */}
-      <Section n={6} title="Notes" optional>
-        <Field label="Notes">
+      <Section n={6} title={t('forms.notes')} optional>
+        <Field label={t('forms.notes')}>
           <textarea
             rows={3}
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="What you noticed, what helped, what didn't…"
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
           />
         </Field>
@@ -218,7 +216,7 @@ export function TeethingForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-peach-500 to-coral-500 hover:from-peach-600 hover:to-coral-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log teething event'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.teething_log_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">
@@ -226,7 +224,7 @@ export function TeethingForm({
           </Button>
         )}
       </div>
-      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
+      <p className="text-center text-xs text-ink-muted">{t('forms.fast_log')} <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }

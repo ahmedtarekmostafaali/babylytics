@@ -9,6 +9,7 @@ import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Section, Field, QuickPill, WhenPicker } from '@/components/forms/FormKit';
+import { useT } from '@/lib/i18n/client';
 
 export type SpeakingValue = {
   id?: string;
@@ -39,6 +40,7 @@ export function SpeakingForm({
   initial?: SpeakingValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [observedAt, setObservedAt] = useState(initial?.observed_at ? isoToLocalInput(initial.observed_at) : nowLocalInput());
   const [word,       setWord]       = useState(initial?.word_or_phrase ?? '');
   const [category,   setCategory]   = useState<SpeakingValue['category']>(initial?.category ?? 'word');
@@ -97,7 +99,7 @@ export function SpeakingForm({
   return (
     <form onSubmit={submit} className="space-y-8">
       {/* 1. Category */}
-      <Section n={1} title="What kind of speech?">
+      <Section n={1} title={t('forms.speaking_kind')}>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {CATEGORIES.map(c => (
             <button type="button" key={c.value} onClick={() => setCategory(c.value)}
@@ -108,19 +110,18 @@ export function SpeakingForm({
                   : 'border-slate-200 bg-white hover:bg-slate-50 text-ink',
               )}>
               <span className="text-xl leading-none">{c.emoji}</span>
-              <span className="leading-tight">{c.label}</span>
+              <span className="leading-tight">{t(`forms.speaking_cat_${c.value}`)}</span>
             </button>
           ))}
         </div>
       </Section>
 
       {/* 2. Word / phrase */}
-      <Section n={2} title="What did they say?" optional>
-        <Field label="Word or phrase">
+      <Section n={2} title={t('forms.speaking_said')} optional>
+        <Field label={t('forms.speaking_word')}>
           <input
             value={word}
             onChange={e => setWord(e.target.value)}
-            placeholder='e.g. "mama", "more milk", "go car"'
             className={cn(
               'h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold',
               'focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30',
@@ -130,12 +131,12 @@ export function SpeakingForm({
         <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink-strong">
           <input type="checkbox" checked={firstUse} onChange={e => setFirstUse(e.target.checked)}
             className="h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-500" />
-          First time using this word/phrase 🎉
+          {t('forms.speaking_first_time')}
         </label>
       </Section>
 
       {/* 3. Language */}
-      <Section n={3} title="Language" optional>
+      <Section n={3} title={t('forms.speaking_language')} optional>
         <div className="flex flex-wrap gap-2">
           {SUGGESTED_LANGUAGES.map(l => (
             <QuickPill key={l} active={language === l} onClick={() => setLanguage(l)} tint="brand">
@@ -146,30 +147,28 @@ export function SpeakingForm({
       </Section>
 
       {/* 4. Context */}
-      <Section n={4} title="Context" optional>
-        <Field label="What was happening?">
+      <Section n={4} title={t('forms.speaking_context')} optional>
+        <Field label={t('forms.speaking_context')}>
           <input
             value={context}
             onChange={e => setContext(e.target.value)}
-            placeholder="e.g. pointing at bottle, while waving bye"
             className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
           />
         </Field>
       </Section>
 
       {/* 5. When */}
-      <Section n={5} title="When?">
+      <Section n={5} title={t('forms.when')}>
         <WhenPicker time={observedAt} onChange={setObservedAt} tint="brand" />
       </Section>
 
       {/* 6. Notes */}
-      <Section n={6} title="Notes" optional>
-        <Field label="Notes">
+      <Section n={6} title={t('forms.notes')} optional>
+        <Field label={t('forms.notes')}>
           <textarea
             rows={3}
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="Anything else worth remembering…"
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
           />
         </Field>
@@ -180,7 +179,7 @@ export function SpeakingForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-brand-500 to-mint-500 hover:from-brand-600 hover:to-mint-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log new speech'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.speaking_log_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">
@@ -188,7 +187,7 @@ export function SpeakingForm({
           </Button>
         )}
       </div>
-      <p className="text-center text-xs text-ink-muted">Capture the moment <span className="text-coral-500">❤️</span></p>
+      <p className="text-center text-xs text-ink-muted">{t('forms.fast_log')} <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }

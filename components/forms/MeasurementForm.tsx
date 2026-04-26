@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Section, WhenPicker } from '@/components/forms/FormKit';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Scale, Ruler, Brain } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type MeasurementFormValue = {
   id?: string;
@@ -18,6 +19,8 @@ export type MeasurementFormValue = {
 };
 
 export function MeasurementForm({ babyId, initial }: { babyId: string; initial?: MeasurementFormValue }) {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const t = useT();
   const router = useRouter();
   const [time, setTime] = useState(initial?.measured_at ? isoToLocalInput(initial.measured_at) : nowLocalInput());
   const [kg, setKg]     = useState(initial?.weight_kg?.toString() ?? '');
@@ -66,22 +69,21 @@ export function MeasurementForm({ babyId, initial }: { babyId: string; initial?:
 
   return (
     <form onSubmit={submit} className="space-y-8">
-      <Section n={1} title="Measurements" optional>
-        <p className="mb-3 text-sm text-ink-muted">Fill any that you measured — you don&apos;t have to enter all three.</p>
+      <Section n={1} title={t('trackers.meas_title')} optional>
         <div className="grid sm:grid-cols-3 gap-3">
-          <MeasureCard icon={Scale} tint="brand" label="Weight"  unit="kg" step="0.001" min={0} max={40}  value={kg}   onChange={setKg} placeholder="e.g. 3.70" />
-          <MeasureCard icon={Ruler} tint="mint"  label="Height"  unit="cm" step="0.1"   min={0} max={200} value={cm}   onChange={setCm} placeholder="e.g. 55.0" />
-          <MeasureCard icon={Brain} tint="lavender" label="Head circumference" unit="cm" step="0.1" min={0} max={80} value={head} onChange={setHead} placeholder="e.g. 37.5" />
+          <MeasureCard icon={Scale} tint="brand" label={t('forms.meas_weight').replace(' (kg)', '')}  unit="kg" step="0.001" min={0} max={40}  value={kg}   onChange={setKg} placeholder="e.g. 3.70" />
+          <MeasureCard icon={Ruler} tint="mint"  label={t('forms.meas_height').replace(' (cm)', '')}  unit="cm" step="0.1"   min={0} max={200} value={cm}   onChange={setCm} placeholder="e.g. 55.0" />
+          <MeasureCard icon={Brain} tint="lavender" label={t('forms.meas_head').replace(' (cm)', '')} unit="cm" step="0.1" min={0} max={80} value={head} onChange={setHead} placeholder="e.g. 37.5" />
         </div>
       </Section>
 
-      <Section n={2} title="When?">
+      <Section n={2} title={t('forms.when')}>
         <WhenPicker time={time} onChange={setTime} tint="brand" />
       </Section>
 
-      <Section n={3} title="Add details" optional>
+      <Section n={3} title={t('forms.feed_add_details')} optional>
         <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-          placeholder="e.g. clinic visit, home scale, wearing clothes"
+          placeholder={t('forms.feed_notes_placeholder')}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
       </Section>
 
@@ -90,10 +92,10 @@ export function MeasurementForm({ babyId, initial }: { babyId: string; initial?:
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-brand-500 to-brand-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save measurement'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.meas_log_cta')}
         </Button>
         {initial?.id && (
-          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">Delete</Button>
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">{t('forms.delete')}</Button>
         )}
       </div>
     </form>

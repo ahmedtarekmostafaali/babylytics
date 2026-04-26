@@ -9,6 +9,7 @@ import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Section, Field, QuickPill, Stepper, WhenPicker } from '@/components/forms/FormKit';
+import { useT } from '@/lib/i18n/client';
 
 export type ActivityValue = {
   id?: string;
@@ -48,6 +49,7 @@ export function ActivityForm({
   initial?: ActivityValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [startedAt, setStartedAt] = useState(initial?.started_at ? isoToLocalInput(initial.started_at) : nowLocalInput());
   const [duration, setDuration]   = useState<number>(initial?.duration_min ?? 15);
   const [type, setType]           = useState(initial?.activity_type ?? '');
@@ -106,7 +108,7 @@ export function ActivityForm({
   return (
     <form onSubmit={submit} className="space-y-8">
       {/* 1. Activity */}
-      <Section n={1} title="What activity?">
+      <Section n={1} title={t('forms.act_what')}>
         <div className="space-y-3">
           {!initial?.id && (
             <div className="flex flex-wrap gap-2">
@@ -117,12 +119,11 @@ export function ActivityForm({
               ))}
             </div>
           )}
-          <Field label="Activity name">
+          <Field label={t('forms.act_name')}>
             <input
               value={type}
               onChange={e => setType(e.target.value)}
               required
-              placeholder="e.g. Tummy time, Park walk, Swimming class"
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30"
             />
           </Field>
@@ -130,10 +131,10 @@ export function ActivityForm({
       </Section>
 
       {/* 2. Details */}
-      <Section n={2} title="Details">
+      <Section n={2} title={t('forms.act_details')}>
         <div className="space-y-4">
           <Stepper
-            label="Duration"
+            label={t('forms.act_duration')}
             value={duration}
             onChange={setDuration}
             unit="min"
@@ -143,21 +144,21 @@ export function ActivityForm({
             badge={{ text: 'TIME', tint: 'mint' }}
           />
 
-          <Field label="Intensity">
+          <Field label={t('forms.act_intensity')}>
             <div className="flex flex-wrap gap-2">
               {INTENSITIES.map(it => (
                 <QuickPill key={it.value} active={intensity === it.value} onClick={() => setIntensity(it.value)} tint="mint">
-                  {it.label}
+                  {t(`forms.act_int_${it.value}`)}
                 </QuickPill>
               ))}
             </div>
           </Field>
 
-          <Field label="Mood">
+          <Field label={t('forms.act_mood')}>
             <div className="flex flex-wrap gap-2">
               {MOODS.map(m => (
                 <QuickPill key={m.value} active={mood === m.value} onClick={() => setMood(m.value)} tint="mint">
-                  {m.label}
+                  {t(`forms.act_mood_${m.value}`)}
                 </QuickPill>
               ))}
             </div>
@@ -166,30 +167,28 @@ export function ActivityForm({
       </Section>
 
       {/* 3. When */}
-      <Section n={3} title="When?">
+      <Section n={3} title={t('forms.when')}>
         <WhenPicker time={startedAt} onChange={setStartedAt} tint="mint" />
       </Section>
 
       {/* 4. Add details */}
-      <Section n={4} title="Add details" optional>
+      <Section n={4} title={t('forms.feed_add_details')} optional>
         <div className="space-y-3">
-          <Field label="Location">
+          <Field label={t('forms.act_location')}>
             <input
               value={location}
               onChange={e => setLocation(e.target.value)}
-              placeholder="Home, park, grandma's house, gym…"
               className={cn(
                 'h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base',
                 'focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30'
               )}
             />
           </Field>
-          <Field label="Notes">
+          <Field label={t('forms.notes')}>
             <textarea
               rows={3}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="What happened, milestones, reactions…"
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30"
             />
           </Field>
@@ -201,7 +200,7 @@ export function ActivityForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-mint-500 to-brand-500 hover:from-mint-600 hover:to-brand-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Log activity'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.act_log_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">
@@ -209,7 +208,7 @@ export function ActivityForm({
           </Button>
         )}
       </div>
-      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
+      <p className="text-center text-xs text-ink-muted">{t('forms.fast_log')} <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }
