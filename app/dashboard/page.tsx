@@ -103,7 +103,7 @@ export default async function DashboardPage() {
             <p className="mt-2 text-ink max-w-lg">
               {(babies ?? []).length === 0
                 ? 'Ready to start? Add your first baby to track feedings, stool, medications and growth.'
-                : `You have ${(babies ?? []).length} ${((babies ?? []).length === 1) ? 'baby' : 'babies'} on your dashboard. Pick one below.`}
+                : `You have ${(babies ?? []).length} ${((babies ?? []).length === 1) ? 'baby' : 'babies'}. Pick one below.`}
             </p>
           </div>
           <Link href="/babies/new"

@@ -14,8 +14,9 @@ import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
   Stethoscope, CalendarClock, HeartPulse, ScanLine, Activity, Heart, Tv, FlaskConical,
-  Smile, MessageCircle,
+  Smile, MessageCircle, ChevronDown, Settings, ShoppingCart,
 } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 type BabyRow = {
   id: string;
@@ -30,6 +31,7 @@ type BabyRow = {
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useT();
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -38,11 +40,16 @@ export function Sidebar() {
   const [avatars, setAvatars] = useState<Record<string, string | null>>({});
   const [babySwitcherOpen, setBabySwitcherOpen] = useState(false);
   const [role, setRole] = useState<string | null>(null);
+  // Per-category collapse state, persisted to localStorage so it survives
+  // page navigation. Default: every category open.
+  const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('bx:sidebar-collapsed');
       if (saved === '1') setCollapsed(true);
+      const cats = localStorage.getItem('bx:sidebar-cats');
+      if (cats) setOpenCats(JSON.parse(cats));
     } catch { /* ignore */ }
 
     const supabase = createClient();
@@ -72,6 +79,16 @@ export function Sidebar() {
   }, [collapsed]);
 
   useEffect(() => { setMobileOpen(false); setBabySwitcherOpen(false); }, [pathname]);
+
+  function toggleCat(id: string) {
+    setOpenCats(prev => {
+      const next = { ...prev, [id]: prev[id] === false ? true : false };
+      try { localStorage.setItem('bx:sidebar-cats', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }
+  // Default open unless explicitly false.
+  const isCatOpen = (id: string) => openCats[id] !== false;
 
   const currentBabyId = useMemo(() => {
     const m = pathname?.match(/^\/babies\/([0-9a-f-]{8,})/i);
@@ -169,61 +186,117 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Nav sections */}
-      <nav className={cn('flex-1 overflow-y-auto space-y-5', collapsed ? 'px-2 py-3' : 'px-3 py-4')}>
+      {/* Nav sections — categories are expandable when not collapsed. */}
+      <nav className={cn('flex-1 overflow-y-auto space-y-3', collapsed ? 'px-2 py-3' : 'px-3 py-4')}>
         <NavGroup label="HOME" collapsed={collapsed}>
-          <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} collapsed={collapsed} tint="brand" />
+          <NavItem href="/dashboard" icon={LayoutDashboard} label={t('nav.my_babies')}
+            active={pathname === '/dashboard'} collapsed={collapsed} tint="brand" />
         </NavGroup>
 
         {currentBabyId && (
           <>
+            {/* Always-visible Overview link */}
             <NavGroup label={isPregnancy ? 'PREGNANCY' : 'TRACK'} collapsed={collapsed}>
-              <NavItem href={`/babies/${currentBabyId}`}               icon={isPregnancy ? HeartPulse : Clock} label="Overview" active={pathname === `/babies/${currentBabyId}`} collapsed={collapsed} tint={isPregnancy ? 'lavender' : 'brand'} />
-              {isPregnancy && canViewLogs && <>
-                <NavItem href={`/babies/${currentBabyId}/prenatal/visits`}       icon={Stethoscope} label="Prenatal visits" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/visits`) ?? false} collapsed={collapsed} tint="lavender" />
-                <NavItem href={`/babies/${currentBabyId}/prenatal/ultrasounds`}  icon={ScanLine}    label="Ultrasounds"     active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/ultrasounds`) ?? false} collapsed={collapsed} tint="brand" />
-                <NavItem href={`/babies/${currentBabyId}/prenatal/kicks`}        icon={Activity}    label="Kick counter"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/kicks`) ?? false} collapsed={collapsed} tint="coral" />
-                <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}     label="Maternal vitals" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />
-                <NavItem href={`/babies/${currentBabyId}/labs`}                  icon={FlaskConical} label="Labs"           active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
-                <NavItem href={`/babies/${currentBabyId}/medications`}           icon={Pill}        label="Medications"     active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="mint" />
-                {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`}  icon={CalendarClock} label="Appointments"  active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
-              </>}
-              {!isPregnancy && canViewLogs && <>
-                <NavItem href={`/babies/${currentBabyId}/feedings`}      icon={Milk}      label="Feedings"     active={pathname?.startsWith(`/babies/${currentBabyId}/feedings`) ?? false} collapsed={collapsed} tint="coral" />
-                <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}   label="Stool"        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />
-                <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}      label="Medications"  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="lavender" />
-                <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}     label="Measurements" active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />
-                <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label="Temperature"  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />
-                <NavItem href={`/babies/${currentBabyId}/sleep`}         icon={Moon}      label="Sleep"        active={pathname?.startsWith(`/babies/${currentBabyId}/sleep`) ?? false} collapsed={collapsed} tint="lavender" />
-                <NavItem href={`/babies/${currentBabyId}/activities`}    icon={Activity}  label="Activities"   active={pathname?.startsWith(`/babies/${currentBabyId}/activities`) ?? false} collapsed={collapsed} tint="mint" />
-                <NavItem href={`/babies/${currentBabyId}/teething`}      icon={Smile}     label="Teething"     active={pathname?.startsWith(`/babies/${currentBabyId}/teething`) ?? false} collapsed={collapsed} tint="peach" />
-                <NavItem href={`/babies/${currentBabyId}/speaking`}      icon={MessageCircle} label="Speaking" active={pathname?.startsWith(`/babies/${currentBabyId}/speaking`) ?? false} collapsed={collapsed} tint="brand" />
-                <NavItem href={`/babies/${currentBabyId}/screen-time`}   icon={Tv}        label="Screen time"  active={pathname?.startsWith(`/babies/${currentBabyId}/screen-time`) ?? false} collapsed={collapsed} tint="lavender" />
-                <NavItem href={`/babies/${currentBabyId}/labs`}          icon={FlaskConical} label="Labs"     active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
-                <NavItem href={`/babies/${currentBabyId}/vaccinations`}  icon={Syringe}   label="Vaccinations" active={pathname?.startsWith(`/babies/${currentBabyId}/vaccinations`) ?? false} collapsed={collapsed} tint="lavender" />
-                {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`} icon={CalendarClock} label="Appointments" active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
-              </>}
+              <NavItem href={`/babies/${currentBabyId}`} icon={isPregnancy ? HeartPulse : Clock}
+                label={t('nav.overview')} active={pathname === `/babies/${currentBabyId}`}
+                collapsed={collapsed} tint={isPregnancy ? 'lavender' : 'brand'} />
             </NavGroup>
 
-            {canViewLogs && (
-              <NavGroup label="TOOLS" collapsed={collapsed}>
-                <NavItem href={`/babies/${currentBabyId}/ocr`}     icon={FileText}  label="Smart Scan" active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />
-                <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label="Medical Profile" active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />
-                {canExport && <NavItem href={`/babies/${currentBabyId}/reports`} icon={BarChart3} label="Reports"    active={pathname?.startsWith(`/babies/${currentBabyId}/reports`) ?? false} collapsed={collapsed} tint="peach" />}
-              </NavGroup>
+            {/* ─────── Pregnancy mode: prenatal categories ─────── */}
+            {isPregnancy && canViewLogs && (
+              <>
+                <NavCategory id="preg_visits" label={t('nav.cat_care')} icon={Stethoscope} collapsed={collapsed}
+                  open={isCatOpen('preg_visits')} onToggle={() => toggleCat('preg_visits')}>
+                  <NavItem href={`/babies/${currentBabyId}/prenatal/visits`}       icon={Stethoscope} label="Prenatal visits" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/visits`) ?? false} collapsed={collapsed} tint="lavender" />
+                  <NavItem href={`/babies/${currentBabyId}/prenatal/ultrasounds`}  icon={ScanLine}    label="Ultrasounds"     active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/ultrasounds`) ?? false} collapsed={collapsed} tint="brand" />
+                  <NavItem href={`/babies/${currentBabyId}/labs`}                  icon={FlaskConical} label={t('nav.labs_scans')} active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
+                  <NavItem href={`/babies/${currentBabyId}/medications`}           icon={Pill}        label={t('nav.medications')} active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="mint" />
+                  {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`}  icon={CalendarClock} label={t('nav.appointments')} active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
+                </NavCategory>
+
+                <NavCategory id="preg_vital" label={t('nav.cat_vital_signs')} icon={Heart} collapsed={collapsed}
+                  open={isCatOpen('preg_vital')} onToggle={() => toggleCat('preg_vital')}>
+                  <NavItem href={`/babies/${currentBabyId}/prenatal/kicks`}        icon={Activity}    label="Kick counter"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/kicks`) ?? false} collapsed={collapsed} tint="coral" />
+                  <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}    label="Maternal vitals" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />
+                </NavCategory>
+
+                <NavCategory id="preg_records" label={t('nav.cat_records')} icon={FileText} collapsed={collapsed}
+                  open={isCatOpen('preg_records')} onToggle={() => toggleCat('preg_records')}>
+                  <NavItem href={`/babies/${currentBabyId}/ocr`}             icon={FileText}  label={t('nav.files')} active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />
+                  <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label={t('nav.medical_profile')} active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />
+                  {canExport && <NavItem href={`/babies/${currentBabyId}/reports`} icon={BarChart3} label={t('nav.reports')} active={pathname?.startsWith(`/babies/${currentBabyId}/reports`) ?? false} collapsed={collapsed} tint="peach" />}
+                  <NavItem href={`/babies/${currentBabyId}/shopping`}        icon={ShoppingCart} label={t('nav.shopping')} active={pathname?.startsWith(`/babies/${currentBabyId}/shopping`) ?? false} collapsed={collapsed} tint="mint" />
+                </NavCategory>
+              </>
+            )}
+
+            {/* ─────── Baby mode: categorised trackers ─────── */}
+            {!isPregnancy && canViewLogs && (
+              <>
+                <NavCategory id="baby_vital" label={t('nav.cat_vital_signs')} icon={HeartPulse} collapsed={collapsed}
+                  open={isCatOpen('baby_vital')} onToggle={() => toggleCat('baby_vital')}>
+                  <NavItem href={`/babies/${currentBabyId}/feedings`}      icon={Milk}        label={t('nav.feedings')}     active={pathname?.startsWith(`/babies/${currentBabyId}/feedings`) ?? false} collapsed={collapsed} tint="coral" />
+                  <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}     label={t('nav.stool')}        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />
+                  <NavItem href={`/babies/${currentBabyId}/sleep`}         icon={Moon}        label={t('nav.sleep')}        active={pathname?.startsWith(`/babies/${currentBabyId}/sleep`) ?? false} collapsed={collapsed} tint="lavender" />
+                  <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label={t('nav.temperature')}  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />
+                  <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}       label={t('nav.measurements')} active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />
+                </NavCategory>
+
+                <NavCategory id="baby_care" label={t('nav.cat_care')} icon={Stethoscope} collapsed={collapsed}
+                  open={isCatOpen('baby_care')} onToggle={() => toggleCat('baby_care')}>
+                  <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}        label={t('nav.medications')}  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="lavender" />
+                  <NavItem href={`/babies/${currentBabyId}/vaccinations`}  icon={Syringe}     label={t('nav.vaccinations')} active={pathname?.startsWith(`/babies/${currentBabyId}/vaccinations`) ?? false} collapsed={collapsed} tint="lavender" />
+                  <NavItem href={`/babies/${currentBabyId}/labs`}          icon={FlaskConical} label={t('nav.labs_scans')}  active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
+                  {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`} icon={CalendarClock} label={t('nav.appointments')} active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
+                </NavCategory>
+
+                <NavCategory id="baby_dev" label={t('nav.cat_development')} icon={Activity} collapsed={collapsed}
+                  open={isCatOpen('baby_dev')} onToggle={() => toggleCat('baby_dev')}>
+                  <NavItem href={`/babies/${currentBabyId}/activities`}    icon={Activity}      label={t('nav.activities')}   active={pathname?.startsWith(`/babies/${currentBabyId}/activities`) ?? false} collapsed={collapsed} tint="mint" />
+                  <NavItem href={`/babies/${currentBabyId}/teething`}      icon={Smile}         label={t('nav.teething')}     active={pathname?.startsWith(`/babies/${currentBabyId}/teething`) ?? false} collapsed={collapsed} tint="peach" />
+                  <NavItem href={`/babies/${currentBabyId}/speaking`}      icon={MessageCircle} label={t('nav.speaking')}     active={pathname?.startsWith(`/babies/${currentBabyId}/speaking`) ?? false} collapsed={collapsed} tint="brand" />
+                  <NavItem href={`/babies/${currentBabyId}/screen-time`}   icon={Tv}            label={t('nav.screen_time')}  active={pathname?.startsWith(`/babies/${currentBabyId}/screen-time`) ?? false} collapsed={collapsed} tint="lavender" />
+                </NavCategory>
+
+                <NavCategory id="baby_records" label={t('nav.cat_records')} icon={FileText} collapsed={collapsed}
+                  open={isCatOpen('baby_records')} onToggle={() => toggleCat('baby_records')}>
+                  <NavItem href={`/babies/${currentBabyId}/ocr`}             icon={FileText}   label={t('nav.files')} active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />
+                  <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label={t('nav.medical_profile')} active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />
+                  {canExport && <NavItem href={`/babies/${currentBabyId}/reports`} icon={BarChart3} label={t('nav.reports')} active={pathname?.startsWith(`/babies/${currentBabyId}/reports`) ?? false} collapsed={collapsed} tint="peach" />}
+                  <NavItem href={`/babies/${currentBabyId}/shopping`}        icon={ShoppingCart} label={t('nav.shopping')} active={pathname?.startsWith(`/babies/${currentBabyId}/shopping`) ?? false} collapsed={collapsed} tint="mint" />
+                </NavCategory>
+              </>
             )}
 
             {isParent && (
-              <NavGroup label="SETTINGS" collapsed={collapsed}>
+              <NavCategory id="settings_family" label={t('nav.cat_family')} icon={Users} collapsed={collapsed}
+                open={isCatOpen('settings_family')} onToggle={() => toggleCat('settings_family')}>
                 {isPregnancy && (
                   <NavItem href={`/babies/${currentBabyId}/prenatal/profile`} icon={Heart} label="Pregnancy profile" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/profile`) ?? false} collapsed={collapsed} tint="coral" />
                 )}
-                <NavItem href={`/babies/${currentBabyId}/doctors`}    icon={Stethoscope} label="Doctors"     active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false}    collapsed={collapsed} tint="lavender" />
-                <NavItem href={`/babies/${currentBabyId}/caregivers`} icon={Users}       label="Caregivers"  active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`) ?? false} collapsed={collapsed} tint="mint" />
-                <NavItem href={`/babies/${currentBabyId}/edit`}       icon={UserCog}     label="Profile"     active={pathname?.startsWith(`/babies/${currentBabyId}/edit`) ?? false}       collapsed={collapsed} tint="brand" />
+                <NavItem href={`/babies/${currentBabyId}/doctors`}    icon={Stethoscope} label={t('nav.doctors')}    active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false}    collapsed={collapsed} tint="lavender" />
+                <NavItem href={`/babies/${currentBabyId}/caregivers`} icon={Users}       label={t('nav.caregivers')} active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`) ?? false} collapsed={collapsed} tint="mint" />
+                <NavItem href={`/babies/${currentBabyId}/edit`}       icon={UserCog}     label="Profile"             active={pathname?.startsWith(`/babies/${currentBabyId}/edit`) ?? false}       collapsed={collapsed} tint="brand" />
+                <NavItem href="/preferences"                          icon={Settings}    label={t('nav.preferences')} active={pathname?.startsWith('/preferences') ?? false} collapsed={collapsed} tint="brand" />
+              </NavCategory>
+            )}
+
+            {/* Preferences is always reachable — even for non-parents on a baby. */}
+            {!isParent && (
+              <NavGroup label="" collapsed={collapsed}>
+                <NavItem href="/preferences" icon={Settings} label={t('nav.preferences')}
+                  active={pathname?.startsWith('/preferences') ?? false} collapsed={collapsed} tint="brand" />
               </NavGroup>
             )}
           </>
+        )}
+
+        {/* Preferences when no baby is selected (e.g. on /dashboard). */}
+        {!currentBabyId && (
+          <NavGroup label="" collapsed={collapsed}>
+            <NavItem href="/preferences" icon={Settings} label={t('nav.preferences')}
+              active={pathname?.startsWith('/preferences') ?? false} collapsed={collapsed} tint="brand" />
+          </NavGroup>
         )}
       </nav>
 
@@ -342,11 +415,61 @@ function NavGroup({ label, children, collapsed }: { label: string; children: Rea
   return (
     <div>
       {collapsed ? (
-        <div className="mx-auto my-2 h-px w-8 bg-slate-200" aria-hidden />
+        label ? <div className="mx-auto my-2 h-px w-8 bg-slate-200" aria-hidden /> : null
       ) : (
-        <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">{label}</div>
+        label ? <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-ink-muted">{label}</div> : null
       )}
       <div className={cn(collapsed ? 'space-y-1' : 'space-y-0.5')}>{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Expandable category header. When the sidebar is collapsed (icon rail),
+ * the header is hidden — children render flush like before, with a divider
+ * between groups. When the sidebar is expanded, the user can click the
+ * header chevron to collapse the group and tighten the rail.
+ */
+function NavCategory({
+  id, label, icon: Icon, collapsed, open, onToggle, children,
+}: {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  collapsed: boolean;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  if (collapsed) {
+    // Icon rail: just show the children with a thin divider above.
+    return (
+      <div>
+        <div className="mx-auto my-2 h-px w-8 bg-slate-200" aria-hidden />
+        <div className="space-y-1">{children}</div>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-2xl">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={`navcat-${id}`}
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100/70 transition group"
+      >
+        <span className="h-7 w-7 rounded-lg grid place-items-center text-ink-muted bg-white border border-slate-200 group-hover:border-brand-200 group-hover:text-brand-600 shrink-0">
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+        <span className="flex-1 text-left text-[11px] font-bold uppercase tracking-wider text-ink-muted">{label}</span>
+        <ChevronDown className={cn('h-3.5 w-3.5 text-ink-muted transition-transform', !open && '-rotate-90')} />
+      </button>
+      {open && (
+        <div id={`navcat-${id}`} className="mt-1 space-y-0.5">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
