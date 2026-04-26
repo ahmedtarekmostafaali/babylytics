@@ -44,8 +44,10 @@ export function Wordmark({
   ];
   const letters = 'babylytics'.split('');
 
+  // dir="ltr" is critical: the brand name is "babylytics" — never mirror it
+  // even when the surrounding page is in RTL (Arabic, Hebrew, etc.).
   return (
-    <span className={cn('inline-flex items-center gap-2 font-extrabold tracking-tight', text, className)}>
+    <span dir="ltr" className={cn('inline-flex items-center gap-2 font-extrabold tracking-tight', text, className)}>
       {showLogo && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src="/Logo.png" alt="Babylytics" className={cn(logoSize, 'rounded-lg object-cover')} />

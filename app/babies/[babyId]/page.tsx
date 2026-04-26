@@ -18,6 +18,8 @@ import {
 } from '@/lib/dates';
 import { effectiveStage } from '@/lib/lifecycle';
 import { loadHiddenWidgets, showWidget } from '@/lib/dashboard-prefs';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor } from '@/lib/i18n';
 import { fmtKg, fmtMl } from '@/lib/units';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import {
@@ -48,6 +50,11 @@ export default async function BabyOverview({
   const day = dayWindow(focusDate);
   const last7 = lastNDaysWindow(7);
   const last14 = lastNDaysWindow(14);
+
+  // Per-user language → server-side translator. Falls back to English when the
+  // user hasn't set a preference yet.
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
 
   const { data: baby } = await supabase
     .from('babies')
@@ -452,7 +459,13 @@ export default async function BabyOverview({
 
   // ───────── Greeting
   const hourInCairo = Number(new Intl.DateTimeFormat('en-GB', { timeZone: TIMEZONE, hour: '2-digit', hour12: false }).format(new Date()));
-  const greeting = hourInCairo < 5 ? 'Good night' : hourInCairo < 12 ? 'Good morning' : hourInCairo < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = hourInCairo < 5
+    ? t('overview.greet_night')
+    : hourInCairo < 12
+      ? t('overview.greet_morning')
+      : hourInCairo < 17
+        ? t('overview.greet_afternoon')
+        : t('overview.greet_evening');
 
   // ───────── Last-X tiles
   const lastFeedBits: string[] = [];
@@ -471,10 +484,10 @@ export default async function BabyOverview({
               {greeting}
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-strong truncate">
-              {greeting}, {baby.name}!
+              {greeting}, <bdi>{baby.name}</bdi>!
             </h1>
             <div className="text-xs text-ink-muted mt-0.5">
-              {baby.gender} · {age} days old{w ? ` · ${fmtKg(w)}` : ''}
+              {t(`overview.${baby.gender === 'male' ? 'male' : 'female'}`)} · {t('overview.days_old', { n: age })}{w ? ` · ${fmtKg(w)}` : ''}
             </div>
             {showPregnancyArchive && (
               <Link href={`/babies/${babyId}/medical-profile#pregnancy-history`}
@@ -502,14 +515,16 @@ export default async function BabyOverview({
           <Pill className="h-5 w-5 text-coral-600 mt-0.5 shrink-0" />
           <div className="flex-1">
             <div className="font-bold text-coral-900">
-              {overdueCount} medication dose{overdueCount > 1 ? 's' : ''} due now
+              {overdueCount === 1
+                ? `1 ${t('overview.dose_due_now')}`
+                : t('overview.doses_due_now', { n: overdueCount })}
             </div>
-            <p className="text-coral-800/90 mt-0.5">Log them as taken, missed, or skipped — they&apos;re past the scheduled time.</p>
+            <p className="text-coral-800/90 mt-0.5">{t('overview.dose_due_sub')}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {reminders.filter(r => r.isOverdue).slice(0, 4).map(r => (
                 <Link key={r.medId} href={`/babies/${babyId}/medications/log?m=${r.medId}`}
                   className="inline-flex items-center gap-1.5 rounded-full bg-coral-600 px-3 py-1 text-xs font-semibold text-white hover:bg-coral-700">
-                  <Pill className="h-3 w-3" /> Log {r.name}
+                  <Pill className="h-3 w-3" /> {t('overview.log_med', { name: r.name })}
                 </Link>
               ))}
               {reminders.filter(r => r.isOverdue).length > 4 && (
@@ -548,22 +563,22 @@ export default async function BabyOverview({
       <section className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         {show('last_feeding') && <LastCard
           tint="coral" icon={Milk}
-          label="Last feeding"
+          label={t('overview.kpi_last_feeding')}
           value={lastFeed.data ? (lastFeedBits[0] ?? '—') : 'No data'}
-          sub={lastFeed.data ? lastFeedBits.slice(1).join(' · ') : 'tap to log'}
+          sub={lastFeed.data ? lastFeedBits.slice(1).join(' · ') : t('overview.tap_to_log')}
           time={lastFeed.data?.feeding_time ?? null}
           href={`/babies/${babyId}/feedings`}
         />}
         {show('todays_feedings') && <LastCard
           tint="peach" icon={Milk}
-          label="Today's feedings"
-          value={todayFeedCount === 0 ? 'No data' : fmtMl(todayFeedVolume)}
+          label={t('overview.kpi_todays_feedings')}
+          value={todayFeedCount === 0 ? t('overview.no_data') : fmtMl(todayFeedVolume)}
           sub={todayFeedCount === 0
-            ? 'log your first feed'
-            : `${todayFeedCount} feed${todayFeedCount === 1 ? '' : 's'}${todayBreasts > 0 ? ` · ${todayBreasts} breast` : ''}`}
+            ? t('overview.tap_to_log')
+            : t('overview.feeds_n', { n: todayFeedCount })}
           time={null}
           href={`/babies/${babyId}/feedings`}
-          badge={todayFeedCount > 0 ? 'today' : undefined}
+          badge={todayFeedCount > 0 ? t('overview.today') : undefined}
         />}
         {show('feed_pace') && <FeedPaceCard cmp={feedPace} />}
         {show('feeding_progress') && (() => {
@@ -579,46 +594,46 @@ export default async function BabyOverview({
           return (
             <LastCard
               tint={tone} icon={Milk}
-              label="Feeding %"
+              label={t('overview.kpi_feeding_pct')}
               value={recommended > 0 ? `${pct}%` : '—'}
               sub={recommended === 0
-                ? 'set weight to compute'
+                ? t('overview.tap_to_log')
                 : pct >= 100
-                  ? `goal hit · ${fmtMl(recommended)}`
-                  : `${fmtMl(remaining)} left to goal`}
+                  ? `${t('overview.goal_hit')} · ${fmtMl(recommended)}`
+                  : t('overview.ml_left_to_goal', { ml: remaining })}
               time={null}
               href={`/babies/${babyId}/feedings`}
-              badge={recommended > 0 && pct >= 100 ? 'goal hit' : undefined}
+              badge={recommended > 0 && pct >= 100 ? t('overview.goal_hit') : undefined}
             />
           );
         })()}
         {show('last_sleep') && <LastCard
           tint="lavender" icon={Moon}
-          label="Last sleep"
+          label={t('overview.kpi_last_sleep')}
           value={
             lastSleep.data
               ? (lastSleep.data.end_at == null
-                  ? 'In progress'
+                  ? t('overview.in_progress')
                   : `${Math.floor((lastSleepDurMin ?? 0) / 60)}h ${(lastSleepDurMin ?? 0) % 60}m`)
-              : 'No data'
+              : t('overview.no_data')
           }
-          sub={lastSleep.data ? `${lastSleep.data.location}${lastSleep.data.quality ? ` · ${String(lastSleep.data.quality).replace('_',' ')}` : ''}` : 'tap to log'}
+          sub={lastSleep.data ? `${lastSleep.data.location}${lastSleep.data.quality ? ` · ${String(lastSleep.data.quality).replace('_',' ')}` : ''}` : t('overview.tap_to_log')}
           time={lastSleep.data?.start_at ?? null}
           href={`/babies/${babyId}/sleep`}
-          badge={lastSleep.data?.end_at == null ? 'live' : undefined}
+          badge={lastSleep.data?.end_at == null ? t('overview.live') : undefined}
         />}
         {show('last_stool') && <LastCard
           tint="mint" icon={Droplet}
-          label="Last stool"
-          value={lastStool.data ? (lastStool.data.quantity_category ?? 'logged') : 'No data'}
-          sub={lastStool.data?.color ?? 'tap to log'}
+          label={t('overview.kpi_last_stool')}
+          value={lastStool.data ? (lastStool.data.quantity_category ?? '—') : t('overview.no_data')}
+          sub={lastStool.data?.color ?? t('overview.tap_to_log')}
           time={lastStool.data?.stool_time ?? null}
           href={`/babies/${babyId}/stool`}
         />}
         {show('todays_summary') && <LastCard
           tint="mint" icon={Droplet}
-          label="Today's stool"
-          value={todayStoolCount === 0 ? 'No data' : `${todayStoolCount} change${todayStoolCount === 1 ? '' : 's'}`}
+          label={t('overview.kpi_todays_stool')}
+          value={todayStoolCount === 0 ? t('overview.no_data') : t('overview.changes_n', { n: todayStoolCount })}
           sub={todayStoolCount === 0
             ? 'log a diaper'
             : `S ${todayStoolSmall} · M ${todayStoolMedium} · L ${todayStoolLarge}`}
@@ -628,7 +643,7 @@ export default async function BabyOverview({
         />}
         {show('last_dose') && <LastCard
           tint={nextDose?.isOverdue ? 'coral' : 'peach'} icon={Pill}
-          label="Medications"
+          label={t('overview.kpi_last_dose')}
           value={nextDose?.name ?? (lastDose.data ? `Last: ${lastDose.data.status}` : 'No doses')}
           sub={
             nextDose?.isOverdue ? `overdue by ${fmtRelative(nextDose.nextAt!).replace(/ ago$/, '')}`
@@ -641,9 +656,9 @@ export default async function BabyOverview({
         />}
         {show('last_measurement') && <LastCard
           tint="brand" icon={Scale}
-          label="Measurements"
+          label={t('overview.kpi_last_measurement')}
           value={lastMeasurement.data?.weight_kg ? fmtKg(lastMeasurement.data.weight_kg) : 'No data'}
-          sub={lastMeasurement.data?.height_cm ? `${lastMeasurement.data.height_cm} cm` : 'tap to log'}
+          sub={lastMeasurement.data?.height_cm ? `${lastMeasurement.data.height_cm} cm` : t('overview.tap_to_log')}
           time={lastMeasurement.data?.measured_at ?? null}
           href={`/babies/${babyId}/measurements`}
         />}
@@ -687,7 +702,7 @@ export default async function BabyOverview({
       <section className="grid gap-4 lg:grid-cols-3">
         {/* ───── LEFT: Today's Timeline ───── */}
         <Panel
-          title="Today's timeline"
+          title={t('overview.todays_timeline')}
           subtitle={fmtDate(day.start)}
           icon={Activity}
           tint="coral"
@@ -727,7 +742,7 @@ export default async function BabyOverview({
 
         {/* ───── MIDDLE: Today's Insights ───── */}
         <Panel
-          title="Today's insights"
+          title={t('overview.todays_insights')}
           subtitle="last 7 days"
           icon={TrendingUp}
           tint="mint"
@@ -982,13 +997,13 @@ export default async function BabyOverview({
       <div className="hidden md:block sticky bottom-4 z-30">
         <div className="rounded-2xl border border-slate-200 bg-white/95 backdrop-blur shadow-panel px-3 py-2">
           <div className="flex items-center gap-2 overflow-x-auto">
-            <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-2 pr-1 whitespace-nowrap">Quick add</span>
-            <QuickPill href={`/babies/${babyId}/feedings/new`}     icon={Milk}        tint="coral"    label="Feeding" />
-            <QuickPill href={`/babies/${babyId}/sleep/new`}        icon={Moon}        tint="lavender" label="Sleep" />
-            <QuickPill href={`/babies/${babyId}/stool/new`}        icon={Droplet}     tint="mint"     label="Stool" />
-            <QuickPill href={`/babies/${babyId}/medications/log`}  icon={Pill}        tint="lavender" label="Medication" />
-            <QuickPill href={`/babies/${babyId}/temperature/new`}  icon={Thermometer} tint="peach"    label="Temperature" />
-            <QuickPill href={`/babies/${babyId}/measurements/new`} icon={Scale}       tint="brand"    label="Measurement" />
+            <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider pl-2 pr-1 whitespace-nowrap">{t('overview.quick_add')}</span>
+            <QuickPill href={`/babies/${babyId}/feedings/new`}     icon={Milk}        tint="coral"    label={t('overview.quick_feeding')} />
+            <QuickPill href={`/babies/${babyId}/sleep/new`}        icon={Moon}        tint="lavender" label={t('overview.quick_sleep')} />
+            <QuickPill href={`/babies/${babyId}/stool/new`}        icon={Droplet}     tint="mint"     label={t('overview.quick_stool')} />
+            <QuickPill href={`/babies/${babyId}/medications/log`}  icon={Pill}        tint="lavender" label={t('overview.quick_medication')} />
+            <QuickPill href={`/babies/${babyId}/temperature/new`}  icon={Thermometer} tint="peach"    label={t('overview.quick_temperature')} />
+            <QuickPill href={`/babies/${babyId}/measurements/new`} icon={Scale}       tint="brand"    label={t('overview.quick_measurement')} />
           </div>
         </div>
       </div>

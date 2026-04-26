@@ -96,6 +96,73 @@ export const en = {
     saved: 'Preferences saved.',
   },
 
+  // ── Baby overview (most-visible page) ────────────────────────────
+  overview: {
+    greet_morning:   'Good morning',
+    greet_afternoon: 'Good afternoon',
+    greet_evening:   'Good evening',
+    greet_night:     'Good night',
+
+    days_old: '{n} days old',
+    male:     'male',
+    female:   'female',
+
+    dose_due_now: 'medication dose due now',
+    doses_due_now: '{n} medication doses due now',
+    dose_due_sub: "Log them as taken, missed, or skipped — they're past the scheduled time.",
+    log_med:      'Log {name}',
+
+    // KPI tile labels (top of overview)
+    kpi_last_feeding:    'Last feeding',
+    kpi_todays_feedings: "Today's feedings",
+    kpi_feeding_pct:     'Feeding %',
+    kpi_feed_pace:       'Feed pace',
+    kpi_last_sleep:      'Last sleep',
+    kpi_last_stool:      'Last stool',
+    kpi_todays_stool:    "Today's stool",
+    kpi_last_temp:       'Last temperature',
+    kpi_last_dose:       'Medications',
+    kpi_last_measurement:'Measurements',
+
+    // Sub-labels
+    tap_to_log:        'tap to log',
+    today_so_far:      'Today so far',
+    seven_day_avg:     '7-day avg',
+    today_so_far_avg:  'Today so far · 7-day avg',
+    feeds_n:           '{n} feeds',
+    changes_n:         '{n} changes',
+    ml_left_to_goal:   '{ml} ml left to goal',
+    goal_hit:          'goal hit',
+    no_data:           'No data',
+    in_progress:       'In progress',
+    live:              'live',
+    today:             'today',
+
+    // Sections + chips
+    growth_insights:        'Growth insights',
+    vs_who_standards:       'vs WHO standards',
+    log_measurement:        'Log measurement',
+    todays_timeline:        "Today's timeline",
+    todays_insights:        "Today's insights",
+
+    // Card mini-labels
+    median_short: 'Median',
+    min_short:    'min',
+    on_track:     'on track',
+    above_median: 'above median',
+    below_median: 'below median',
+    below_who_min:'below WHO min — talk to pediatrician',
+
+    // Quick add bar
+    quick_add:        'QUICK ADD',
+    quick_feeding:    'Feeding',
+    quick_sleep:      'Sleep',
+    quick_stool:      'Stool',
+    quick_medication: 'Medication',
+    quick_temperature:'Temperature',
+    quick_measurement:'Measurement',
+  },
+
   // ── Auth ────────────────────────────────────────────────────────
   auth: {
     sign_in: 'Sign in',
