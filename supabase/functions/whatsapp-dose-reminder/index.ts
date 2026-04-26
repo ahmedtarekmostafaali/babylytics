@@ -28,6 +28,14 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const TWILIO_ACCOUNT_SID        = Deno.env.get('TWILIO_ACCOUNT_SID')!;
 const TWILIO_AUTH_TOKEN         = Deno.env.get('TWILIO_AUTH_TOKEN')!;
 const TWILIO_WHATSAPP_FROM      = Deno.env.get('TWILIO_WHATSAPP_FROM')!;
+// Optional: when set, the function sends the approved Content Template instead
+// of a free-form Body. Required for production senders — Meta only allows
+// free-form messages inside a 24h user-initiated session window. Set this to
+// the ContentSid Twilio gave you after the template was approved (HX...).
+const TWILIO_CONTENT_SID        = Deno.env.get('TWILIO_CONTENT_SID') ?? '';
+// Optional Twilio Messaging Service to route through; usually not needed for
+// WhatsApp because the From sender determines the channel.
+const TWILIO_MESSAGING_SID      = Deno.env.get('TWILIO_MESSAGING_SID') ?? '';
 
 type PendingRow = {
   medication_id: string;
@@ -58,13 +66,34 @@ function renderBody(r: PendingRow): string {
   ].join('\n');
 }
 
-async function sendTwilio(to: string, body: string): Promise<{ ok: true; sid: string } | { ok: false; error: string }> {
+async function sendTwilio(to: string, body: string, r: PendingRow): Promise<{ ok: true; sid: string } | { ok: false; error: string }> {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-  const params = new URLSearchParams({
-    From: TWILIO_WHATSAPP_FROM,
-    To:   to.startsWith('whatsapp:') ? to : `whatsapp:${to}`,
-    Body: body,
-  });
+  const params = new URLSearchParams();
+
+  // Route: either a Messaging Service or a fixed From sender.
+  if (TWILIO_MESSAGING_SID) params.append('MessagingServiceSid', TWILIO_MESSAGING_SID);
+  else                       params.append('From', TWILIO_WHATSAPP_FROM);
+
+  params.append('To', to.startsWith('whatsapp:') ? to : `whatsapp:${to}`);
+
+  if (TWILIO_CONTENT_SID) {
+    // PRODUCTION PATH — approved template message. Variables map to the
+    // {{1}}..{{4}} placeholders in the template body. Order MUST match what
+    // we submitted to Meta:
+    //   {{1}} baby name, {{2}} med name, {{3}} dosage, {{4}} due time
+    params.append('ContentSid', TWILIO_CONTENT_SID);
+    params.append('ContentVariables', JSON.stringify({
+      '1': r.baby_name,
+      '2': r.med_name,
+      '3': r.med_dosage ?? '—',
+      '4': fmtTimeCairo(r.scheduled_for),
+    }));
+  } else {
+    // SANDBOX / DEV PATH — free-form Body. Only delivers to users who have
+    // sent the join code to the Twilio sandbox number.
+    params.append('Body', body);
+  }
+
   const auth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
   const res = await fetch(url, {
     method: 'POST',
@@ -150,7 +179,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       continue;
     }
 
-    const sendRes = await sendTwilio(r.e164, body);
+    const sendRes = await sendTwilio(r.e164, body, r);
     if (sendRes.ok) {
       await sb.from('whatsapp_outbox').update({
         status: 'sent', twilio_sid: sendRes.sid, sent_at: new Date().toISOString(), attempts: 1,
