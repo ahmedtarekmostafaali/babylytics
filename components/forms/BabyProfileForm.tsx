@@ -11,7 +11,7 @@ import { isoToLocalInput, localInputToIso } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { fmtMl, fmtKg } from '@/lib/units';
 import {
-  Camera, Trash2, Save, Info, Gift, Stethoscope, SlidersHorizontal, StickyNote,
+  Camera, Trash2, Save, Info, Gift, Stethoscope, StickyNote,
   Loader2,
 } from 'lucide-react';
 
@@ -34,12 +34,13 @@ export type BabyProfileValue = {
   next_appointment_notes?: string | null;
 };
 
-type Tab = 'basic' | 'birth' | 'health' | 'prefs' | 'notes';
+// 'prefs' was removed — language / timezone / unit preferences now live on
+// the global /preferences page so we don't surface a duplicate empty tab here.
+type Tab = 'basic' | 'birth' | 'health' | 'notes';
 const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'basic',  label: 'Basic Info',   icon: Info },
   { key: 'birth',  label: 'Birth Stats',  icon: Gift },
   { key: 'health', label: 'Health Info',  icon: Stethoscope },
-  { key: 'prefs',  label: 'Preferences',  icon: SlidersHorizontal },
   { key: 'notes',  label: 'Notes',        icon: StickyNote },
 ];
 
@@ -340,14 +341,6 @@ export function BabyProfileForm({
           <input type="hidden" value={docClinic ?? ''} readOnly />
           <input type="hidden" value={appt ?? ''} readOnly />
           <input type="hidden" value={apptNotes ?? ''} readOnly />
-        </SectionCard>
-      )}
-
-      {tab === 'prefs' && (
-        <SectionCard icon={SlidersHorizontal} tint="brand" title="Preferences">
-          <p className="text-sm text-ink-muted">
-            Language, timezone and unit preferences are coming soon. For now the app runs in English with metric units and the Africa/Cairo timezone.
-          </p>
         </SectionCard>
       )}
 

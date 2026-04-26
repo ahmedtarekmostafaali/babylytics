@@ -12,6 +12,7 @@ import {
 import type { Lang } from '@/lib/i18n';
 import { Save, Globe, MapPin, Clock, Ruler, Bell, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { WhatsAppSandboxJoin } from '@/components/WhatsAppSandboxJoin';
 
 export function PreferencesForm({ initial }: { initial: UserPrefs }) {
   const router = useRouter();
@@ -149,6 +150,11 @@ export function PreferencesForm({ initial }: { initial: UserPrefs }) {
             />
             {t('prefs.whatsapp_optin')}
           </label>
+
+          {/* Sandbox onboarding helper — appears the moment the user starts
+              entering a number. Disappears once we move to a production
+              sender (set NEXT_PUBLIC_WHATSAPP_SANDBOX=false). */}
+          {waNumber.trim() && <WhatsAppSandboxJoin />}
         </div>
       </Card>
 
