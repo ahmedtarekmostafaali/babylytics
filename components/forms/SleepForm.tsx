@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Section, TypeTile, WhenPicker } from '@/components/forms/FormKit';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { SleepSchema } from '@/lib/validators';
+import { useT } from '@/lib/i18n/client';
 import {
   Save, Moon, Bed, Car, Armchair, Home, Baby as BabyIcon,
   Play, Square, Smile, Frown, Meh, HelpCircle,
@@ -26,6 +27,7 @@ export type SleepFormValue = {
 
 export function SleepForm({ babyId, initial }: { babyId: string; initial?: SleepFormValue }) {
   const router = useRouter();
+  const t = useT();
   const [startAt, setStartAt] = useState(
     initial?.start_at ? isoToLocalInput(initial.start_at) : nowLocalInput(),
   );
@@ -125,38 +127,37 @@ export function SleepForm({ babyId, initial }: { babyId: string; initial?: Sleep
         )}
       </div>
 
-      <Section n={1} title="Where did they sleep?">
+      <Section n={1} title={t('forms.sleep_where')}>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <TypeTile icon={BabyIcon} label="Crib"     tint="lavender" active={location === 'crib'}     onClick={() => setLocation('crib')} />
-          <TypeTile icon={Bed}      label="Bed"      tint="brand"    active={location === 'bed'}      onClick={() => setLocation('bed')} />
-          <TypeTile icon={Car}      label="Car"      tint="coral"    active={location === 'car'}      onClick={() => setLocation('car')} />
-          <TypeTile icon={Home}     label="Stroller" tint="mint"     active={location === 'stroller'} onClick={() => setLocation('stroller')} />
-          <TypeTile icon={Armchair} label="Arms"     tint="peach"    active={location === 'arms'}     onClick={() => setLocation('arms')} />
-          <TypeTile icon={HelpCircle} label="Other"  tint="mint"     active={location === 'other'}    onClick={() => setLocation('other')} />
+          <TypeTile icon={BabyIcon} label={t('forms.sleep_loc_crib')}     tint="lavender" active={location === 'crib'}     onClick={() => setLocation('crib')} />
+          <TypeTile icon={Bed}      label={t('forms.sleep_loc_bed')}      tint="brand"    active={location === 'bed'}      onClick={() => setLocation('bed')} />
+          <TypeTile icon={Car}      label={t('forms.sleep_loc_car')}      tint="coral"    active={location === 'car'}      onClick={() => setLocation('car')} />
+          <TypeTile icon={Home}     label={t('forms.sleep_loc_stroller')} tint="mint"     active={location === 'stroller'} onClick={() => setLocation('stroller')} />
+          <TypeTile icon={Armchair} label={t('forms.sleep_loc_arms')}     tint="peach"    active={location === 'arms'}     onClick={() => setLocation('arms')} />
+          <TypeTile icon={HelpCircle} label={t('forms.sleep_loc_other')}  tint="mint"     active={location === 'other'}    onClick={() => setLocation('other')} />
         </div>
       </Section>
 
-      <Section n={2} title="Started at">
+      <Section n={2} title={t('forms.sleep_started_at')}>
         <WhenPicker time={startAt} onChange={setStartAt} tint="lavender" />
       </Section>
 
-      <Section n={3} title="Ended at" optional>
+      <Section n={3} title={t('forms.sleep_ended_at')} optional>
         <WhenPicker time={endAt || nowLocalInput()} onChange={setEndAt} tint="brand" />
-        <p className="mt-2 text-xs text-ink-muted">Leave on auto to track a live session; pick a time when finished.</p>
       </Section>
 
-      <Section n={4} title="How did they sleep?" optional>
+      <Section n={4} title={t('forms.sleep_quality')} optional>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <TypeTile icon={Smile}     label="Sound"       tint="mint"     active={quality === 'sound'}      onClick={() => setQuality('sound')} />
-          <TypeTile icon={Meh}       label="Restless"    tint="peach"    active={quality === 'restless'}   onClick={() => setQuality('restless')} />
-          <TypeTile icon={Frown}     label="Woke often"  tint="coral"    active={quality === 'woke_often'} onClick={() => setQuality('woke_often')} />
-          <TypeTile icon={HelpCircle} label="Not sure"   tint="lavender" active={quality === 'unknown'}    onClick={() => setQuality('unknown')} />
+          <TypeTile icon={Smile}     label={t('forms.sleep_q_sound')}    tint="mint"     active={quality === 'sound'}      onClick={() => setQuality('sound')} />
+          <TypeTile icon={Meh}       label={t('forms.sleep_q_restless')} tint="peach"    active={quality === 'restless'}   onClick={() => setQuality('restless')} />
+          <TypeTile icon={Frown}     label={t('forms.sleep_q_woke')}     tint="coral"    active={quality === 'woke_often'} onClick={() => setQuality('woke_often')} />
+          <TypeTile icon={HelpCircle} label={t('forms.sleep_q_unknown')} tint="lavender" active={quality === 'unknown'}    onClick={() => setQuality('unknown')} />
         </div>
       </Section>
 
-      <Section n={5} title="Add details" optional>
+      <Section n={5} title={t('forms.feed_add_details')} optional>
         <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-          placeholder="Any notes? (e.g. refused crib, woke at 3am)"
+          placeholder={t('forms.feed_notes_placeholder')}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
       </Section>
 
@@ -165,10 +166,10 @@ export function SleepForm({ babyId, initial }: { babyId: string; initial?: Sleep
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-lavender-500 to-brand-500">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save sleep'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.sleep_save_cta')}
         </Button>
         {initial?.id && (
-          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">Delete</Button>
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">{t('forms.delete')}</Button>
         )}
       </div>
     </form>

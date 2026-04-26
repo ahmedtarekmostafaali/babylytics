@@ -7,6 +7,7 @@ import { Section, TypeTile, WhenPicker, Field } from '@/components/forms/FormKit
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Droplet, Droplets, CloudRain } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/client';
 
 type Size = 'small' | 'medium' | 'large';
 
@@ -27,6 +28,7 @@ const CONSISTENCIES = ['watery', 'loose', 'soft', 'firm', 'pellets'];
 
 export function StoolForm({ babyId, initial }: { babyId: string; initial?: StoolFormValue }) {
   const router = useRouter();
+  const t = useT();
   const [time, setTime] = useState(initial?.stool_time ? isoToLocalInput(initial.stool_time) : nowLocalInput());
   const [size, setSize] = useState<Size>((initial?.quantity_category ?? 'medium') as Size);
   const [ml, setMl]     = useState(initial?.quantity_ml?.toString() ?? '');
@@ -77,51 +79,50 @@ export function StoolForm({ babyId, initial }: { babyId: string; initial?: Stool
 
   return (
     <form onSubmit={submit} className="space-y-8">
-      <Section n={1} title="Size">
+      <Section n={1} title={t('forms.stool_size')}>
         <div className="grid grid-cols-3 gap-3">
-          <TypeTile icon={Droplet}   label="Small"  tint="mint" active={size === 'small'}  onClick={() => setSize('small')} />
-          <TypeTile icon={Droplets}  label="Medium" tint="mint" active={size === 'medium'} onClick={() => setSize('medium')} />
-          <TypeTile icon={CloudRain} label="Large"  tint="mint" active={size === 'large'}  onClick={() => setSize('large')} />
+          <TypeTile icon={Droplet}   label={t('forms.stool_small')}  tint="mint" active={size === 'small'}  onClick={() => setSize('small')} />
+          <TypeTile icon={Droplets}  label={t('forms.stool_medium')} tint="mint" active={size === 'medium'} onClick={() => setSize('medium')} />
+          <TypeTile icon={CloudRain} label={t('forms.stool_large')}  tint="mint" active={size === 'large'}  onClick={() => setSize('large')} />
         </div>
       </Section>
 
-      <Section n={2} title="Appearance" optional>
+      <Section n={2} title={t('forms.feed_details')} optional>
         <div className="space-y-4">
-          <Field label="Color">
+          <Field label={t('forms.stool_color')}>
             <div className="flex flex-wrap gap-2">
               {COLORS.map(c => (
                 <Chip key={c} active={color === c} onClick={() => setColor(color === c ? '' : c)}>{c}</Chip>
               ))}
             </div>
           </Field>
-          <Field label="Consistency">
+          <Field label={t('forms.stool_consistency')}>
             <div className="flex flex-wrap gap-2">
               {CONSISTENCIES.map(c => (
                 <Chip key={c} active={consistency === c} onClick={() => setConsistency(consistency === c ? '' : c)}>{c}</Chip>
               ))}
             </div>
           </Field>
-          <Field label="Quantity (ml, optional)">
+          <Field label={t('forms.feed_quantity')}>
             <input type="number" min={0} max={1000} step={1}
               value={ml} onChange={e => setMl(e.target.value)}
-              placeholder="estimate if you know"
               className="h-12 w-40 rounded-2xl border border-slate-200 bg-white px-4 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
           </Field>
           <label className="inline-flex items-center gap-2 text-sm">
             <input type="checkbox" checked={rash} onChange={e => setRash(e.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-mint-500 focus:ring-mint-500" />
-            Diaper rash present
+            {t('forms.stool_diaper_rash')}
           </label>
         </div>
       </Section>
 
-      <Section n={3} title="When?">
+      <Section n={3} title={t('forms.when')}>
         <WhenPicker time={time} onChange={setTime} tint="mint" />
       </Section>
 
-      <Section n={4} title="Add details" optional>
+      <Section n={4} title={t('forms.feed_add_details')} optional>
         <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-          placeholder="Anything worth remembering"
+          placeholder={t('forms.feed_notes_placeholder')}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
       </Section>
 
@@ -130,10 +131,10 @@ export function StoolForm({ babyId, initial }: { babyId: string; initial?: Stool
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-mint-500 to-mint-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save stool log'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.stool_log_cta')}
         </Button>
         {initial?.id && (
-          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">Delete</Button>
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">{t('forms.delete')}</Button>
         )}
       </div>
     </form>

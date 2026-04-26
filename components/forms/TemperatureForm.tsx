@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Section, TypeTile, WhenPicker, Field } from '@/components/forms/FormKit';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Thermometer, Ear, Baby as BabyIcon, Smile } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 type Method = 'axillary'|'oral'|'rectal'|'ear'|'forehead'|'other';
 
@@ -20,6 +21,7 @@ export type TemperatureFormValue = {
 
 export function TemperatureForm({ babyId, initial }: { babyId: string; initial?: TemperatureFormValue }) {
   const router = useRouter();
+  const t = useT();
   const [time, setTime]     = useState(initial?.measured_at ? isoToLocalInput(initial.measured_at) : nowLocalInput());
   const [temp, setTemp]     = useState<string>(initial?.temperature_c?.toString() ?? '37.0');
   const [method, setMethod] = useState<Method>(initial?.method ?? 'axillary');
@@ -72,17 +74,17 @@ export function TemperatureForm({ babyId, initial }: { babyId: string; initial?:
 
   return (
     <form onSubmit={submit} className="space-y-8">
-      <Section n={1} title="How did you take it?">
+      <Section n={1} title={t('forms.temp_how')}>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <TypeTile icon={BabyIcon}  label="Axillary" tint="coral" active={method === 'axillary'} onClick={() => setMethod('axillary')} sub="underarm" />
-          <TypeTile icon={Thermometer} label="Oral" tint="brand" active={method === 'oral'} onClick={() => setMethod('oral')} sub="under tongue" />
-          <TypeTile icon={Ear}       label="Ear"      tint="peach" active={method === 'ear'} onClick={() => setMethod('ear')} sub="tympanic" />
-          <TypeTile icon={Smile}     label="Forehead" tint="mint" active={method === 'forehead'} onClick={() => setMethod('forehead')} sub="temporal" />
-          <TypeTile icon={Thermometer} label="Rectal" tint="lavender" active={method === 'rectal'} onClick={() => setMethod('rectal')} sub="most accurate" />
+          <TypeTile icon={BabyIcon}  label={t('forms.temp_axillary')} tint="coral" active={method === 'axillary'} onClick={() => setMethod('axillary')} sub={t('forms.temp_axillary_sub')} />
+          <TypeTile icon={Thermometer} label={t('forms.temp_oral')} tint="brand" active={method === 'oral'} onClick={() => setMethod('oral')} sub={t('forms.temp_oral_sub')} />
+          <TypeTile icon={Ear}       label={t('forms.temp_ear')}      tint="peach" active={method === 'ear'} onClick={() => setMethod('ear')} sub={t('forms.temp_ear_sub')} />
+          <TypeTile icon={Smile}     label={t('forms.temp_forehead')} tint="mint" active={method === 'forehead'} onClick={() => setMethod('forehead')} sub={t('forms.temp_forehead_sub')} />
+          <TypeTile icon={Thermometer} label={t('forms.temp_rectal')} tint="lavender" active={method === 'rectal'} onClick={() => setMethod('rectal')} sub={t('forms.temp_rectal_sub')} />
         </div>
       </Section>
 
-      <Section n={2} title="Reading">
+      <Section n={2} title={t('forms.temp_reading')}>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 flex items-center gap-5 flex-wrap">
           <input type="number" step="0.1" min={30.1} max={44.9} value={temp} onChange={e => setTemp(e.target.value)}
             className="h-16 w-40 rounded-2xl border border-slate-200 bg-white px-4 text-3xl font-bold focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
@@ -94,13 +96,13 @@ export function TemperatureForm({ babyId, initial }: { babyId: string; initial?:
         </div>
       </Section>
 
-      <Section n={3} title="When?">
+      <Section n={3} title={t('forms.when')}>
         <WhenPicker time={time} onChange={setTime} tint="coral" />
       </Section>
 
-      <Section n={4} title="Add details" optional>
+      <Section n={4} title={t('forms.feed_add_details')} optional>
         <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-          placeholder="Notes (e.g. fussy, symptoms, after bath)"
+          placeholder={t('forms.feed_notes_placeholder')}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
       </Section>
 
@@ -109,10 +111,10 @@ export function TemperatureForm({ babyId, initial }: { babyId: string; initial?:
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-coral-500 to-coral-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save reading'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.temp_log_cta')}
         </Button>
         {initial?.id && (
-          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">Delete</Button>
+          <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">{t('forms.delete')}</Button>
         )}
       </div>
     </form>

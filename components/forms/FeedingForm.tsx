@@ -7,6 +7,7 @@ import { Baby as BabyIcon, Milk, Utensils, Play, Square, Clock, Save } from 'luc
 import { Section, TypeTile, WhenPicker, Stepper, Field } from '@/components/forms/FormKit';
 import { cn } from '@/lib/utils';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
+import { useT } from '@/lib/i18n/client';
 
 type FeedMode = 'breast' | 'bottle' | 'solid';
 
@@ -29,6 +30,7 @@ function modeFromMilkType(t?: FeedingFormValue['milk_type']): FeedMode {
 
 export function FeedingForm({ babyId, initial }: { babyId: string; initial?: FeedingFormValue }) {
   const router = useRouter();
+  const t = useT();
   const [mode, setMode] = useState<FeedMode>(modeFromMilkType(initial?.milk_type));
 
   // Common
@@ -148,21 +150,21 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
   return (
     <form onSubmit={submit} className="space-y-8">
       {/* 1. Type selector */}
-      <Section title="What type of feeding?" n={1}>
+      <Section title={t('forms.feed_what')} n={1}>
         <div className="grid sm:grid-cols-3 gap-3">
-          <TypeTile icon={BabyIcon} label="Breastfeeding" tint="coral"    active={isBreast} onClick={() => setMode('breast')} />
-          <TypeTile icon={Milk}     label="Bottle"         tint="brand"    active={isBottle} onClick={() => setMode('bottle')} />
-          <TypeTile icon={Utensils} label="Solid"          tint="peach"    active={isSolid}  onClick={() => setMode('solid')}  />
+          <TypeTile icon={BabyIcon} label={t('forms.feed_breastfeeding')} tint="coral"    active={isBreast} onClick={() => setMode('breast')} />
+          <TypeTile icon={Milk}     label={t('forms.feed_bottle')}         tint="brand"    active={isBottle} onClick={() => setMode('bottle')} />
+          <TypeTile icon={Utensils} label={t('forms.feed_solid')}          tint="peach"    active={isSolid}  onClick={() => setMode('solid')}  />
         </div>
       </Section>
 
       {/* 2. Details — varies by mode */}
-      <Section title="Details" n={2}>
+      <Section title={t('forms.feed_details')} n={2}>
         {isBreast && (
           <div className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-3">
-              <Stepper label="Left breast"  value={leftMin}  onChange={setLeftMin}  unit="min" badge={{ text: 'L', tint: 'coral' }} />
-              <Stepper label="Right breast" value={rightMin} onChange={setRightMin} unit="min" badge={{ text: 'R', tint: 'lavender' }} />
+              <Stepper label={t('forms.feed_left_breast')}  value={leftMin}  onChange={setLeftMin}  unit="min" badge={{ text: 'L', tint: 'coral' }} />
+              <Stepper label={t('forms.feed_right_breast')} value={rightMin} onChange={setRightMin} unit="min" badge={{ text: 'R', tint: 'lavender' }} />
             </div>
 
             {/* Timer */}
@@ -213,26 +215,26 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
         {isBottle && (
           <div className="space-y-3">
             <div className="grid sm:grid-cols-2 gap-3">
-              <Field label="Amount (ml)">
+              <Field label={t('forms.feed_amount')}>
                 <input type="number" min={0} max={2000} step={1}
                   value={ml} onChange={e => setMl(e.target.value)}
                   placeholder="e.g. 120"
                   className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
               </Field>
-              <Field label="Kcal (optional)">
+              <Field label={t('forms.feed_kcal')}>
                 <input type="number" min={0} max={5000} step={1}
                   value={kcal} onChange={e => setKcal(e.target.value)}
                   placeholder="e.g. 80"
                   className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
               </Field>
             </div>
-            <Field label="Contents">
+            <Field label={t('forms.feed_contents')}>
               <div className="inline-flex rounded-full border border-slate-200 bg-white overflow-hidden">
                 {(['formula','mixed','other'] as const).map(k => (
                   <button key={k} type="button" onClick={() => setBottleKind(k)}
-                    className={cn('px-4 py-2 text-sm capitalize',
+                    className={cn('px-4 py-2 text-sm',
                       bottleKind === k ? 'bg-brand-500 text-white' : 'text-ink hover:bg-slate-50')}>
-                    {k}
+                    {t(`forms.feed_${k}`)}
                   </button>
                 ))}
               </div>
@@ -242,26 +244,25 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
 
         {isSolid && (
           <div>
-            <Field label="Kcal (optional)">
+            <Field label={t('forms.feed_kcal')}>
               <input type="number" min={0} max={5000} step={1}
                 value={kcal} onChange={e => setKcal(e.target.value)}
                 placeholder="e.g. 120"
                 className="h-12 w-40 rounded-2xl border border-slate-200 bg-white px-4 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
             </Field>
-            <p className="mt-2 text-xs text-ink-muted">Describe the food in the notes field below — e.g. &ldquo;half a banana, yogurt&rdquo;.</p>
           </div>
         )}
       </Section>
 
       {/* 3. When */}
-      <Section title="When?" n={3}>
+      <Section title={t('forms.when')} n={3}>
         <WhenPicker time={time} onChange={setTime} tint="coral" />
       </Section>
 
       {/* 4. Notes */}
-      <Section title="Add details" n={4} optional>
+      <Section title={t('forms.feed_add_details')} n={4} optional>
         <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-          placeholder={isSolid ? 'What did they eat? e.g. half a banana, yogurt' : 'Notes (e.g. mood, meds, anything important)'}
+          placeholder={t('forms.feed_notes_placeholder')}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
       </Section>
 
@@ -270,13 +271,13 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-coral-500 to-coral-600 hover:from-coral-600 hover:to-coral-700">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save feeding'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.feed_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">Delete</Button>
         )}
       </div>
-      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
+      <p className="text-center text-xs text-ink-muted">{t('forms.fast_log')} <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }
