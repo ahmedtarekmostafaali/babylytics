@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/Input';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Trash2 } from 'lucide-react';
 import { Section, Field, QuickPill, Stepper, WhenPicker } from '@/components/forms/FormKit';
+import { useT } from '@/lib/i18n/client';
 
 export type AppointmentFormValue = {
   id?: string;
@@ -22,12 +23,8 @@ export type AppointmentFormValue = {
   conclusion?: string | null;
 };
 
-const STATUSES: { value: NonNullable<AppointmentFormValue['status']>; label: string }[] = [
-  { value: 'scheduled',   label: 'Scheduled'   },
-  { value: 'completed',   label: 'Completed'   },
-  { value: 'cancelled',   label: 'Cancelled'   },
-  { value: 'missed',      label: 'Missed'      },
-  { value: 'rescheduled', label: 'Rescheduled' },
+const STATUS_KEYS: NonNullable<AppointmentFormValue['status']>[] = [
+  'scheduled', 'completed', 'cancelled', 'missed', 'rescheduled',
 ];
 
 export function AppointmentForm({
@@ -38,6 +35,14 @@ export function AppointmentForm({
   initial?: AppointmentFormValue;
 }) {
   const router = useRouter();
+  const t = useT();
+  const STATUS_LABEL: Record<NonNullable<AppointmentFormValue['status']>, string> = {
+    scheduled:   t('forms.appt_status_scheduled'),
+    completed:   t('forms.appt_status_completed'),
+    cancelled:   t('forms.appt_status_cancelled'),
+    missed:      t('forms.appt_status_missed'),
+    rescheduled: t('forms.appt_status_rescheduled'),
+  };
   const [doctorId, setDoctorId] = useState<string | null>(initial?.doctor_id ?? doctors[0]?.id ?? null);
   const [when, setWhen]         = useState(initial?.scheduled_at ? isoToLocalInput(initial.scheduled_at) : nowLocalInput());
   const [duration, setDuration] = useState<number>(initial?.duration_min ?? 30);
@@ -54,7 +59,7 @@ export function AppointmentForm({
     e.preventDefault();
     setErr(null);
     const iso = localInputToIso(when);
-    if (!iso) { setErr('Pick a valid time.'); return; }
+    if (!iso) { setErr(t('forms.appt_pick_valid_time')); return; }
     const parsed = AppointmentSchema.safeParse({
       doctor_id: doctorId || null,
       scheduled_at: iso,
@@ -83,7 +88,7 @@ export function AppointmentForm({
 
   async function onDelete() {
     if (!initial?.id) return;
-    if (!window.confirm('Delete this appointment?')) return;
+    if (!window.confirm(t('forms.appt_delete_confirm'))) return;
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.from('appointments')
@@ -98,15 +103,15 @@ export function AppointmentForm({
   return (
     <form onSubmit={submit} className="space-y-8">
       {/* 1. Doctor + status */}
-      <Section n={1} title="Who and what status?">
+      <Section n={1} title={t('forms.appt_section_who')}>
         <div className="space-y-4">
-          <Field label="Doctor">
+          <Field label={t('forms.appt_doctor')}>
             <Select
               value={doctorId ?? ''}
               onChange={e => setDoctorId(e.target.value || null)}
               className="h-12 rounded-2xl"
             >
-              <option value="">— No doctor —</option>
+              <option value="">{t('forms.appt_no_doctor')}</option>
               {doctors.map(d => (
                 <option key={d.id} value={d.id}>
                   {d.name}{d.specialty ? ` · ${d.specialty}` : ''}
@@ -114,11 +119,11 @@ export function AppointmentForm({
               ))}
             </Select>
           </Field>
-          <Field label="Status">
+          <Field label={t('forms.appt_status')}>
             <div className="flex flex-wrap gap-2">
-              {STATUSES.map(s => (
-                <QuickPill key={s.value} active={status === s.value} onClick={() => setStatus(s.value)} tint="lavender">
-                  {s.label}
+              {STATUS_KEYS.map(sv => (
+                <QuickPill key={sv} active={status === sv} onClick={() => setStatus(sv)} tint="lavender">
+                  {STATUS_LABEL[sv]}
                 </QuickPill>
               ))}
             </div>
@@ -127,11 +132,11 @@ export function AppointmentForm({
       </Section>
 
       {/* 2. When + duration + purpose */}
-      <Section n={2} title="When and what for?">
+      <Section n={2} title={t('forms.appt_section_when')}>
         <div className="space-y-4">
           <WhenPicker time={when} onChange={setWhen} tint="lavender" />
           <Stepper
-            label="Duration"
+            label={t('forms.act_duration')}
             value={duration}
             onChange={setDuration}
             unit="min"
@@ -140,11 +145,11 @@ export function AppointmentForm({
             max={600}
             badge={{ text: 'TIME', tint: 'lavender' }}
           />
-          <Field label="Purpose">
+          <Field label={t('forms.appt_purpose')}>
             <input
               value={purpose ?? ''}
               onChange={e => setPurpose(e.target.value)}
-              placeholder="e.g. 2-month check-up, vaccination"
+              placeholder={t('forms.appt_purpose_ph')}
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30"
             />
           </Field>
@@ -152,35 +157,35 @@ export function AppointmentForm({
       </Section>
 
       {/* 3. Location */}
-      <Section n={3} title="Where?" optional>
-        <Field label="Location">
+      <Section n={3} title={t('forms.appt_section_where')} optional>
+        <Field label={t('forms.appt_location')}>
           <input
             value={location ?? ''}
             onChange={e => setLocation(e.target.value)}
-            placeholder="Clinic address or video link"
+            placeholder={t('forms.appt_location_ph')}
             className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30"
           />
         </Field>
       </Section>
 
       {/* 4. Notes — split prep + conclusion */}
-      <Section n={4} title="Add details" optional>
+      <Section n={4} title={t('forms.feed_add_details')} optional>
         <div className="space-y-4">
-          <Field label="Prep notes (before the visit)" hint="Questions to ask, prep notes, things to remember.">
+          <Field label={t('forms.appt_prep_label')} hint={t('forms.appt_prep_hint')}>
             <textarea
               rows={3}
               value={notes ?? ''}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Questions to ask, prep notes, things to remember…"
+              placeholder={t('forms.appt_prep_ph')}
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30"
             />
           </Field>
-          <Field label="Doctor's conclusion (after the visit)" hint="Fill this in after the appointment so it stays in the baby's record.">
+          <Field label={t('forms.appt_conclusion_label')} hint={t('forms.appt_conclusion_hint')}>
             <textarea
               rows={4}
               value={conclusion ?? ''}
               onChange={e => setConclusion(e.target.value)}
-              placeholder="What the doctor said, diagnosis, treatment plan, follow-up instructions, next appointment, prescriptions issued, etc."
+              placeholder={t('forms.appt_conclusion_ph')}
               className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30"
             />
           </Field>
@@ -192,7 +197,7 @@ export function AppointmentForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-lavender-500 to-brand-500 hover:from-lavender-600 hover:to-brand-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Book appointment'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.appt_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">
@@ -200,7 +205,7 @@ export function AppointmentForm({
           </Button>
         )}
       </div>
-      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
+      <p className="text-center text-xs text-ink-muted">{t('forms.fast_log')} <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }

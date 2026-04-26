@@ -9,6 +9,7 @@ import { isoToLocalInput, localInputToIso } from '@/lib/dates';
 import { fmtMl, fmtKg } from '@/lib/units';
 import { BabyAvatar } from '@/components/BabyAvatar';
 import { Camera, Trash2 } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type BabyEditValue = {
   id: string;
@@ -40,6 +41,7 @@ export function BabyEditForm({
   avatarUrl: string | null;
 }) {
   const router = useRouter();
+  const t = useT();
   const [name, setName]           = useState(baby.name);
   const [dob, setDob]             = useState(isoToLocalInput(baby.dob));
   const [gender, setGender]       = useState(baby.gender);
@@ -65,7 +67,7 @@ export function BabyEditForm({
   async function onAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) { setErr('Please choose an image.'); return; }
+    if (!file.type.startsWith('image/')) { setErr(t('forms.baby_photo_choose_image')); return; }
     setErr(null); setMsg(null); setUploadingAvatar(true);
     const supabase = createClient();
     const path = `babies/${baby.id}/avatar/${Date.now()}_${sanitize(file.name)}`;
@@ -85,19 +87,19 @@ export function BabyEditForm({
     const { data: signed } = await supabase.storage.from(AVATAR_BUCKET).createSignedUrl(path, 600);
     setLocalAvatar(signed?.signedUrl ?? null);
     setUploadingAvatar(false);
-    setMsg('Photo updated.');
+    setMsg(t('forms.baby_photo_updated'));
     router.refresh();
   }
 
   async function onAvatarClear() {
-    if (!window.confirm('Remove baby photo?')) return;
+    if (!window.confirm(t('forms.baby_photo_remove_confirm'))) return;
     setUploadingAvatar(true);
     const supabase = createClient();
     const { error } = await supabase.from('babies').update({ avatar_path: null }).eq('id', baby.id);
     setUploadingAvatar(false);
     if (error) { setErr(error.message); return; }
     setLocalAvatar(null);
-    setMsg('Photo removed.');
+    setMsg(t('forms.baby_photo_removed'));
     router.refresh();
   }
 
@@ -124,13 +126,13 @@ export function BabyEditForm({
     }).eq('id', baby.id);
     setSaving(false);
     if (error) { setErr(error.message); return; }
-    setMsg('Saved.');
+    setMsg(t('forms.baby_saved'));
     router.push(`/babies/${baby.id}`);
     router.refresh();
   }
 
   async function onSoftDelete() {
-    if (!window.confirm(`Delete ${baby.name}'s profile? All their logs remain in the database but the baby will disappear from your dashboard. This can be restored by a database admin.`)) return;
+    if (!window.confirm(t('forms.baby_delete_profile_confirm', { name: baby.name }))) return;
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase
@@ -149,8 +151,8 @@ export function BabyEditForm({
       <div className="flex items-center gap-5 flex-wrap rounded-2xl bg-gradient-to-br from-brand-50 to-mint-50 border border-slate-200/70 p-4">
         <BabyAvatar url={localAvatar} size="2xl" />
         <div className="flex-1 min-w-[200px]">
-          <div className="text-sm font-semibold text-ink-strong">Baby photo</div>
-          <p className="text-xs text-ink-muted mt-0.5">JPG or PNG, square looks best. Caregivers with access see this.</p>
+          <div className="text-sm font-semibold text-ink-strong">{t('forms.baby_photo_title')}</div>
+          <p className="text-xs text-ink-muted mt-0.5">{t('forms.baby_photo_help')}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input ref={fileRef} type="file" accept="image/*" onChange={onAvatarChange} className="hidden" />
             <button
@@ -160,7 +162,7 @@ export function BabyEditForm({
               className="inline-flex items-center gap-2 rounded-full bg-brand-500 hover:bg-brand-600 text-white text-sm px-4 py-1.5 shadow-sm disabled:opacity-60"
             >
               <Camera className="h-4 w-4" />
-              {uploadingAvatar ? 'Uploading…' : localAvatar ? 'Change photo' : 'Upload photo'}
+              {uploadingAvatar ? t('forms.baby_photo_uploading') : localAvatar ? t('forms.baby_photo_change') : t('forms.baby_photo_upload')}
             </button>
             {localAvatar && !uploadingAvatar && (
               <button
@@ -168,7 +170,7 @@ export function BabyEditForm({
                 onClick={onAvatarClear}
                 className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white text-ink text-sm px-4 py-1.5 hover:bg-slate-50"
               >
-                <Trash2 className="h-4 w-4" /> Remove
+                <Trash2 className="h-4 w-4" /> {t('forms.baby_photo_remove')}
               </button>
             )}
           </div>
@@ -176,46 +178,46 @@ export function BabyEditForm({
       </div>
 
       <div>
-        <Label htmlFor="n">Name</Label>
+        <Label htmlFor="n">{t('forms.baby_name')}</Label>
         <Input id="n" required value={name} onChange={e => setName(e.target.value)} />
       </div>
       <div>
-        <Label htmlFor="d">Date &amp; time of birth</Label>
+        <Label htmlFor="d">{t('forms.baby_dob')}</Label>
         <Input id="d" type="datetime-local" required value={dob} onChange={e => setDob(e.target.value)} />
       </div>
       <div>
-        <Label htmlFor="g">Gender</Label>
+        <Label htmlFor="g">{t('forms.baby_gender')}</Label>
         <Select id="g" value={gender} onChange={e => setGender(e.target.value as typeof gender)}>
-          <option value="female">Female</option>
-          <option value="male">Male</option>
+          <option value="female">{t('forms.baby_gender_female')}</option>
+          <option value="male">{t('forms.baby_gender_male')}</option>
         </Select>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label htmlFor="bw">Birth weight (kg)</Label>
+          <Label htmlFor="bw">{t('forms.baby_birth_weight')}</Label>
           <Input id="bw" type="number" step="0.001" min={0} max={10} value={birthWeight} onChange={e => setBirthWeight(e.target.value)} />
         </div>
         <div>
-          <Label htmlFor="bh">Birth height (cm)</Label>
+          <Label htmlFor="bh">{t('forms.baby_birth_height')}</Label>
           <Input id="bh" type="number" step="0.1" min={0} max={80} value={birthHeight} onChange={e => setBirthHeight(e.target.value)} />
         </div>
       </div>
       <div>
-        <Label htmlFor="f">Feeding factor (ml / kg / day)</Label>
+        <Label htmlFor="f">{t('forms.baby_feed_factor')}</Label>
         <Input id="f" type="number" step="1" min={50} max={250} value={factor} onChange={e => setFactor(e.target.value)} />
         <div className="mt-2 rounded-md bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-700">
-          <div>Recommended daily feed preview (live):</div>
+          <div>{t('forms.baby_feed_preview')}</div>
           <div className="mt-1 font-mono text-slate-900">
             {fmtKg(weightForCalc)} × {factor || '—'} ml/kg/day = <span className="font-semibold">{fmtMl(previewRecommended)}</span>
-            {currentWeightKg == null && <span className="ml-2 text-amber-700">(using birth weight; log a measurement for a more accurate number)</span>}
+            {currentWeightKg == null && <span className="ml-2 text-amber-700">{t('forms.baby_feed_using_birth')}</span>}
           </div>
         </div>
         <p className="text-xs text-slate-500 mt-1">
-          Typical factors: 150 for newborns (default), 120–140 after 3 months, 100 after 6 months with solids.
+          {t('forms.baby_feed_factor_help')}
         </p>
       </div>
       <div>
-        <Label htmlFor="no">Notes</Label>
+        <Label htmlFor="no">{t('forms.notes')}</Label>
         <Textarea id="no" rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)} />
       </div>
 
@@ -223,10 +225,10 @@ export function BabyEditForm({
       {msg && <p className="text-sm text-emerald-700">{msg}</p>}
 
       <div className="flex items-center justify-between gap-3 pt-2">
-        <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
+        <Button type="submit" disabled={saving}>{saving ? t('forms.saving') : t('forms.save_changes')}</Button>
         {canDelete && (
           <Button type="button" variant="danger" onClick={onSoftDelete} disabled={saving}>
-            Delete profile
+            {t('forms.baby_delete_profile_cta')}
           </Button>
         )}
       </div>

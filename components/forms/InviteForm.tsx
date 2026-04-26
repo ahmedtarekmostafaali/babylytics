@@ -6,19 +6,33 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Mail, Shield, Stethoscope, Heart, Eye, Check, Link2, Copy, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/client';
 
 export type CaregiverRole = 'parent' | 'doctor' | 'nurse' | 'viewer';
 type Mode = 'email' | 'link';
 
-const ROLE_OPTIONS: { value: CaregiverRole; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; tint: string }[] = [
-  { value: 'parent', label: 'Parent / Guardian', desc: 'Full access — write every log, upload files, invite caregivers.', icon: Shield,      tint: 'bg-brand-100 text-brand-700' },
-  { value: 'doctor', label: 'Doctor',            desc: 'Read logs, add comments, export reports. No write access.',        icon: Stethoscope, tint: 'bg-lavender-100 text-lavender-700' },
-  { value: 'nurse',  label: 'Nurse',             desc: 'Read-only access to logs. Cannot add, edit, or comment.',         icon: Heart,       tint: 'bg-coral-100 text-coral-700' },
-  { value: 'viewer', label: 'Viewer',            desc: 'Overview page only. No access to logs or reports.',               icon: Eye,         tint: 'bg-slate-100 text-ink' },
+const ROLE_META: { value: CaregiverRole; icon: React.ComponentType<{ className?: string }>; tint: string }[] = [
+  { value: 'parent', icon: Shield,      tint: 'bg-brand-100 text-brand-700'     },
+  { value: 'doctor', icon: Stethoscope, tint: 'bg-lavender-100 text-lavender-700' },
+  { value: 'nurse',  icon: Heart,       tint: 'bg-coral-100 text-coral-700'     },
+  { value: 'viewer', icon: Eye,         tint: 'bg-slate-100 text-ink'           },
 ];
 
 export function InviteForm({ babyId }: { babyId: string }) {
   const router = useRouter();
+  const t = useT();
+  const ROLE_LABEL: Record<CaregiverRole, string> = {
+    parent: t('forms.invite_role_parent'),
+    doctor: t('forms.invite_role_doctor'),
+    nurse:  t('forms.invite_role_nurse'),
+    viewer: t('forms.invite_role_viewer'),
+  };
+  const ROLE_DESC: Record<CaregiverRole, string> = {
+    parent: t('forms.invite_role_parent_desc'),
+    doctor: t('forms.invite_role_doctor_desc'),
+    nurse:  t('forms.invite_role_nurse_desc'),
+    viewer: t('forms.invite_role_viewer_desc'),
+  };
   const [mode, setMode]   = useState<Mode>('email');
   const [email, setEmail] = useState('');
   const [role, setRole]   = useState<CaregiverRole>('nurse');
@@ -38,7 +52,7 @@ export function InviteForm({ babyId }: { babyId: string }) {
     const { error } = await supabase.rpc('invite_caregiver', { p_baby: babyId, p_email: email, p_role: role });
     setSaving(false);
     if (error) { setErr(error.message); return; }
-    setMsg(`Added ${email} as ${role}.`);
+    setMsg(t('forms.invite_email_added', { email, role: ROLE_LABEL[role] }));
     setEmail('');
     router.refresh();
   }
@@ -55,7 +69,7 @@ export function InviteForm({ babyId }: { babyId: string }) {
       invited_by: (await supabase.auth.getUser()).data.user?.id,
     }).select('id').single();
     setSaving(false);
-    if (error || !data) { setErr(error?.message ?? 'Failed to create link'); return; }
+    if (error || !data) { setErr(error?.message ?? t('forms.invite_link_failed')); return; }
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     setLinkUrl(`${origin}/invite/${data.id}`);
     router.refresh();
@@ -75,8 +89,8 @@ export function InviteForm({ babyId }: { babyId: string }) {
     if (typeof navigator !== 'undefined' && 'share' in navigator) {
       try {
         await (navigator as Navigator & { share: (d: ShareData) => Promise<void> }).share({
-          title: 'Babylytics caregiver invite',
-          text: message || 'You\'re invited to help with the baby on Babylytics.',
+          title: t('forms.invite_link_share_title'),
+          text: message || t('forms.invite_link_share_text'),
           url: linkUrl,
         });
       } catch { /* user cancelled */ }
@@ -85,7 +99,7 @@ export function InviteForm({ babyId }: { babyId: string }) {
     }
   }
 
-  const selected = ROLE_OPTIONS.find(r => r.value === role)!;
+  const selectedLabel = ROLE_LABEL[role];
 
   return (
     <div className="space-y-5">
@@ -95,21 +109,21 @@ export function InviteForm({ babyId }: { babyId: string }) {
           onClick={() => { setMode('email'); setLinkUrl(null); setMsg(null); }}
           className={cn('rounded-xl py-2 transition inline-flex items-center justify-center gap-1.5',
             mode === 'email' ? 'bg-white text-ink-strong shadow-sm' : 'text-ink-muted hover:text-ink')}>
-          <Mail className="h-4 w-4" /> By email
+          <Mail className="h-4 w-4" /> {t('forms.invite_by_email')}
         </button>
         <button type="button"
           onClick={() => { setMode('link'); setMsg(null); }}
           className={cn('rounded-xl py-2 transition inline-flex items-center justify-center gap-1.5',
             mode === 'link' ? 'bg-white text-ink-strong shadow-sm' : 'text-ink-muted hover:text-ink')}>
-          <Link2 className="h-4 w-4" /> Share link
+          <Link2 className="h-4 w-4" /> {t('forms.invite_by_link')}
         </button>
       </div>
 
       {/* Role picker (shared by both modes) */}
       <div>
-        <div className="text-sm font-semibold text-ink-strong mb-2">Select role</div>
+        <div className="text-sm font-semibold text-ink-strong mb-2">{t('forms.invite_role_label')}</div>
         <div className="grid gap-2">
-          {ROLE_OPTIONS.map(o => {
+          {ROLE_META.map(o => {
             const active = role === o.value;
             const Icon = o.icon;
             return (
@@ -121,8 +135,8 @@ export function InviteForm({ babyId }: { babyId: string }) {
                   <Icon className="h-4 w-4" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block font-semibold text-ink-strong text-sm">{o.label}</span>
-                  <span className="block text-xs text-ink-muted truncate">{o.desc}</span>
+                  <span className="block font-semibold text-ink-strong text-sm">{ROLE_LABEL[o.value]}</span>
+                  <span className="block text-xs text-ink-muted truncate">{ROLE_DESC[o.value]}</span>
                 </span>
                 {active && <Check className="h-4 w-4 text-brand-600 shrink-0" />}
               </button>
@@ -134,39 +148,39 @@ export function InviteForm({ babyId }: { babyId: string }) {
       {mode === 'email' ? (
         <form onSubmit={submitEmail} className="space-y-4">
           <div>
-            <div className="text-sm font-semibold text-ink-strong mb-2">Email address</div>
+            <div className="text-sm font-semibold text-ink-strong mb-2">{t('forms.invite_email_label')}</div>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
               <Input type="email" required value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="caregiver@example.com"
+                placeholder={t('forms.invite_email_ph')}
                 className="pl-9" />
             </div>
-            <p className="mt-1 text-xs text-ink-muted">They must already have a Babylytics account. If they don&apos;t, use the share-link tab instead.</p>
+            <p className="mt-1 text-xs text-ink-muted">{t('forms.invite_email_help')}</p>
           </div>
           {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
           {msg && <p className="text-sm text-mint-700 font-medium">{msg}</p>}
           <Button type="submit" disabled={saving || !email}
             className="w-full h-12 rounded-2xl bg-gradient-to-r from-mint-500 to-mint-600">
-            <Mail className="h-4 w-4" /> {saving ? 'Inviting…' : `Invite ${selected.label.toLowerCase()}`}
+            <Mail className="h-4 w-4" /> {saving ? t('forms.invite_inviting') : t('forms.invite_send_cta', { role: selectedLabel })}
           </Button>
         </form>
       ) : (
         <div className="space-y-4">
           <div>
-            <div className="text-sm font-semibold text-ink-strong mb-2">Pre-fill email (optional)</div>
+            <div className="text-sm font-semibold text-ink-strong mb-2">{t('forms.invite_link_pre_email_label')}</div>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
               <Input type="email" value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="dr.elsayed@clinic.com"
+                placeholder={t('forms.invite_link_pre_email_ph')}
                 className="pl-9" />
             </div>
           </div>
           <div>
-            <div className="text-sm font-semibold text-ink-strong mb-2">Welcome message (optional)</div>
+            <div className="text-sm font-semibold text-ink-strong mb-2">{t('forms.invite_link_msg_label')}</div>
             <Textarea rows={2} value={message} onChange={e => setMessage(e.target.value)}
-              placeholder="A short note for the recipient…" />
+              placeholder={t('forms.invite_link_msg_ph')} />
           </div>
 
           {!linkUrl ? (
@@ -174,29 +188,29 @@ export function InviteForm({ babyId }: { babyId: string }) {
               {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
               <Button type="button" disabled={saving} onClick={generateLink}
                 className="w-full h-12 rounded-2xl bg-gradient-to-r from-lavender-500 to-brand-500">
-                <Link2 className="h-4 w-4" /> {saving ? 'Generating…' : `Generate link for ${selected.label.toLowerCase()}`}
+                <Link2 className="h-4 w-4" /> {saving ? t('forms.invite_generating') : t('forms.invite_generate_cta', { role: selectedLabel })}
               </Button>
               <p className="text-[11px] text-ink-muted text-center">
-                Anyone with the link can join as <strong>{selected.label}</strong>. Link expires in 14 days. The recipient will need to create a Babylytics account if they don&apos;t already have one.
+                {t('forms.invite_link_help', { role: selectedLabel })}
               </p>
             </>
           ) : (
             <div className="rounded-2xl border border-mint-200 bg-mint-50/50 p-4 space-y-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-mint-700">Invite link ready · 14-day expiry</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-mint-700">{t('forms.invite_link_ready')}</div>
               <div className="rounded-xl bg-white border border-slate-200 p-2 text-xs font-mono text-ink-strong break-all">
                 {linkUrl}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" onClick={copyLink} className="rounded-full bg-brand-500 hover:bg-brand-600">
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Copied!' : 'Copy link'}
+                  {copied ? t('forms.invite_link_copied') : t('forms.invite_link_copy')}
                 </Button>
                 <Button type="button" onClick={shareLink} variant="secondary" className="rounded-full">
-                  <Share2 className="h-4 w-4" /> Share
+                  <Share2 className="h-4 w-4" /> {t('forms.invite_link_share')}
                 </Button>
                 <button type="button" onClick={() => { setLinkUrl(null); setEmail(''); setMessage(''); }}
                   className="text-xs text-ink-muted hover:text-ink-strong ml-auto self-center">
-                  Generate another
+                  {t('forms.invite_link_generate_another')}
                 </button>
               </div>
             </div>
