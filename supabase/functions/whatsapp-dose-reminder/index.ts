@@ -60,9 +60,9 @@ function renderBody(r: PendingRow): string {
   return [
     `🩺 ${r.baby_name} — medication reminder`,
     `${r.med_name}${dose}`,
-    `Due at ${fmtTimeCairo(r.scheduled_for)} (Cairo time).`,
+    `Due in 15 minutes — at ${fmtTimeCairo(r.scheduled_for)} (Cairo time).`,
     '',
-    'Reply DONE in the app once given. — Babylytics',
+    'Please log the dose once done.',
   ].join('\n');
 }
 
@@ -128,11 +128,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     auth: { persistSession: false },
   });
 
-  // Look ahead 15 minutes by default; window 15 minutes back to catch the
-  // first run after a missed cron tick.
+  // Send a heads-up 15 minutes before the dose. window=0 means we only ever
+  // pick up future doses — no back-fill on missed cron ticks. The unique
+  // outbox constraint guarantees the same dose is never queued twice, so
+  // running cron every minute is safe: only the first tick that sees the
+  // dose at <=15 min away wins, every subsequent tick no-ops on the upsert.
   const { data: pending, error } = await sb.rpc('pending_med_reminders', {
     p_lookahead_minutes: 15,
-    p_window_minutes:    15,
+    p_window_minutes:    0,
   });
   if (error) {
     console.error('pending_med_reminders error', error);
