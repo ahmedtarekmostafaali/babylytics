@@ -43,15 +43,15 @@ export function TemperatureForm({ babyId, initial }: { babyId: string; initial?:
     setErr(null);
     const iso = localInputToIso(time);
     if (!iso) { setErr('Pick a valid time.'); return; }
-    if (!Number.isFinite(t) || t <= 30 || t >= 45) { setErr('Enter a realistic temperature between 30.1 and 44.9 °C.'); return; }
+    if (!Number.isFinite(tempNum) || tempNum <= 30 || tempNum >= 45) { setErr('Enter a realistic temperature between 30.1 and 44.9 °C.'); return; }
     setSaving(true);
     const supabase = createClient();
     const op = initial?.id
       ? supabase.from('temperature_logs').update({
-          measured_at: iso, temperature_c: t, method, notes: notes || null,
+          measured_at: iso, temperature_c: tempNum, method, notes: notes || null,
         }).eq('id', initial.id)
       : supabase.from('temperature_logs').insert({
-          baby_id: babyId, measured_at: iso, temperature_c: t, method, notes: notes || null,
+          baby_id: babyId, measured_at: iso, temperature_c: tempNum, method, notes: notes || null,
           created_by: (await supabase.auth.getUser()).data.user?.id,
         });
     const { error } = await op;
