@@ -8,6 +8,8 @@ import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
 import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor } from '@/lib/i18n';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate, yesterdayLocalDate, localDayKey,
 } from '@/lib/dates';
@@ -47,6 +49,7 @@ export default async function MedicationsLog({
   searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
+  const t = tFor((await loadUserPrefs(supabase)).language);
   const range = parseRangeParam(searchParams);
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const activeStatuses = rawTypes.filter((t): t is MedStatus => (MED_STATUSES as readonly string[]).includes(t));
@@ -152,25 +155,25 @@ export default async function MedicationsLog({
   return (
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Medications" eyebrowTint="lavender"
-        title="Medications"
-        subtitle={`${activeMeds.length} active prescription${activeMeds.length === 1 ? '' : 's'} · ${logs.length} doses logged`}
+        eyebrow={t('trackers.track_eyebrow')} eyebrowTint="lavender"
+        title={t('trackers.meds_title')}
+        subtitle={t('trackers.meds_sub')}
         right={
           perms.canWriteLogs ? (
             <div className="flex items-center gap-2 flex-wrap justify-end">
               <BulkDelete babyId={params.babyId} table="medication_logs" timeColumn="medication_time"
-                visibleIds={logs.map(r => r.id)} kindLabel="dose logs" />
+                visibleIds={logs.map(r => r.id)} kindLabel={t('trackers.meds_title').toLowerCase()} />
               <Link href={`/babies/${params.babyId}/medications/new`}
                 className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-ink-strong text-sm font-semibold px-4 py-1.5 shadow-sm">
-                <Plus className="h-4 w-4" /> Medication
+                <Plus className="h-4 w-4" /> {t('trackers.meds_cta')}
               </Link>
               <Link href={`/babies/${params.babyId}/medications/log`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-                <Plus className="h-4 w-4" /> Log dose
+                <Plus className="h-4 w-4" /> {t('trackers.meds_log_cta')}
               </Link>
             </div>
           ) : (
-            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">{t('page.read_only')}</span>
           )
         } />
 
@@ -420,7 +423,7 @@ export default async function MedicationsLog({
         </div>
       </div>
       <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
-        pageScope="medications_list" title="Page comments" />
+        pageScope="medications_list" title={t('page.page_comments')} />
     </PageShell>
   );
 }

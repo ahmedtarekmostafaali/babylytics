@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { assertRole } from '@/lib/role-guard';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor } from '@/lib/i18n';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
@@ -45,6 +47,7 @@ export default async function ScreenTimeList({
   searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
+  const t = tFor((await loadUserPrefs(supabase)).language);
   const range = parseRangeParam(searchParams);
 
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean) as Device[];
@@ -77,22 +80,22 @@ export default async function ScreenTimeList({
 
   return (
     <PageShell max="5xl">
-      <PageHeader backHref={`/babies/${params.babyId}`} backLabel="Overview"
-        eyebrow="Track" eyebrowTint="lavender"
-        title="Screen time"
-        subtitle="All recorded screen-time sessions."
+      <PageHeader backHref={`/babies/${params.babyId}`} backLabel={t('page.overview')}
+        eyebrow={t('trackers.track_eyebrow')} eyebrowTint="lavender"
+        title={t('trackers.screen_title')}
+        subtitle={t('trackers.screen_sub')}
         right={
           perms.canWriteLogs ? (
             <div className="flex items-center gap-2">
               <BulkDelete babyId={params.babyId} table="screen_time_logs" timeColumn="started_at"
-                visibleIds={rows.map(r => r.id)} kindLabel="sessions" />
+                visibleIds={rows.map(r => r.id)} kindLabel={t('trackers.screen_title').toLowerCase()} />
               <Link href={`/babies/${params.babyId}/screen-time/new`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 hover:brightness-105 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-                <Plus className="h-4 w-4" /> Log session
+                <Plus className="h-4 w-4" /> {t('trackers.screen_cta')}
               </Link>
             </div>
           ) : (
-            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">{t('page.read_only')}</span>
           )
         } />
 
@@ -110,7 +113,7 @@ export default async function ScreenTimeList({
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
           {groups.length === 0 && (
             <div className="p-10 text-center text-sm text-ink-muted">
-              No screen-time sessions in this window.
+              {t('page.no_in_window')}
             </div>
           )}
 
@@ -217,7 +220,7 @@ export default async function ScreenTimeList({
                 )}
 
                 <div className="border-t border-slate-100 pt-3">
-                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Logged on</div>
+                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.logged_on')}</div>
                   <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
                 </div>
               </div>
@@ -227,7 +230,7 @@ export default async function ScreenTimeList({
       </div>
 
       <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
-        pageScope="screen_time_list" title="Page comments" />
+        pageScope="screen_time_list" title={t('page.page_comments')} />
     </PageShell>
   );
 }

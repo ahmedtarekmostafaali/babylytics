@@ -323,6 +323,89 @@ export const en = {
     labs_cta:       'Add lab or scan',
   },
 
+  // ── Forms / FormKit primitives ───────────────────────────────────
+  forms: {
+    // Shared
+    optional:        'optional',
+    required:        'required',
+    notes:           'Notes',
+    when:            'When?',
+    now:             'Now',
+    pick_time:       'Pick a time',
+    exact_time:      'Exact time',
+    minus_15_min:    '−15 min',
+    minus_30_min:    '−30 min',
+    minus_1_hr:      '−1 hr',
+    save:            'Save',
+    save_changes:    'Save changes',
+    saving:          'Saving…',
+    delete:          'Delete',
+    add_more:        'Add more',
+    fast_log:        'Takes less than 2 seconds',
+
+    // Feeding
+    feed_what:       'What was fed?',
+    feed_quantity:   'Quantity (ml)',
+    feed_duration:   'Duration (min)',
+    feed_kcal:       'Calories (kcal)',
+    feed_breast:     'Breast',
+    feed_formula:    'Formula',
+    feed_mixed:      'Mixed',
+    feed_solid:      'Solid',
+    feed_other:      'Other',
+    feed_log_cta:    'Log feeding',
+    feed_save_cta:   'Save feeding',
+
+    // Stool
+    stool_size:      'Size',
+    stool_small:     'Small',
+    stool_medium:    'Medium',
+    stool_large:     'Large',
+    stool_color:     'Color',
+    stool_consistency:'Consistency',
+    stool_diaper_rash:'Diaper rash',
+    stool_log_cta:   'Log stool',
+
+    // Sleep
+    sleep_started_at:'Started at',
+    sleep_ended_at:  'Ended at',
+    sleep_ongoing:   'Still sleeping',
+    sleep_location:  'Location',
+    sleep_quality:   'Quality',
+    sleep_log_cta:   'Log sleep',
+
+    // Temperature
+    temp_value:      'Temperature (°C)',
+    temp_method:     'Method',
+    temp_log_cta:    'Log reading',
+
+    // Measurement
+    meas_weight:     'Weight (kg)',
+    meas_height:     'Height (cm)',
+    meas_head:       'Head circumference (cm)',
+    meas_log_cta:    'Save measurement',
+
+    // Medication (definition)
+    med_name:        'Medication name',
+    med_dosage:      'Dosage per dose',
+    med_route:       'How is it given?',
+    med_frequency:   'How often?',
+    med_starts_at:   'Starts',
+    med_ends_at:     'Ends (optional)',
+    med_total_doses: 'Total doses (optional)',
+    med_prescribed_by:'Who prescribed it?',
+    med_save_cta:    'Save medication',
+
+    // Medication log (dose)
+    medlog_pick_med: 'Pick a medication',
+    medlog_status:   'Status',
+    medlog_taken:    'Taken',
+    medlog_missed:   'Missed',
+    medlog_skipped:  'Skipped',
+    medlog_actual_dose:'Actual dose given',
+    medlog_log_cta:  'Log dose',
+  },
+
   // ── Auth ────────────────────────────────────────────────────────
   auth: {
     sign_in: 'Sign in',

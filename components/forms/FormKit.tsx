@@ -3,17 +3,19 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 import { Clock, Check, Minus, Plus } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 /** Numbered section used in every log form */
 export function Section({ n, title, optional, children }: {
   n: number; title: string; optional?: boolean; children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <section>
       <h3 className="mb-3 text-lg font-bold text-ink-strong">
         <span className="text-ink-muted font-medium">{n}. </span>
         {title}
-        {optional && <span className="ml-1 text-ink-muted text-sm font-normal">(optional)</span>}
+        {optional && <span className="ml-1 text-ink-muted text-sm font-normal">({t('forms.optional')})</span>}
       </h3>
       {children}
     </section>
@@ -160,6 +162,7 @@ export function WhenPicker({ time, onChange, tint = 'coral' }: {
   onChange: (local: string) => void;
   tint?: Tint;
 }) {
+  const t = useT();
   const [picked, setPicked] = useState<0 | 15 | 30 | 60 | 'custom' | null>(null);
 
   function setRelative(minutesAgo: 0 | 15 | 30 | 60) {
@@ -180,13 +183,13 @@ export function WhenPicker({ time, onChange, tint = 'coral' }: {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <QuickPill active={effectivePicked === 0}  onClick={() => setRelative(0)}  tint={tint} icon={<Check className="h-3.5 w-3.5" />}>Now</QuickPill>
-        <QuickPill active={effectivePicked === 15} onClick={() => setRelative(15)} tint={tint}>−15 min</QuickPill>
-        <QuickPill active={effectivePicked === 30} onClick={() => setRelative(30)} tint={tint}>−30 min</QuickPill>
-        <QuickPill active={effectivePicked === 60} onClick={() => setRelative(60)} tint={tint}>−1 hr</QuickPill>
+        <QuickPill active={effectivePicked === 0}  onClick={() => setRelative(0)}  tint={tint} icon={<Check className="h-3.5 w-3.5" />}>{t('forms.now')}</QuickPill>
+        <QuickPill active={effectivePicked === 15} onClick={() => setRelative(15)} tint={tint}>{t('forms.minus_15_min')}</QuickPill>
+        <QuickPill active={effectivePicked === 30} onClick={() => setRelative(30)} tint={tint}>{t('forms.minus_30_min')}</QuickPill>
+        <QuickPill active={effectivePicked === 60} onClick={() => setRelative(60)} tint={tint}>{t('forms.minus_1_hr')}</QuickPill>
       </div>
       <div>
-        <div className="text-xs font-medium text-ink-muted mb-1.5">Exact time</div>
+        <div className="text-xs font-medium text-ink-muted mb-1.5">{t('forms.exact_time')}</div>
         <div className={cn(
           'inline-flex items-center gap-2 rounded-2xl border bg-white px-4 py-2.5 w-full sm:w-auto',
           effectivePicked === 'custom'
