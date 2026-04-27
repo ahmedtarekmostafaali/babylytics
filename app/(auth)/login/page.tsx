@@ -8,14 +8,18 @@ import { Wordmark } from '@/components/Wordmark';
 import { Heart, Milk, Moon, Baby, Scale } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import { SocialAuthButtons } from '@/components/SocialAuthButtons';
 
 function LoginForm() {
   const router = useRouter();
   const t = useT();
-  const next = useSearchParams().get('next') ?? '/dashboard';
+  const search = useSearchParams();
+  const next = search.get('next') ?? '/dashboard';
+  // Surface OAuth-callback errors that came back via /auth/callback?oauth_error=…
+  const oauthErr = search.get('oauth_error');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(oauthErr);
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -35,7 +39,11 @@ function LoginForm() {
       <h1 className="text-4xl font-bold tracking-tight text-ink-strong">{t('auth.login_welcome')}</h1>
       <p className="mt-2 text-ink">{t('auth.login_subtitle')}</p>
 
-      <form className="mt-8 space-y-4" onSubmit={submit}>
+      <div className="mt-6">
+        <SocialAuthButtons mode="login" />
+      </div>
+
+      <form className="mt-5 space-y-4" onSubmit={submit}>
         <div>
           <label className="block text-sm font-medium text-ink mb-1">{t('auth.email')}</label>
           <input type="email" required autoComplete="email" placeholder={t('auth.email_ph')}

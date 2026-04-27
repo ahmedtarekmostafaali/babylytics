@@ -2365,6 +2365,15 @@ export const ar: Messages = {
     password_ph:             '••••••••',
     forgot:                  'نسيت كلمة المرور؟',
 
+    // Social sign-in row
+    social_login_google:      'المتابعة عبر Google',
+    social_login_apple:       'المتابعة عبر Apple',
+    social_login_facebook:    'المتابعة عبر Facebook',
+    social_register_google:   'إنشاء حساب عبر Google',
+    social_register_apple:    'إنشاء حساب عبر Apple',
+    social_register_facebook: 'إنشاء حساب عبر Facebook',
+    social_divider:           'أو بالبريد',
+
     login_welcome:           'مرحبًا بعودتك',
     login_subtitle:          'سعيدون برؤيتك مرة أخرى.',
     login_signing_in:        'جارٍ تسجيل الدخول…',

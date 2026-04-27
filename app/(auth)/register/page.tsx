@@ -8,6 +8,8 @@ import { Wordmark } from '@/components/Wordmark';
 import { Check } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import { SocialAuthButtons } from '@/components/SocialAuthButtons';
+import { Suspense } from 'react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -81,7 +83,13 @@ export default function RegisterPage() {
           <h1 className="text-4xl font-bold tracking-tight text-ink-strong">{t('auth.register_title')}</h1>
           <p className="mt-2 text-ink">{t('auth.register_subtitle')}</p>
 
-          <form className="mt-8 space-y-4" onSubmit={submit}>
+          <div className="mt-6">
+            <Suspense fallback={null}>
+              <SocialAuthButtons mode="register" />
+            </Suspense>
+          </div>
+
+          <form className="mt-5 space-y-4" onSubmit={submit}>
             <Field label={t('auth.register_your_name')}>
               <input required placeholder={t('auth.register_name_ph')} value={displayName} onChange={e => setDisplayName(e.target.value)}
                 className="h-12 w-full rounded-2xl bg-white border border-slate-200 px-4 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />

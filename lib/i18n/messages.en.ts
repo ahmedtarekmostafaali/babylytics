@@ -2406,6 +2406,15 @@ export const en = {
     password_ph:             '••••••••',
     forgot:                  'Forgot password?',
 
+    // Social sign-in row
+    social_login_google:      'Continue with Google',
+    social_login_apple:       'Continue with Apple',
+    social_login_facebook:    'Continue with Facebook',
+    social_register_google:   'Sign up with Google',
+    social_register_apple:    'Sign up with Apple',
+    social_register_facebook: 'Sign up with Facebook',
+    social_divider:           'or with email',
+
     login_welcome:           'Welcome back',
     login_subtitle:          'Hello, glad to see you again.',
     login_signing_in:        'Signing in…',
