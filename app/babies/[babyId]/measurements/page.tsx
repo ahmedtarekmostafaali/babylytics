@@ -66,7 +66,21 @@ export default async function MeasurementsLog({
   const { data: baby } = await supabase.from('babies').select('id,name,birth_weight_kg,birth_height_cm').eq('id', params.babyId).single();
   if (!baby) notFound();
 
-  const [{ data: rowsData }, { data: allRows }] = await Promise.all([
+  // Three queries:
+  //   1. Visible rows for the date-range window (left panel).
+  //   2. All rows ascending — feeds the trend sparklines.
+  //   3. Per-field most-recent-non-null queries for the "Growth trend"
+  //      and "Growth so far" numbers. These bypass the array-walk
+  //      heuristic and ask Postgres directly for the latest weight /
+  //      height / head row, so a stray third row can't desync the
+  //      number from the sparkline.
+  const [
+    { data: rowsData },
+    { data: allRows },
+    { data: latestWeightRow },
+    { data: latestHeightRow },
+    { data: latestHeadRow },
+  ] = await Promise.all([
     supabase.from('measurements')
       .select('id,measured_at,weight_kg,height_cm,head_circ_cm,notes,source,created_at')
       .eq('baby_id', params.babyId).is('deleted_at', null)
@@ -75,12 +89,27 @@ export default async function MeasurementsLog({
     supabase.from('measurements')
       .select('measured_at,weight_kg,height_cm,head_circ_cm,created_at')
       .eq('baby_id', params.babyId).is('deleted_at', null)
-      // Order by measured_at primarily; tiebreak with created_at so two
-      // entries with the same logical timestamp still resolve in insert
-      // order. Ascending so all[all.length-1] is the most recent.
       .order('measured_at', { ascending: true })
       .order('created_at', { ascending: true })
       .limit(500),
+    supabase.from('measurements')
+      .select('measured_at,weight_kg').eq('baby_id', params.babyId)
+      .is('deleted_at', null).not('weight_kg', 'is', null)
+      .order('measured_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle(),
+    supabase.from('measurements')
+      .select('measured_at,height_cm').eq('baby_id', params.babyId)
+      .is('deleted_at', null).not('height_cm', 'is', null)
+      .order('measured_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle(),
+    supabase.from('measurements')
+      .select('measured_at,head_circ_cm').eq('baby_id', params.babyId)
+      .is('deleted_at', null).not('head_circ_cm', 'is', null)
+      .order('measured_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle(),
   ]);
 
   const rowsAll = (rowsData ?? []) as Row[];
@@ -98,24 +127,11 @@ export default async function MeasurementsLog({
   const heightSpark = all.map(r => r.height_cm != null ? Number(r.height_cm) : NaN).filter(n => Number.isFinite(n));
   const headSpark   = all.map(r => r.head_circ_cm != null ? Number(r.head_circ_cm) : NaN).filter(n => Number.isFinite(n));
 
-  // Per-field latest non-null lookup. The right-rail "Growth trend"
-  // and "Growth so far" bands previously read all[all.length-1] which
-  // returned the *most recent row* — meaning a height-only entry would
-  // mask a freshly-logged weight (or vice versa). Walk the array
-  // backwards per field so each metric shows the freshest value of
-  // its kind.
-  const latestWeight = (() => {
-    for (let i = all.length - 1; i >= 0; i--) if (all[i]!.weight_kg != null) return Number(all[i]!.weight_kg);
-    return null;
-  })();
-  const latestHeight = (() => {
-    for (let i = all.length - 1; i >= 0; i--) if (all[i]!.height_cm != null) return Number(all[i]!.height_cm);
-    return null;
-  })();
-  const latestHead = (() => {
-    for (let i = all.length - 1; i >= 0; i--) if (all[i]!.head_circ_cm != null) return Number(all[i]!.head_circ_cm);
-    return null;
-  })();
+  // Per-field latest non-null pulled directly from Postgres — see the
+  // three single-row queries above. Avoids any array-walk staleness.
+  const latestWeight = latestWeightRow?.weight_kg != null ? Number(latestWeightRow.weight_kg) : null;
+  const latestHeight = latestHeightRow?.height_cm != null ? Number(latestHeightRow.height_cm) : null;
+  const latestHead   = latestHeadRow?.head_circ_cm != null ? Number(latestHeadRow.head_circ_cm) : null;
 
   const birthW = baby.birth_weight_kg ? Number(baby.birth_weight_kg) : null;
   const birthH = baby.birth_height_cm ? Number(baby.birth_height_cm) : null;
@@ -280,11 +296,20 @@ export default async function MeasurementsLog({
               <h3 className="text-sm font-bold text-ink-strong">Growth trend</h3>
               <TrendingUp className="h-4 w-4 text-ink-muted" />
             </div>
-            <TrendRow label="Weight" latest={latestWeight != null ? fmtKg(latestWeight) : '—'} spark={weightSpark} color="#B9A7D8" />
+            <TrendRow label="Weight"
+              latest={latestWeight != null ? fmtKg(latestWeight) : '—'}
+              source={latestWeightRow?.measured_at ?? null}
+              spark={weightSpark} color="#B9A7D8" />
             <div className="h-3" />
-            <TrendRow label="Height" latest={latestHeight != null ? fmtCm(latestHeight) : '—'} spark={heightSpark} color="#7FC8A9" />
+            <TrendRow label="Height"
+              latest={latestHeight != null ? fmtCm(latestHeight) : '—'}
+              source={latestHeightRow?.measured_at ?? null}
+              spark={heightSpark} color="#7FC8A9" />
             <div className="h-3" />
-            <TrendRow label="Head circ" latest={latestHead != null ? fmtCm(latestHead) : '—'} spark={headSpark} color="#F4A6A6" />
+            <TrendRow label="Head circ"
+              latest={latestHead != null ? fmtCm(latestHead) : '—'}
+              source={latestHeadRow?.measured_at ?? null}
+              spark={headSpark} color="#F4A6A6" />
           </section>
         </div>
       </div>
@@ -325,13 +350,20 @@ function MStat({ icon: Icon, tint, label, value }: {
   );
 }
 
-function TrendRow({ label, latest, spark, color }: { label: string; latest: string; spark: number[]; color: string }) {
+function TrendRow({ label, latest, source, spark, color }: {
+  label: string; latest: string;
+  source: string | null;
+  spark: number[]; color: string;
+}) {
   return (
     <div>
       <div className="flex items-center justify-between">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</div>
         <div className="text-sm font-bold text-ink-strong">{latest}</div>
       </div>
+      {source && (
+        <div className="text-[10px] text-ink-muted mt-0.5">from {fmtDateTime(source)}</div>
+      )}
       <div className="mt-1">
         <Sparkline data={spark.length ? spark : [0]} color={color} width={280} height={36} strokeWidth={2} />
       </div>
