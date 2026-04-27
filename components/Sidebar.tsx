@@ -14,7 +14,7 @@ import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
   Stethoscope, CalendarClock, HeartPulse, ScanLine, Activity, Heart, Tv, FlaskConical,
-  Smile, MessageCircle, ChevronDown, Settings, ShoppingCart,
+  Smile, MessageCircle, ChevronDown, Settings, ShoppingCart, Megaphone,
 } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 
@@ -216,6 +216,8 @@ export function Sidebar() {
         <NavGroup label="HOME" collapsed={collapsed}>
           <NavItem href="/dashboard" icon={LayoutDashboard} label={t('nav.my_babies')}
             active={pathname === '/dashboard'} collapsed={collapsed} tint="brand" />
+          <NavItem href="/updates" icon={Megaphone} label={t('nav.updates')}
+            active={pathname?.startsWith('/updates') ?? false} collapsed={collapsed} tint="mint" />
         </NavGroup>
 
         {currentBabyId && (

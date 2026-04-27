@@ -29,6 +29,7 @@ function friendlyNotificationLabel(kind: string, t: TFunc): string {
     file_ready:          t('dashboard.notif_file_ready'),
     feeding_alert:       t('dashboard.notif_feed_alert'),
     stool_alert:         t('dashboard.notif_stool_alert'),
+    app_update:          t('dashboard.notif_app_update'),
   };
   return map[kind] ?? kind.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -202,6 +203,7 @@ export default async function DashboardPage() {
                   case 'feeding_alert':      return `${baby}/feedings`;
                   case 'stool_alert':        return `${baby}/stool`;
                   case 'file_ready':         return `${baby}/ocr`;
+                  case 'app_update':         return '/updates';
                   default:                   return baby;
                 }
               })();

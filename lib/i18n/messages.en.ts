@@ -46,6 +46,7 @@ export const en = {
     caregivers: 'Caregivers',
     doctors: 'Doctors',
     preferences: 'Preferences',
+    updates: "What's new",
   },
 
   // ── Common buttons / words ──────────────────────────────────────
@@ -1438,7 +1439,19 @@ export const en = {
     notif_file_ready:      'File ready',
     notif_feed_alert:      'Feeding alert',
     notif_stool_alert:     'Stool alert',
+    notif_app_update:      "What's new",
     name_fallback:         'there',
+  },
+
+  // ── Updates / changelog page ────────────────────────────────────
+  updates: {
+    eyebrow:               "What's new",
+    title:                 "What's new in Babylytics",
+    subtitle:              'Every bug fix, new feature, and enhancement we ship — newest first.',
+    empty:                 'No updates yet. Check back soon.',
+    cat_new_feature:       'New features',
+    cat_bug_fix:           'Bug fixes',
+    cat_enhancement:       'Enhancements',
   },
 
   // ── Edit-baby page (Baby profile + sidebar) ─────────────────────
@@ -1757,6 +1770,9 @@ export const en = {
     med_due_msg:           'A scheduled dose is due now.',
     med_missed_msg:        'A scheduled dose was missed.',
     file_ready_msg:        'A file finished processing.',
+    app_update:            "What's new",
+    app_update_msg:        "What's new: {title}",
+    app_update_generic:    "We just shipped a new update. Tap to see what's new.",
   },
 
   // ── Legal footer ────────────────────────────────────────────────

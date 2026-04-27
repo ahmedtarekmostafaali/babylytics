@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { fmtRelative } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import {
-  Bell, X, Check, Pill, FileText, Milk, Droplet, AlertTriangle, BellOff, ArrowRight,
+  Bell, X, Check, Pill, FileText, Milk, Droplet, AlertTriangle, BellOff, ArrowRight, Sparkles,
 } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 
@@ -27,6 +27,7 @@ const KIND_META: Record<string, { icon: React.ComponentType<{ className?: string
   file_ready:          { icon: FileText,tint: 'bg-mint-100 text-mint-700',       tkey: 'notif.file_ready' },
   feeding_alert:       { icon: Milk,    tint: 'bg-coral-100 text-coral-700',     tkey: 'notif.feeding_alert' },
   stool_alert:         { icon: Droplet, tint: 'bg-mint-100 text-mint-700',       tkey: 'notif.stool_alert' },
+  app_update:          { icon: Sparkles,tint: 'bg-mint-100 text-mint-700',       tkey: 'notif.app_update' },
 };
 
 export function NotificationsBell({ babyId }: { babyId: string }) {
@@ -107,6 +108,7 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
       case 'feeding_alert': return `${baby}/feedings`;
       case 'stool_alert':   return `${baby}/stool`;
       case 'file_ready':    return `${baby}/ocr`;
+      case 'app_update':    return '/updates';
       default:              return null;
     }
   }
@@ -183,6 +185,10 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
                     if (n.kind === 'medication_due')    return t('notif.med_due_msg');
                     if (n.kind === 'medication_missed') return t('notif.med_missed_msg');
                     if (n.kind === 'file_ready')        return t('notif.file_ready_msg');
+                    if (n.kind === 'app_update') {
+                      const title = typeof n.payload?.title === 'string' ? n.payload.title : null;
+                      return title ? t('notif.app_update_msg', { title }) : t('notif.app_update_generic');
+                    }
                     return meta.tkey ? t(meta.tkey) : n.kind;
                   })();
                   const Body = (

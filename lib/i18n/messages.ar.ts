@@ -44,6 +44,7 @@ export const ar: Messages = {
     caregivers: 'مقدمو الرعاية',
     doctors: 'الأطباء',
     preferences: 'التفضيلات',
+    updates: 'الجديد',
   },
 
   common: {
@@ -1398,7 +1399,19 @@ export const ar: Messages = {
     notif_file_ready:      'الملف جاهز',
     notif_feed_alert:      'تنبيه رضعة',
     notif_stool_alert:     'تنبيه براز',
+    notif_app_update:      'الجديد',
     name_fallback:         'بك',
+  },
+
+  // ── Updates / changelog page ────────────────────────────────────
+  updates: {
+    eyebrow:               'الجديد',
+    title:                 'الجديد في بابيليتيكس',
+    subtitle:              'كل إصلاح خطأ، ميزة جديدة، وتحسين نطلقه — الأحدث أولًا.',
+    empty:                 'لا توجد تحديثات بعد. تحقق قريبًا.',
+    cat_new_feature:       'ميزات جديدة',
+    cat_bug_fix:           'إصلاح أخطاء',
+    cat_enhancement:       'تحسينات',
   },
 
   // ── Edit-baby page ──────────────────────────────────────────────
@@ -1717,6 +1730,9 @@ export const ar: Messages = {
     med_due_msg:           'جرعة مجدولة مستحقة الآن.',
     med_missed_msg:        'فاتت جرعة مجدولة.',
     file_ready_msg:        'انتهت معالجة ملف.',
+    app_update:            'الجديد',
+    app_update_msg:        'الجديد: {title}',
+    app_update_generic:    'أطلقنا للتو تحديثًا جديدًا. اضغط للاطلاع على الجديد.',
   },
 
   // ── Legal footer ────────────────────────────────────────────────
