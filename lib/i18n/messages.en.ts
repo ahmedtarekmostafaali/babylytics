@@ -1056,6 +1056,54 @@ export const en = {
     nb_born_factor_help:   "Default 150. Adjust on your pediatrician's advice.",
     nb_born_create:        'Create baby',
 
+    // Allergy form — quick-pick templates + delete confirm
+    allergy_quick_pick:      'Quick pick',
+    allergy_quick_pick_help: 'Tap a common allergen to pre-fill the fields. You can edit anything before saving.',
+    allergy_del_confirm:     'Delete this allergy record?',
+    allergy_tpl: {
+      generic_caveat: 'These templates are general parent education. Always confirm the diagnosis and management plan with your paediatrician.',
+      cow_milk: {
+        label:    "Cow's milk",
+        eyebrow:  "Cow's milk allergy (CMPA)",
+        title:    'What to know about cow\'s milk protein allergy',
+        reaction: 'Hives, vomiting, diarrhea, eczema flares, fussiness or refusal to feed after dairy.',
+        guidance: {
+          intro:
+            "Cow's milk protein allergy (CMPA) is the most common food allergy in babies — affecting roughly 2–3% of infants. It's a true immune reaction to the proteins in cow's milk (casein and whey), distinct from lactose intolerance (which is rare in babies). Reactions can be IgE-mediated (within minutes) or non-IgE-mediated (hours to days, often gut-only).",
+          sym_skin_title:   'Skin',
+          sym_skin_items:   'Hives or rash | Eczema flare-ups | Itchy or red around the mouth | Lip / face swelling',
+          sym_gut_title:    'Tummy',
+          sym_gut_items:    'Vomiting / spitting up a lot | Diarrhea, sometimes bloody or mucousy | Reflux that doesn\'t settle | Colic / inconsolable crying after feeds | Poor weight gain',
+          sym_respir_title: 'Breathing',
+          sym_respir_items: 'Runny nose / chronic congestion | Cough or wheeze after feeds | Sudden trouble breathing (urgent)',
+          avoid_title:    'What to avoid',
+          avoid:
+            'All dairy: milk, cream, butter, ghee, yogurt, cheese, ice cream | Hidden ingredients: casein, caseinate, whey, lactalbumin, lactoglobulin, milk solids | "Lactose-free" still contains milk protein — not safe for CMPA | Most goat / sheep / buffalo milk also reacts (cross-reactive in 80–90% of cases) | Baked goods, processed meats, and "non-dairy" creamers often contain milk — read every label',
+          alternatives_title: 'Alternatives',
+          alternatives:
+            'Breastfeeding mom: avoid all dairy yourself for 2–4 weeks to test (your provider can guide) | Formula: extensively hydrolyzed (eHF) is first-line; amino-acid formula (AAF) for severe cases | After 6 months, fortified soy formula may work if no soy allergy | Older toddler: fortified plant milks (oat, almond, soy) — check calcium + vitamin D | Calcium sources: leafy greens, sesame paste / tahini, fortified cereals',
+          red_flags_title: 'Seek urgent care if',
+          red_flags:
+            'Trouble breathing, wheeze, or noisy breathing | Tongue or throat swelling | Sudden pale or floppy after a feed | Repeated vomiting AND lethargy | Bloody stool with fever or dehydration | Use the prescribed adrenaline (epinephrine) auto-injector if anaphylaxis is suspected and call emergency services',
+          outlook_title: 'Outlook',
+          outlook:
+            'Good news: the majority of children outgrow CMPA by age 3–5 years. Your provider may do a milk-ladder reintroduction (cooked → baked → fresh) under supervision when ready. Track every reaction in this app — patterns help.',
+          disclaimer:
+            'This is general parent education, not medical advice. Always confirm a diagnosis and management plan with your paediatrician or paediatric allergist.',
+        },
+      },
+      peanut:     { label: 'Peanut',     reaction: 'Hives, swelling, throat tightness, vomiting, or breathing trouble after peanut exposure.' },
+      egg:        { label: 'Egg',        reaction: 'Hives, vomiting, or eczema flare after egg, especially raw or lightly cooked.' },
+      soy:        { label: 'Soy' },
+      wheat:      { label: 'Wheat' },
+      fish:       { label: 'Fish' },
+      shellfish:  { label: 'Shellfish' },
+      tree_nuts:  { label: 'Tree nuts' },
+      sesame:     { label: 'Sesame', reaction: 'Hives, swelling, or vomiting after sesame / tahini.' },
+      penicillin: { label: 'Penicillin' },
+      latex:      { label: 'Latex' },
+    },
+
     // Maternal symptom form
     symp_kind_title:       'What are you feeling?',
     symp_sev_title:        'How severe is it? (1 = mild, 5 = severe)',
