@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -37,12 +38,38 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [coords, setCoords] = useState<{ top: number; right: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Compute the screen position of the button so the portal panel can
+  // anchor under it from anywhere in the page (escapes parent
+  // overflow-hidden / rounded clipping).
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+    function place() {
+      const r = buttonRef.current!.getBoundingClientRect();
+      setCoords({ top: r.bottom + 8, right: window.innerWidth - r.right });
+    }
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open]);
 
   // Close on outside click.
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      if (buttonRef.current?.contains(target)) return;
+      setOpen(false);
     }
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
@@ -113,21 +140,15 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
     }
   }
 
-  return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(o => !o)}
-        className="relative h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
-        aria-label={t('notif.aria_label')}>
-        <Bell className={`h-4 w-4 ${unread > 0 ? 'text-coral-600' : 'text-ink'}`} />
-        {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-coral-500 text-white text-[10px] grid place-items-center font-bold">
-            {unread > 99 ? '99+' : unread}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-h-[70vh] overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-panel z-50 flex flex-col">
+  // The dropdown panel is rendered via a portal so it can escape any
+  // ancestor that uses `overflow-hidden` (the pregnancy hero card uses
+  // `rounded-[32px] overflow-hidden` to clip its decorative blobs, which
+  // also clipped this panel previously). The portal anchors under the
+  // bell button using getBoundingClientRect coordinates.
+  const panel = open && coords && (
+    <div ref={ref} role="dialog" aria-label={t('notif.header')}
+      className="fixed w-[min(384px,calc(100vw-1.5rem))] max-h-[70vh] overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-panel z-[100] flex flex-col"
+      style={{ top: coords.top, right: coords.right }}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-ink" />
@@ -228,8 +249,23 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
               </ul>
             )}
           </div>
-        </div>
-      )}
     </div>
   );
+
+  return (
+    <>
+      <button ref={buttonRef} onClick={() => setOpen(o => !o)}
+        className="relative h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
+        aria-label={t('notif.aria_label')}>
+        <Bell className={`h-4 w-4 ${unread > 0 ? 'text-coral-600' : 'text-ink'}`} />
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-coral-500 text-white text-[10px] grid place-items-center font-bold">
+            {unread > 99 ? '99+' : unread}
+          </span>
+        )}
+      </button>
+      {mounted && panel ? createPortal(panel, document.body) : null}
+    </>
+  );
 }
+

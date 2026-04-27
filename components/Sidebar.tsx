@@ -151,7 +151,7 @@ export function Sidebar() {
     <div className="h-full flex flex-col relative">
       {/* Wordmark header */}
       <div className={cn('flex items-center h-16 border-b border-slate-200/70', collapsed ? 'justify-center px-2' : 'px-5')}>
-        <Link href="/dashboard" className="flex items-center" title="Babylytics">
+        <Link href="/" className="flex items-center" title="Babylytics">
           {collapsed ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src="/Logo.png" alt="Babylytics" className="h-9 w-9 rounded-lg object-cover" />

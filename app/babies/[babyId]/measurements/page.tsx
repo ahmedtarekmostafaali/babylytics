@@ -93,10 +93,24 @@ export default async function MeasurementsLog({
   const heightSpark = all.map(r => r.height_cm != null ? Number(r.height_cm) : NaN).filter(n => Number.isFinite(n));
   const headSpark   = all.map(r => r.head_circ_cm != null ? Number(r.head_circ_cm) : NaN).filter(n => Number.isFinite(n));
 
-  const latest = all[all.length - 1] ?? null;
-  const latestWeight = latest?.weight_kg != null ? Number(latest.weight_kg) : null;
-  const latestHeight = latest?.height_cm != null ? Number(latest.height_cm) : null;
-  const latestHead   = latest?.head_circ_cm != null ? Number(latest.head_circ_cm) : null;
+  // Per-field latest non-null lookup. The right-rail "Growth trend"
+  // and "Growth so far" bands previously read all[all.length-1] which
+  // returned the *most recent row* — meaning a height-only entry would
+  // mask a freshly-logged weight (or vice versa). Walk the array
+  // backwards per field so each metric shows the freshest value of
+  // its kind.
+  const latestWeight = (() => {
+    for (let i = all.length - 1; i >= 0; i--) if (all[i]!.weight_kg != null) return Number(all[i]!.weight_kg);
+    return null;
+  })();
+  const latestHeight = (() => {
+    for (let i = all.length - 1; i >= 0; i--) if (all[i]!.height_cm != null) return Number(all[i]!.height_cm);
+    return null;
+  })();
+  const latestHead = (() => {
+    for (let i = all.length - 1; i >= 0; i--) if (all[i]!.head_circ_cm != null) return Number(all[i]!.head_circ_cm);
+    return null;
+  })();
 
   const birthW = baby.birth_weight_kg ? Number(baby.birth_weight_kg) : null;
   const birthH = baby.birth_height_cm ? Number(baby.birth_height_cm) : null;

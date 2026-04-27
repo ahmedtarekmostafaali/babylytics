@@ -21,6 +21,8 @@ type Row = {
   id: string;
   title: string;
   body: string | null;
+  title_ar: string | null;
+  body_ar:  string | null;
   category: Category;
   published_at: string;     // YYYY-MM-DD
   created_at: string;
@@ -46,7 +48,7 @@ export default async function UpdatesPage() {
 
   const { data: rows } = await supabase
     .from('app_updates')
-    .select('id,title,body,category,published_at,created_at')
+    .select('id,title,body,title_ar,body_ar,category,published_at,created_at')
     .order('published_at', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -80,7 +82,7 @@ export default async function UpdatesPage() {
           {CATEGORIES.map(c => {
             const list = byCat[c.key];
             if (list.length === 0) return null;
-            return <CategoryBlock key={c.key} list={list} cat={c} t={t} />;
+            return <CategoryBlock key={c.key} list={list} cat={c} t={t} lang={userPrefs.language} />;
           })}
         </div>
       )}
@@ -89,11 +91,12 @@ export default async function UpdatesPage() {
 }
 
 function CategoryBlock({
-  list, cat, t,
+  list, cat, t, lang,
 }: {
   list: Row[];
   cat: typeof CATEGORIES[number];
   t: TFunc;
+  lang: 'en' | 'ar';
 }) {
   const { Icon } = cat;
   return (
@@ -108,17 +111,24 @@ function CategoryBlock({
         </span>
       </div>
       <ul className="space-y-3">
-        {list.map(r => (
-          <li key={r.id} className="rounded-xl bg-white border border-slate-200 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="font-semibold text-ink-strong">{r.title}</div>
-              <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-ink-muted whitespace-nowrap">
-                <Calendar className="h-3 w-3" /> {fmtDate(r.published_at)}
-              </span>
-            </div>
-            {r.body && <p className="mt-1.5 text-sm text-ink leading-relaxed whitespace-pre-wrap">{r.body}</p>}
-          </li>
-        ))}
+        {list.map(r => {
+          // Pick the user's language version when available, fall back
+          // to English so newly-shipped (not-yet-translated) entries
+          // still render rather than disappear.
+          const title = lang === 'ar' && r.title_ar ? r.title_ar : r.title;
+          const body  = lang === 'ar' && r.body_ar  ? r.body_ar  : r.body;
+          return (
+            <li key={r.id} className="rounded-xl bg-white border border-slate-200 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="font-semibold text-ink-strong">{title}</div>
+                <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-ink-muted whitespace-nowrap">
+                  <Calendar className="h-3 w-3" /> {fmtDate(r.published_at)}
+                </span>
+              </div>
+              {body && <p className="mt-1.5 text-sm text-ink leading-relaxed whitespace-pre-wrap">{body}</p>}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
