@@ -26,6 +26,11 @@ create index if not exists idx_app_updates_published
   on public.app_updates(published_at desc, created_at desc);
 create index if not exists idx_app_updates_category
   on public.app_updates(category, published_at desc);
+-- Unique guard so re-running seed migrations is idempotent. Created
+-- here (above the function + seed inserts) so the function's
+-- ON CONFLICT clause and the seed inserts both have a valid target.
+create unique index if not exists idx_app_updates_seed_uniq
+  on public.app_updates(title, published_at);
 
 -- Anyone authenticated can read the changelog. Inserts/updates/deletes are
 -- restricted at the RPC layer below (security definer) so we don't need a
@@ -89,9 +94,16 @@ begin
     raise exception 'invalid category %', p_category;
   end if;
 
+  -- ON CONFLICT (title, published_at) keeps this idempotent — a seed
+  -- migration (or a re-run of an in-place migration) calling with the
+  -- same title+date refreshes the body instead of raising 23505 against
+  -- the idx_app_updates_seed_uniq unique index defined alongside the
+  -- table at the top of this migration.
   insert into public.app_updates (title, body, category, published_at, created_by)
        values (p_title, p_body, p_category, p_date, auth.uid())
-    returning id into v_id;
+    on conflict (title, published_at) do update
+       set body = excluded.body
+     returning id into v_id;
 
   return v_id;
 end; $$;
@@ -102,11 +114,9 @@ end; $$;
 -- ────────────────────────────────────────────────────────────────────────────
 -- Seed: backfill the most material recent shipments so the page lights up on
 -- first deploy. Dates are approximations grouped by Vercel deploy windows.
--- Safe to re-run — the unique title+date guard avoids duplicates.
+-- Safe to re-run — the unique (title, published_at) guard above
+-- (idx_app_updates_seed_uniq) makes ON CONFLICT DO NOTHING work.
 -- ────────────────────────────────────────────────────────────────────────────
-
-create unique index if not exists idx_app_updates_seed_uniq
-  on public.app_updates(title, published_at);
 
 insert into public.app_updates (title, body, category, published_at)
 values
