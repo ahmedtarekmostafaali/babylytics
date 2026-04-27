@@ -24,13 +24,19 @@ import {
   parseVoiceCommandAuto, type Intent,
   type FeedingIntent, type StoolIntent, type SleepIntent,
   type TemperatureIntent, type KickIntent, type NoteIntent,
+  type MedicationIntent,
 } from '@/lib/voice/grammar';
+import { fuzzyMatchByName } from '@/lib/voice/match';
 import {
   Mic, MicOff, X, Save, Loader2, AlertTriangle,
-  Milk, Droplet, Moon, Thermometer, Activity, MessageSquare,
+  Milk, Droplet, Moon, Thermometer, Activity, MessageSquare, Pill,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/client';
+
+// Active prescription returned by Supabase. Used for fuzzy-matching
+// the medication name the user spoke.
+type ActiveMed = { id: string; name: string; dosage: string | null };
 
 // Minimal type shim for the Web Speech API — TypeScript's lib doesn't
 // ship these because they're still a draft spec. We only use the bits
@@ -65,6 +71,13 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
   const [detectedLang, setDetectedLang] = useState<'en' | 'ar' | null>(null);
   const [saving, setSaving]         = useState(false);
   const [savedMsg, setSavedMsg]     = useState<string | null>(null);
+
+  // Medication-specific resolution state. Populated when a medication
+  // intent is parsed: we fetch active prescriptions and fuzzy-match
+  // the spoken name against them. The user can switch between
+  // candidates if there are several plausible hits.
+  const [medCandidates, setMedCandidates] = useState<ActiveMed[]>([]);
+  const [medSelectedId, setMedSelectedId] = useState<string | null>(null);
 
   // ASR language — controls which language the SpeechRecognition object
   // is biased toward. Defaults to the user's UI preference but can be
@@ -123,6 +136,12 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
           if (parsed) {
             setIntent(parsed.intent);
             setDetectedLang(parsed.lang);
+            // Medication intents need a follow-up DB lookup to map
+            // the spoken name to an actual prescription. Done async
+            // so the UI shows the parsed card immediately.
+            if (parsed.intent.kind === 'medication') {
+              void resolveMedication(parsed.intent);
+            }
           } else {
             setIntent(null);
             setDetectedLang(null);
@@ -144,17 +163,58 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
 
   function reset() {
     setTranscript(''); setIntent(null); setDetectedLang(null); setError(null); setSavedMsg(null);
+    setMedCandidates([]); setMedSelectedId(null);
+  }
+
+  /**
+   * For a medication intent, fetch the baby's active prescriptions
+   * and fuzzy-match the spoken name. Populates medCandidates +
+   * medSelectedId so the confirm card can show the matched med (or
+   * a picker if the spoken name is ambiguous, or an error if there
+   * are no matches).
+   */
+  async function resolveMedication(i: MedicationIntent) {
+    setMedCandidates([]); setMedSelectedId(null);
+    const supabase = createClient();
+    const { data } = await supabase.from('medications')
+      .select('id,name,dosage,starts_at,ends_at')
+      .eq('baby_id', babyId).is('deleted_at', null)
+      .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString()}`)
+      .order('starts_at', { ascending: false });
+    const meds = (data ?? []) as ActiveMed[];
+    if (meds.length === 0) {
+      setError(t('voice.med_err_none_active'));
+      return;
+    }
+    const hits = fuzzyMatchByName(i.name_query, meds, m => m.name);
+    if (hits.length === 0) {
+      setError(t('voice.med_err_no_match', { name: i.name_query }));
+      return;
+    }
+    // Show the top 3 candidates so the user can switch if our
+    // top pick is wrong.
+    setMedCandidates(hits.slice(0, 3).map(h => h.item));
+    setMedSelectedId(hits[0].item.id);
   }
 
   async function save() {
     if (!intent) return;
+    // Block save on a medication intent until a candidate is chosen.
+    if (intent.kind === 'medication' && !medSelectedId) {
+      setError(t('voice.med_pick_first'));
+      return;
+    }
     setSaving(true); setError(null);
     const supabase = createClient();
     const userId = (await supabase.auth.getUser()).data.user?.id ?? null;
     try {
-      const result = await persistIntent(intent, babyId, userId, supabase);
+      const med = intent.kind === 'medication'
+        ? medCandidates.find(c => c.id === medSelectedId) ?? null
+        : null;
+      const result = await persistIntent(intent, babyId, userId, supabase, med);
       setSavedMsg(result);
       setIntent(null); setTranscript('');
+      setMedCandidates([]); setMedSelectedId(null);
       router.refresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'unknown';
@@ -269,10 +329,14 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
             {/* Parsed intent confirm card */}
             {intent && !savedMsg && (
               <div className="mt-3">
-                <IntentCard intent={intent} t={t} />
+                <IntentCard intent={intent} t={t}
+                  medCandidates={medCandidates}
+                  medSelectedId={medSelectedId}
+                  onMedPick={setMedSelectedId} />
                 {error && <p className="mt-2 text-xs text-coral-700 font-medium">{error}</p>}
                 <div className="mt-3 flex items-center gap-2">
-                  <button onClick={save} disabled={saving}
+                  <button onClick={save}
+                    disabled={saving || (intent.kind === 'medication' && !medSelectedId)}
                     className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-coral-500 to-coral-600 text-white text-sm font-semibold py-3 hover:brightness-105 disabled:opacity-50">
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     {saving ? t('voice.saving') : t('voice.save')}
@@ -310,6 +374,8 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
                   <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1">English</div>
                   <div className="grid grid-cols-1 gap-1.5 text-[11px]">
                     <Example>&ldquo;Log a feeding 120 ml bottle&rdquo;</Example>
+                    <Example>&ldquo;Gave 5ml of Augmentin&rdquo;</Example>
+                    <Example>&ldquo;Skipped the antibiotic&rdquo;</Example>
                     <Example>&ldquo;Diaper change large&rdquo;</Example>
                     <Example>&ldquo;Nap 45 minutes&rdquo;</Example>
                     <Example>&ldquo;Temperature 37.5&rdquo;</Example>
@@ -319,6 +385,8 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
                   <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1">العربية</div>
                   <div className="grid grid-cols-1 gap-1.5 text-[11px]" dir="rtl">
                     <Example>«سجّل رضعة ١٢٠ مل زجاجة»</Example>
+                    <Example>«أعطيت ٥ مل أوجمنتين»</Example>
+                    <Example>«تخطّيت جرعة بنادول»</Example>
                     <Example>«حفاضة كبيرة»</Example>
                     <Example>«نام ٤٥ دقيقة»</Example>
                     <Example>«حرارة ٣٧.٥»</Example>
@@ -339,7 +407,15 @@ function Example({ children }: { children: React.ReactNode }) {
 
 // Render the parsed intent in a friendly card so the user can verify
 // before saving.
-function IntentCard({ intent, t }: { intent: Intent; t: (k: string, vars?: Record<string, string|number>) => string }) {
+function IntentCard({
+  intent, t, medCandidates, medSelectedId, onMedPick,
+}: {
+  intent: Intent;
+  t: (k: string, vars?: Record<string, string|number>) => string;
+  medCandidates?: ActiveMed[];
+  medSelectedId?: string | null;
+  onMedPick?: (id: string) => void;
+}) {
   switch (intent.kind) {
     case 'feeding':     return <Card icon={Milk}        tint="coral"    title={t('voice.intent.feeding')}     body={feedingBody(intent, t)} />;
     case 'stool':       return <Card icon={Droplet}     tint="mint"     title={t('voice.intent.stool')}       body={t(`voice.size.${intent.size}`)} />;
@@ -347,7 +423,76 @@ function IntentCard({ intent, t }: { intent: Intent; t: (k: string, vars?: Recor
     case 'temperature': return <Card icon={Thermometer} tint="peach"    title={t('voice.intent.temperature')} body={`${intent.temperature_c.toFixed(1)} °C${intent.method ? ` · ${t(`voice.method.${intent.method}`)}` : ''}`} />;
     case 'kick':        return <Card icon={Activity}    tint="coral"    title={t('voice.intent.kick')}        body={t('voice.kick_n', { n: intent.count })} />;
     case 'note':        return <Card icon={MessageSquare} tint="brand"  title={t('voice.intent.note')}        body={intent.text} />;
+    case 'medication':  return <MedicationCard intent={intent} t={t}
+                                  candidates={medCandidates ?? []}
+                                  selectedId={medSelectedId ?? null}
+                                  onPick={onMedPick ?? (() => {})} />;
   }
+}
+
+function MedicationCard({
+  intent, t, candidates, selectedId, onPick,
+}: {
+  intent: MedicationIntent;
+  t: (k: string, vars?: Record<string, string|number>) => string;
+  candidates: ActiveMed[];
+  selectedId: string | null;
+  onPick: (id: string) => void;
+}) {
+  const statusKey = `voice.med_status.${intent.status}`;
+  const subBits: string[] = [t(statusKey)];
+  if (intent.dosage) subBits.push(intent.dosage);
+  return (
+    <div className="rounded-2xl bg-white border border-slate-200 p-4 space-y-3">
+      <div className="flex items-start gap-3">
+        <span className="h-10 w-10 rounded-xl grid place-items-center shrink-0 bg-lavender-100 text-lavender-700">
+          <Pill className="h-5 w-5" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('voice.med_will_log')}</div>
+          <div className="text-base font-bold text-ink-strong">{t('voice.intent.medication')}</div>
+          <div className="text-sm text-ink mt-0.5">{subBits.join(' · ')}</div>
+          <div className="text-[11px] text-ink-muted mt-0.5">
+            {t('voice.med_heard_name', { name: intent.name_query })}
+          </div>
+        </div>
+      </div>
+
+      {/* Candidate picker */}
+      {candidates.length > 0 ? (
+        <div className="rounded-xl bg-slate-50 border border-slate-100 p-2 space-y-1.5">
+          <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold px-1">
+            {candidates.length === 1 ? t('voice.med_match') : t('voice.med_pick')}
+          </div>
+          {candidates.map(c => (
+            <button type="button" key={c.id} onClick={() => onPick(c.id)}
+              className={cn(
+                'w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-left transition border',
+                selectedId === c.id
+                  ? 'bg-lavender-50 border-lavender-300 ring-2 ring-lavender-300/30'
+                  : 'bg-white border-slate-200 hover:bg-slate-50'
+              )}>
+              <Pill className={cn('h-3.5 w-3.5 shrink-0', selectedId === c.id ? 'text-lavender-600' : 'text-ink-muted')} />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-ink-strong truncate">{c.name}</div>
+                {c.dosage && <div className="text-[11px] text-ink-muted truncate">{c.dosage}</div>}
+              </div>
+              {selectedId === c.id && (
+                <span className="text-[9px] uppercase font-bold tracking-wider rounded-full bg-lavender-500 text-white px-1.5 py-0.5">
+                  {t('voice.med_selected')}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl bg-coral-50 border border-coral-200 p-2.5 text-xs text-coral-900 flex items-start gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-coral-700" />
+          <p>{t('voice.med_resolving')}</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function feedingBody(i: FeedingIntent, t: (k: string) => string): string {
@@ -388,7 +533,8 @@ function Card({ icon: Icon, tint, title, body }: {
 // success string the UI can show ("Logged a feeding · 120 ml bottle").
 async function persistIntent(intent: Intent, babyId: string, userId: string | null,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any): Promise<string> {
+  supabase: any,
+  resolvedMed: ActiveMed | null = null): Promise<string> {
   const now = new Date().toISOString();
   if (intent.kind === 'feeding') {
     const i = intent as FeedingIntent;
@@ -436,6 +582,27 @@ async function persistIntent(intent: Intent, babyId: string, userId: string | nu
     });
     if (error) throw error;
     return `✓ Logged ${i.count} kick${i.count === 1 ? '' : 's'}`;
+  }
+  if (intent.kind === 'medication') {
+    const i = intent as MedicationIntent;
+    if (!resolvedMed) throw new Error('No medication selected. Pick one from the matches above.');
+    // medication_logs.medication_id is required + must match an active
+    // prescription on the same baby (RLS enforces baby_id). actual_dosage
+    // is text — we pass through the spoken dosage if any, else the
+    // prescription's default dosage.
+    const { error } = await supabase.from('medication_logs').insert({
+      baby_id:        babyId,
+      medication_id:  resolvedMed.id,
+      medication_time: now,
+      status:         i.status,
+      actual_dosage:  i.dosage ?? resolvedMed.dosage ?? null,
+      source:         'manual',
+      created_by:     userId,
+    });
+    if (error) throw error;
+    const verb = i.status === 'taken' ? 'Logged dose' : i.status === 'skipped' ? 'Marked dose skipped' : 'Marked dose missed';
+    const dosageStr = i.dosage ? ` · ${i.dosage}` : (resolvedMed.dosage ? ` · ${resolvedMed.dosage}` : '');
+    return `✓ ${verb} · ${resolvedMed.name}${dosageStr}`;
   }
   if (intent.kind === 'note') {
     const i = intent as NoteIntent;

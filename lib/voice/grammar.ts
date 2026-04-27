@@ -40,10 +40,21 @@ export type TemperatureIntent = {
 };
 export type KickIntent = { kind: 'kick'; count: number };
 export type NoteIntent = { kind: 'note'; text: string };
+export type MedicationIntent = {
+  kind: 'medication';
+  /** Free-form medication name as transcribed (e.g. "panadol",
+   *  "augmentin", «بنادول»). Caller fuzzy-matches against the
+   *  active prescriptions list — the parser does not. */
+  name_query: string;
+  status: 'taken' | 'missed' | 'skipped';
+  /** Optional dosage string ("5ml", "1 tab", "نصف"). */
+  dosage?: string;
+};
 
 export type Intent =
   | FeedingIntent | StoolIntent | SleepIntent
-  | TemperatureIntent | KickIntent | NoteIntent;
+  | TemperatureIntent | KickIntent | NoteIntent
+  | MedicationIntent;
 
 /** Best-effort number extraction. Handles both Western (123) and
  *  Eastern-Arabic (١٢٣) digits, and English number words up to twenty.
@@ -74,20 +85,28 @@ export function parseNumber(s: string): number | null {
 export function parseVoiceCommand(transcriptRaw: string, lang: 'en' | 'ar'): Intent | null {
   if (!transcriptRaw) return null;
   // Normalize: lower-case (Arabic case-folding is a no-op), collapse
-  // whitespace, strip punctuation that confuses the matchers.
+  // whitespace, strip sentence-ending punctuation that confuses the
+  // matchers. We DO keep `.` and `,` because they appear inside
+  // numbers ("37.5", "1,250 ml") and stripping them would corrupt
+  // value extraction. Punctuation between digits stays untouched.
   const t = transcriptRaw
     .toLowerCase()
-    .replace(/[?!.,،؟]/g, ' ')
+    .replace(/[?!،؟]/g, ' ')
+    .replace(/(?<!\d)[.,](?!\d)/g, ' ')   // strip stops only outside numbers
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Try in priority order — kicks are short so we check them last to
-  // avoid misclassifying "kick count five" as a kick with no count.
+  // Try in priority order — feeding / temp / sleep / stool first
+  // because they have the most specific keywords. Medication uses
+  // verbs like "took / gave" which can ambiguate with feeding ("took
+  // bottle") so it sits AFTER feeding. Kicks last because the bare
+  // word "kick" is short and could appear in noise.
   return (
     parseFeeding(t, lang)
     ?? parseTemperature(t, lang)
     ?? parseSleep(t, lang)
     ?? parseStool(t, lang)
+    ?? parseMedication(t, lang)
     ?? parseNote(t, lang)
     ?? parseKick(t, lang)
     ?? null
@@ -258,6 +277,99 @@ function parseKick(t: string, lang: 'en' | 'ar'): KickIntent | null {
   const m = t.match(/(\d+|[٠-٩]+)/);
   const count = m ? parseNumber(m[1]) ?? 1 : 1;
   return { kind: 'kick', count: Math.max(1, Math.min(99, count)) };
+}
+
+// ---------- Medication ---------------------------------------------------
+// Patterns we accept (loose):
+//   English:
+//     "gave panadol"
+//     "took 5ml of augmentin"
+//     "skipped the antibiotic"
+//     "missed iron drops"
+//     "augmentin 5ml dose"
+//     "logged the dose of panadol"
+//   Egyptian Arabic:
+//     «أعطيت بانادول»
+//     «جرعة أوجمنتين»
+//     «اتاخدت جرعة بنادول»
+//     «نسيت دواء الكحة»
+//     «خطّيت أوجمنتين»
+//     «دواء البنادول»
+//
+// The parser's job is to (1) confirm the utterance is medication-y,
+// (2) decide status, (3) extract optional dosage, and (4) leave the
+// remaining noun phrase as the medication name. Matching that name
+// to an actual prescription happens in the UI layer.
+function parseMedication(t: string, lang: 'en' | 'ar'): MedicationIntent | null {
+  const isMed = lang === 'ar'
+    ? /(دواء|الدواء|أدوية|جرعة|أعط|إعط|أعطي|اعطيت|اتاخد|اتجرع|تجرع|بنادول|بانادول|أوجمنتين|أوجمنتن|باراسيتام|كلاريتين|سيتال|بروفين|نيوروفين|سيريتايد|نازوكير|نوفالدول|تيلينول|أنتيبيوتيك|مضاد حيوي|قطرة|نقطة|فيتامين|شراب|قرص)/.test(t)
+    : /\b(med(ication)?s?|medicine|drug|dose|pill|tablet|tab|capsule|antibiotic|prescription|drops?|suppository|syrup|panadol|tylenol|paracetamol|augmentin|amoxicillin|amoxi|claritin|nurofen|brufen|ibuprofen|tylonel|prednisolone|ventolin|neurofen|gave|administered|took|taken)\b/.test(t);
+  if (!isMed) return null;
+
+  // Status — default taken.
+  let status: MedicationIntent['status'] = 'taken';
+  if (lang === 'ar') {
+    if (/(تخطي|خطّ|خطي|تخطّ|تخطيت|اتخطّ)/.test(t))      status = 'skipped';
+    else if (/(فات|نسي|ضاع|اتنسي)/.test(t))              status = 'missed';
+  } else {
+    if (/\b(skipped|skip)\b/.test(t))                     status = 'skipped';
+    else if (/\b(missed|miss|forgot|forgotten)\b/.test(t)) status = 'missed';
+  }
+
+  // Dosage — match before stripping so the name extraction sees a
+  // cleaner string. Common forms: "5ml", "5 ml", "10 mg", "1 tab",
+  // "half tab", "2 drops", «نصف»، «ربع»، «نقطة»، «قطرة».
+  let dosage: string | undefined;
+  let dosageMatch: string | null = null;
+  const numUnit = t.match(/(\d+(?:[.,]\d+)?|[٠-٩]+(?:[.,٫][٠-٩]+)?)\s*(ml|مل|ميلي|cc|mg|ملغ|tab(?:let)?s?|cap(?:sule)?s?|drops?|drop|قطرة|نقطة|قطرات|نقطات|قرص|قرصات|كبسولة|كبسولات|spoon|spoons?|ملعقة|ملاعق)/i);
+  if (numUnit) {
+    const n = parseNumber(numUnit[1]);
+    const unit = numUnit[2];
+    if (n != null) {
+      dosage = `${n}${/^\s*\d/.test(numUnit[0]) ? '' : ''}${unit.toLowerCase().startsWith('ml') ? ' ml' : unit.toLowerCase().startsWith('mg') ? ' mg' : ' ' + unit.replace(/\s+/g, '').toLowerCase()}`;
+      dosage = dosage.trim();
+      dosageMatch = numUnit[0];
+    }
+  } else {
+    // Fractional doses ("half tab", "نصف ملعقة")
+    const halfEn = t.match(/\b(half|quarter)\s+(tab(?:let)?|cap(?:sule)?|spoon|drop|dose)\b/);
+    const halfAr = t.match(/(نص|نصف|ربع)\s+(ملعقة|قرص|كبسولة|قطرة)/);
+    if (halfEn) { dosage = `${halfEn[1]} ${halfEn[2]}`; dosageMatch = halfEn[0]; }
+    else if (halfAr) { dosage = `${halfAr[1]} ${halfAr[2]}`; dosageMatch = halfAr[0]; }
+  }
+
+  // Strip the keywords + dosage so the residue becomes the name query.
+  let residue = t;
+  if (dosageMatch) residue = residue.replace(dosageMatch, ' ');
+  // Trigger verbs / particles to remove before name extraction. We
+  // intentionally KEEP class nouns ("antibiotic", "vitamin", "drops",
+  // "syrup", "دواء") in the residue — when the user says "skipped
+  // the antibiotic", the resulting name_query "antibiotic" is what
+  // surfaces in the friendly "no match found, please say the name"
+  // error. Better than returning null.
+  //
+  // JS's \b is ASCII-only, so for Arabic we use lookarounds with the
+  // Unicode property `\p{L}` (any letter) to define word boundaries.
+  const noise = lang === 'ar'
+    ? /(?<![\p{L}])(اعطيت|أعطيت|أعطيتى|أعطيتي|اعطيتى|اعطيتي|أعطى|اعط|اتاخد|اتاخدت|اتجرع|تجرع|تخطي|تخطيت|تخطّيت|خطّ|خطي|تخطّ|اتخطّ|اتخطيت|فاتت|فات|نسيت|نسي|سجّل|سجل|سجّلي|سجلي|من)(?![\p{L}])/gu
+    : /\b(gave|administered|gives?|takes|took|taken|skipped|skip|missed|miss|forgot|forgotten|logged?|logs?|the|of|a|an|just|now|already|please|i|to|baby|her|his)\b/g;
+  residue = residue
+    .replace(noise, ' ')
+    // Drop standalone digit runs (Western + Eastern Arabic) — keeps
+    // any digits that survived as noise from corrupting the name.
+    .replace(/\b\d+(?:[.,]\d+)?\b/g, ' ')
+    .replace(/[٠-٩]+(?:[.,٫][٠-٩]+)?/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Drop any leading prepositions / particles.
+  residue = residue.replace(/^(of|the|a|an|الـ|ال|من)\s+/i, '').trim();
+
+  if (!residue) return null;
+
+  // Cap the name to a reasonable length — anything more than 6 words
+  // is almost certainly noise.
+  const words = residue.split(/\s+/).slice(0, 6);
+  return { kind: 'medication', name_query: words.join(' '), status, dosage };
 }
 
 // ---------- Note ---------------------------------------------------------
