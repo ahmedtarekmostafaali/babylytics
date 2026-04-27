@@ -15,6 +15,7 @@ import {
 import { Droplet, Plus, Edit3, ArrowRight, Clock, Sparkles } from 'lucide-react';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { tFor, type TFunc } from '@/lib/i18n';
+import { DiabetesTypePicker, type DiabetesType } from '@/components/DiabetesTypePicker';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Blood sugar' };
@@ -107,6 +108,12 @@ export default async function BloodSugarList({
           )
         } />
 
+      {/* Diabetes type picker — shown OPEN by default when the type is
+          'none' so the parent immediately sees they should pick one. */}
+      <DiabetesTypePicker babyId={params.babyId}
+        initialType={diabetesType as DiabetesType}
+        canEdit={perms.canWriteLogs} />
+
       <div className="rounded-xl bg-brand-50 border border-brand-200 p-3 text-xs text-brand-900 flex gap-2">
         <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0 text-brand-700" />
         <p>{t('bs.cgm_roadmap')}</p>
@@ -114,9 +121,6 @@ export default async function BloodSugarList({
 
       <div className="flex items-center gap-3 flex-wrap">
         <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
-        <span className="text-xs text-ink-muted">
-          {t(`bs.diabetes_${diabetesType}`)}
-        </span>
       </div>
 
       {/* Range stats */}

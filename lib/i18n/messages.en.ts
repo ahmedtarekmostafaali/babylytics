@@ -1823,6 +1823,10 @@ export const en = {
     diabetes_type_2:      'Type 2 diabetes',
     diabetes_gestational: 'Gestational diabetes',
     diabetes_suspected:   'Diabetes suspected — under evaluation',
+    dx_label:             'Diabetes type',
+    dx_pick:              'Pick the most accurate option. You can change this any time.',
+    dx_change:            'Change',
+    dx_close:             'Close',
   },
 
   // ── Feedback / bug report / feature request page ────────────────

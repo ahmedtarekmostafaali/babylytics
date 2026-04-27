@@ -1783,6 +1783,10 @@ export const ar: Messages = {
     diabetes_type_2:      'سكري النوع الثاني',
     diabetes_gestational: 'سكري الحمل',
     diabetes_suspected:   'يُشتبه بالسكري — تحت التقييم',
+    dx_label:             'نوع السكري',
+    dx_pick:              'اختاري الأقرب — يمكنك تغييره في أي وقت.',
+    dx_change:            'تغيير',
+    dx_close:             'إغلاق',
   },
 
   // ── Feedback / bug report / feature request page ────────────────
