@@ -90,9 +90,34 @@ export function Sidebar() {
   // Default open unless explicitly false.
   const isCatOpen = (id: string) => openCats[id] !== false;
 
+  // Most pages live under /babies/[id]/* so the URL gives us the active baby.
+  // But "global" pages (Preferences, Updates, Dashboard) leave that route, and
+  // we still want the per-baby nav section to stay visible. We persist the
+  // last-seen babyId in localStorage and fall back to it on those pages.
+  const [stickyBabyId, setStickyBabyId] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem('bx:last-baby');
+      if (v) setStickyBabyId(v);
+    } catch { /* ignore */ }
+  }, []);
+
   const currentBabyId = useMemo(() => {
     const m = pathname?.match(/^\/babies\/([0-9a-f-]{8,})/i);
-    return m ? m[1] : null;
+    if (m) return m[1] ?? null;
+    // Outside a baby route — only fall back if the sticky id still corresponds
+    // to a baby the user has access to. (Babies list is loaded above.)
+    if (stickyBabyId && babies.some(b => b.id === stickyBabyId)) return stickyBabyId;
+    return null;
+  }, [pathname, stickyBabyId, babies]);
+
+  // Whenever we ARE on a baby route, remember that id for next time.
+  useEffect(() => {
+    const m = pathname?.match(/^\/babies\/([0-9a-f-]{8,})/i);
+    if (m && m[1]) {
+      setStickyBabyId(m[1]);
+      try { localStorage.setItem('bx:last-baby', m[1]); } catch { /* ignore */ }
+    }
   }, [pathname]);
 
   // Fetch the caller's role for the current baby so we can hide nav items

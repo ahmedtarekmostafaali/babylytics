@@ -52,12 +52,14 @@ export default async function DashboardPage() {
       .select('id,name,dob,gender,birth_weight_kg,avatar_path')
       .is('deleted_at', null)
       .order('created_at', { ascending: false }),
-    supabase.from('notifications')
-      .select('id,kind,payload,created_at,baby_id')
-      .is('read_at', null)
-      .or(`user_id.eq.${user?.id ?? ''},user_id.is.null`)
-      .order('created_at', { ascending: false })
-      .limit(10),
+    // my_unread_notifications honours per-user reads on broadcasts via the
+    // notification_reads table introduced in migration 028. Falls back to the
+    // older read_at semantics for personal rows. Limit applied client-side.
+    supabase.rpc('my_unread_notifications')
+      .then(r => ({
+        ...r,
+        data: ((r.data ?? []) as Array<{ id: string; kind: string; payload: Record<string, unknown> | null; created_at: string; baby_id: string }>).slice(0, 10),
+      })),
     supabase.from('profiles').select('display_name').eq('id', user?.id ?? '').single(),
   ]);
 

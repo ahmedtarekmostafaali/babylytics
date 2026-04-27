@@ -48,17 +48,16 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
   }, [open]);
 
   // Load notifications when popup opens (and once on mount for the badge count).
+  // Uses my_unread_notifications RPC so broadcast read state is per-user
+  // (migration 028). Read items aren't returned by that RPC, so the bell only
+  // shows what the current user actually still needs to act on.
   async function load() {
     setLoading(true);
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data } = await supabase.from('notifications')
-      .select('id,baby_id,kind,payload,read_at,created_at')
-      .eq('baby_id', babyId)
-      .or(`user_id.eq.${user?.id ?? ''},user_id.is.null`)
-      .order('created_at', { ascending: false })
-      .limit(40);
-    setItems((data ?? []) as Notification[]);
+    const { data } = await supabase.rpc('my_unread_notifications', { p_baby: babyId });
+    // Coerce shape — RPC returns the same row shape, just stripped of any rows
+    // already read by this user.
+    setItems(((data ?? []) as Notification[]).slice(0, 40));
     setLoading(false);
   }
 
@@ -88,7 +87,10 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
 
   async function dismiss(id: string) {
     const supabase = createClient();
-    await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('id', id);
+    // mark_one_notification_read handles per-user reads on broadcasts via the
+    // notification_reads table (migration 028) and a plain read_at update on
+    // personal rows.
+    await supabase.rpc('mark_one_notification_read', { p_id: id });
     setItems(arr => arr.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
   }
 

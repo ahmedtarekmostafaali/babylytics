@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Wordmark } from '@/components/Wordmark';
 import { Heart, Milk, Moon, Baby, Scale } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 function LoginForm() {
   const router = useRouter();
@@ -65,7 +66,8 @@ function LoginForm() {
 export default function LoginPage() {
   const t = useT();
   return (
-    <main className="min-h-screen flex">
+    <main className="min-h-screen flex relative">
+      <div className="absolute top-4 right-4 z-30"><LanguageToggle /></div>
       {/* Left: full-color hero panel (desktop) */}
       <section className="hidden lg:flex w-5/12 relative overflow-hidden bg-gradient-to-br from-brand-500 via-brand-600 to-lavender-500">
         <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 500 900" preserveAspectRatio="none" aria-hidden>

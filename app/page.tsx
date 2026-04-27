@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Wordmark } from '@/components/Wordmark';
 import { HeroOrbit } from '@/components/HeroOrbit';
+import { LanguageToggle } from '@/components/LanguageToggle';
 import {
-  Milk, Moon, Baby, Check, Star, ArrowRight,
+  Milk, Moon, Baby, Check, ArrowRight,
   BarChart3, Brain, Clipboard, Sparkles, Apple, Smartphone,
   LayoutDashboard,
 } from 'lucide-react';
@@ -28,9 +29,9 @@ export default async function Landing() {
             <a href="#features"     className="hover:text-ink-strong">Features</a>
             <a href="#how"          className="hover:text-ink-strong">How it works</a>
             <a href="#ocr"          className="hover:text-ink-strong">Smart Scan</a>
-            <a href="#testimonials" className="hover:text-ink-strong">Parents</a>
           </nav>
           <div className="flex items-center gap-2">
+            <LanguageToggle />
             {isAuthed ? (
               <Link href="/dashboard"
                 className="inline-flex items-center gap-2 rounded-md bg-coral-500 px-4 py-2 text-sm font-medium text-white hover:bg-coral-600 shadow-sm">
@@ -69,37 +70,9 @@ export default async function Landing() {
               Watch demo
             </a>
           </div>
-
-          {/* Social proof */}
-          <div className="mt-8 flex items-center gap-3">
-            <div className="flex -space-x-2">
-              <Avatar tint="coral"    initial="S" />
-              <Avatar tint="mint"     initial="J" />
-              <Avatar tint="lavender" initial="P" />
-              <Avatar tint="peach"    initial="A" />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex text-peach-500">
-                {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-4 w-4 fill-current" />)}
-              </div>
-              <span className="text-sm text-ink">Loved by 10,000+ parents</span>
-            </div>
-          </div>
         </div>
 
         <div className="relative"><HeroOrbit /></div>
-      </section>
-
-      {/* ======= Trust bar ======= */}
-      <section className="max-w-6xl mx-auto px-4 lg:px-8 pb-10">
-        <p className="text-center text-sm text-ink-muted">Trusted by parents and loved by babies</p>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-ink-muted/80 font-serif">
-          <span className="text-xl italic tracking-tight">Forbes</span>
-          <span className="text-xl font-extrabold tracking-tight">theBUMP</span>
-          <span className="text-xl tracking-tight">babycenter</span>
-          <span className="text-xl italic tracking-tight font-bold">Parents.</span>
-          <span className="text-xl tracking-tight font-semibold">verywell <span className="font-normal">family</span></span>
-        </div>
       </section>
 
       {/* ======= Feature cards ======= */}
@@ -201,22 +174,6 @@ export default async function Landing() {
         <OcrBeforeAfter />
       </section>
 
-      {/* ======= Testimonials ======= */}
-      <section id="testimonials" className="max-w-6xl mx-auto px-4 lg:px-8 py-16">
-        <div className="text-center">
-          <div className="text-xs font-semibold tracking-wider text-mint-600 uppercase">Parents love Babylytics</div>
-          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">The calm your brain has been asking for.</h2>
-        </div>
-        <div className="mt-10 grid md:grid-cols-3 gap-5">
-          <Quote name="Sarah M." tint="coral"
-            text="This app changed how I understand my baby's routine. The OCR for my handwritten logs saves me hours." />
-          <Quote name="James T." tint="mint"
-            text="The daily report feels like a weekly briefing from a NICU nurse. We bring it to every pediatrician visit." />
-          <Quote name="Priya K." tint="lavender"
-            text="Arabic + English handwriting recognition is what sold us — nothing else on the market does this well." />
-        </div>
-      </section>
-
       {/* ======= CTA with app-store buttons ======= */}
       <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-16 pb-24">
         <div className="rounded-3xl bg-gradient-to-r from-coral-50 via-peach-50 to-mint-50 border border-slate-200 p-10 text-center relative overflow-hidden">
@@ -279,15 +236,6 @@ export default async function Landing() {
 }
 
 // ---- Sub-components -------------------------------------------------------
-
-function Avatar({ tint, initial }: { tint: 'coral'|'mint'|'lavender'|'peach'; initial: string }) {
-  const bg = { coral: 'bg-coral-300', mint: 'bg-mint-300', lavender: 'bg-lavender-300', peach: 'bg-peach-300' }[tint];
-  return (
-    <span className={`h-8 w-8 rounded-full ring-2 ring-white grid place-items-center text-white text-xs font-bold ${bg}`}>
-      {initial}
-    </span>
-  );
-}
 
 function FeatureCard({ tint, Icon, title, text }: {
   tint: 'coral'|'mint'|'lavender'|'peach'|'brand';
@@ -421,26 +369,6 @@ function Step({ n, tint, Icon, title, text }: {
       <span className={`absolute top-0 left-1/2 translate-x-6 -translate-y-1 h-6 w-6 rounded-full text-white text-xs font-bold grid place-items-center ${badge}`}>{n}</span>
       <h4 className="mt-3 font-semibold text-ink-strong">{title}</h4>
       <p className="mt-1 text-sm text-ink max-w-xs mx-auto">{text}</p>
-    </div>
-  );
-}
-
-function Quote({ name, tint, text }: { name:string; tint:'coral'|'mint'|'lavender'|'peach'; text:string }) {
-  const ring = { coral:'bg-coral-200', mint:'bg-mint-200', lavender:'bg-lavender-200', peach:'bg-peach-200' }[tint];
-  return (
-    <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-card">
-      <div className="flex items-start gap-3">
-        <span className={`h-12 w-12 rounded-full grid place-items-center text-white font-bold text-lg ${ring}`}>{name.charAt(0)}</span>
-        <div className="flex-1">
-          <p className="text-sm text-ink">&ldquo;{text}&rdquo;</p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs text-ink-muted">— {name}</span>
-            <div className="flex gap-0.5 text-peach-500">
-              {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-3 w-3 fill-current" />)}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

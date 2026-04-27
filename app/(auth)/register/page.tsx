@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Wordmark } from '@/components/Wordmark';
 import { Check } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -42,7 +43,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen flex">
+    <main className="min-h-screen flex relative">
+      <div className="absolute top-4 right-4 z-30"><LanguageToggle /></div>
       {/* Left: warm beige/coral panel */}
       <section className="hidden lg:flex w-5/12 relative overflow-hidden bg-gradient-to-br from-peach-100 via-beige/50 to-coral-100">
         <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 500 900" preserveAspectRatio="none" aria-hidden>
