@@ -69,7 +69,11 @@ export default async function AdminEngagement({
             <p className="text-xs text-ink-muted">Distinct parents who logged any tracker entry that day.</p>
           </div>
         </div>
-        <Sparkline data={dauValues.length ? dauValues : [0]} color="#B9A7D8" width={900} height={100} strokeWidth={2.5} />
+        {dauValues.some(v => v > 0) ? (
+          <Sparkline data={dauValues} color="#B9A7D8" width={900} height={100} strokeWidth={2.5} />
+        ) : (
+          <EmptyChart message={`No tracker activity in the last ${days} days.`} />
+        )}
       </section>
 
       <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
@@ -79,7 +83,11 @@ export default async function AdminEngagement({
             <p className="text-xs text-ink-muted">{totalSignups} new accounts in the last {days} days.</p>
           </div>
         </div>
-        <Sparkline data={signupValues.length ? signupValues : [0]} color="#7BAEDC" width={900} height={100} strokeWidth={2.5} />
+        {signupValues.some(v => v > 0) ? (
+          <Sparkline data={signupValues} color="#7BAEDC" width={900} height={100} strokeWidth={2.5} />
+        ) : (
+          <EmptyChart message={`No new sign-ups in the last ${days} days.`} />
+        )}
       </section>
 
       <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
@@ -119,6 +127,14 @@ function RangeTabs({ current }: { current: '7d'|'30d'|'90d' }) {
           {r}
         </a>
       ))}
+    </div>
+  );
+}
+
+function EmptyChart({ message }: { message: string }) {
+  return (
+    <div className="h-24 rounded-xl border border-dashed border-slate-200 bg-slate-50/40 grid place-items-center text-xs text-ink-muted">
+      {message}
     </div>
   );
 }

@@ -62,18 +62,24 @@ export default async function AdminOverview() {
           </div>
           <div className="text-2xl font-bold text-ink-strong">{signupSeries.reduce((a, r) => a + Number(r.signups || 0), 0)}</div>
         </div>
-        <Sparkline
-          data={signupSeries.map(r => Number(r.signups || 0))}
-          color="#7BAEDC" width={900} height={80} strokeWidth={2.5}
-        />
-        <div className="mt-2 grid grid-cols-7 sm:grid-cols-15 text-[10px] text-ink-muted">
-          {signupSeries.length > 0 && (
-            <>
-              <span>{signupSeries[0]?.day?.slice(5)}</span>
-              <span className="col-start-7 sm:col-start-15 text-right">{signupSeries[signupSeries.length - 1]?.day?.slice(5)}</span>
-            </>
-          )}
-        </div>
+        {signupSeries.some(r => Number(r.signups || 0) > 0) ? (
+          <>
+            <Sparkline
+              data={signupSeries.map(r => Number(r.signups || 0))}
+              color="#7BAEDC" width={900} height={80} strokeWidth={2.5}
+            />
+            <div className="mt-2 grid grid-cols-7 sm:grid-cols-15 text-[10px] text-ink-muted">
+              {signupSeries.length > 0 && (
+                <>
+                  <span>{signupSeries[0]?.day?.slice(5)}</span>
+                  <span className="col-start-7 sm:col-start-15 text-right">{signupSeries[signupSeries.length - 1]?.day?.slice(5)}</span>
+                </>
+              )}
+            </div>
+          </>
+        ) : (
+          <EmptyChart message="No new sign-ups in the last 30 days." />
+        )}
       </section>
 
       {/* Daily active users chart */}
@@ -85,10 +91,14 @@ export default async function AdminOverview() {
           </div>
           <div className="text-2xl font-bold text-ink-strong">{dauSeries[dauSeries.length - 1]?.dau ?? 0}<span className="text-xs text-ink-muted ml-2">today</span></div>
         </div>
-        <Sparkline
-          data={dauSeries.map(r => Number(r.dau || 0))}
-          color="#B9A7D8" width={900} height={80} strokeWidth={2.5}
-        />
+        {dauSeries.some(r => Number(r.dau || 0) > 0) ? (
+          <Sparkline
+            data={dauSeries.map(r => Number(r.dau || 0))}
+            color="#B9A7D8" width={900} height={80} strokeWidth={2.5}
+          />
+        ) : (
+          <EmptyChart message="No tracker activity in the last 30 days." />
+        )}
       </section>
 
       {/* Top trackers */}
@@ -122,6 +132,14 @@ export default async function AdminOverview() {
       <p className="text-[10px] text-ink-muted">
         Snapshot computed at {k.as_of ? new Date(k.as_of).toLocaleString() : 'now'}. Cross-user reads happen via SECURITY DEFINER RPCs guarded by the platform-admin role.
       </p>
+    </div>
+  );
+}
+
+function EmptyChart({ message }: { message: string }) {
+  return (
+    <div className="h-20 rounded-xl border border-dashed border-slate-200 bg-slate-50/40 grid place-items-center text-xs text-ink-muted">
+      {message}
     </div>
   );
 }
