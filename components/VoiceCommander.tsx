@@ -21,7 +21,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
-  parseVoiceCommand, type Intent,
+  parseVoiceCommandAuto, type Intent,
   type FeedingIntent, type StoolIntent, type SleepIntent,
   type TemperatureIntent, type KickIntent, type NoteIntent,
 } from '@/lib/voice/grammar';
@@ -62,8 +62,19 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
   const [transcript, setTranscript] = useState('');
   const [error, setError]           = useState<string | null>(null);
   const [intent, setIntent]         = useState<Intent | null>(null);
+  const [detectedLang, setDetectedLang] = useState<'en' | 'ar' | null>(null);
   const [saving, setSaving]         = useState(false);
   const [savedMsg, setSavedMsg]     = useState<string | null>(null);
+
+  // ASR language — controls which language the SpeechRecognition object
+  // is biased toward. Defaults to the user's UI preference but can be
+  // flipped per-session inside the modal. The PARSER always runs both
+  // languages on the resulting transcript — so even if the user has
+  // set this to Arabic and they speak English (or vice-versa), we still
+  // try to recognise the command.
+  const [asrLang, setAsrLang] = useState<'en' | 'ar'>(lang);
+  // Re-sync when the parent's language changes (e.g. user toggled it).
+  useEffect(() => { setAsrLang(lang); }, [lang]);
 
   const recRef = useRef<SR | null>(null);
 
@@ -76,12 +87,15 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
   }, []);
 
   function startListening() {
-    setError(null); setTranscript(''); setIntent(null); setSavedMsg(null);
+    setError(null); setTranscript(''); setIntent(null); setDetectedLang(null); setSavedMsg(null);
     const win = window as Win;
     const Ctor = win.SpeechRecognition ?? win.webkitSpeechRecognition;
     if (!Ctor) { setError(t('voice.unsupported')); return; }
     const r: SR = new Ctor();
-    r.lang = lang === 'ar' ? 'ar-EG' : 'en-US';
+    // ASR language — biases the recognizer's phonetics. The parser
+    // always runs against BOTH languages on the resulting transcript,
+    // so a mismatch isn't fatal.
+    r.lang = asrLang === 'ar' ? 'ar-EG' : 'en-US';
     r.continuous = false;
     r.interimResults = true;
     r.onresult = (e) => {
@@ -100,12 +114,20 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
     };
     r.onend = () => {
       setListening(false);
-      // Once recognition ends, parse whatever we got.
+      // Once recognition ends, parse whatever we got. parseVoiceCommandAuto
+      // tries both English and Arabic grammars and returns the matching
+      // intent + the language it was detected in.
       setTranscript(curr => {
         if (curr) {
-          const parsed = parseVoiceCommand(curr, lang);
-          setIntent(parsed);
-          if (!parsed) setError(t('voice.err_no_match'));
+          const parsed = parseVoiceCommandAuto(curr);
+          if (parsed) {
+            setIntent(parsed.intent);
+            setDetectedLang(parsed.lang);
+          } else {
+            setIntent(null);
+            setDetectedLang(null);
+            setError(t('voice.err_no_match'));
+          }
         }
         return curr;
       });
@@ -121,7 +143,7 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
   }
 
   function reset() {
-    setTranscript(''); setIntent(null); setError(null); setSavedMsg(null);
+    setTranscript(''); setIntent(null); setDetectedLang(null); setError(null); setSavedMsg(null);
   }
 
   async function save() {
@@ -176,6 +198,32 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
               </button>
             </div>
 
+            {/* ASR language toggle — biases the speech recognizer's
+                phonetics. The parser is bilingual either way, so this
+                is purely about transcription accuracy. */}
+            <div className="flex items-center justify-between gap-3 mb-3 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+              <div className="text-[11px] text-ink-muted leading-tight">
+                <div className="font-semibold text-ink">{t('voice.asr_lang_label')}</div>
+                <div>{t('voice.asr_lang_help')}</div>
+              </div>
+              <div className="inline-flex rounded-full bg-white border border-slate-200 p-0.5 shrink-0">
+                <button type="button"
+                  onClick={() => setAsrLang('en')}
+                  disabled={listening}
+                  className={cn(
+                    'h-7 px-3 rounded-full text-xs font-bold transition',
+                    asrLang === 'en' ? 'bg-coral-500 text-white shadow-sm' : 'text-ink-muted hover:text-ink'
+                  )}>EN</button>
+                <button type="button"
+                  onClick={() => setAsrLang('ar')}
+                  disabled={listening}
+                  className={cn(
+                    'h-7 px-3 rounded-full text-xs font-bold transition',
+                    asrLang === 'ar' ? 'bg-coral-500 text-white shadow-sm' : 'text-ink-muted hover:text-ink'
+                  )}>ع</button>
+              </div>
+            </div>
+
             {/* Mic state */}
             <div className="text-center py-4">
               <button
@@ -194,15 +242,25 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
                 {listening ? t('voice.listening') : t('voice.tap_to_speak')}
               </div>
               <div className="text-[11px] text-ink-muted mt-0.5">
-                {lang === 'ar' ? t('voice.lang_ar_hint') : t('voice.lang_en_hint')}
+                {t('voice.bilingual_hint')}
               </div>
             </div>
 
             {/* Transcript */}
             {transcript && (
               <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm">
-                <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-0.5">
-                  {t('voice.heard')}
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
+                    {t('voice.heard')}
+                  </div>
+                  {detectedLang && (
+                    <span className={cn(
+                      'rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider',
+                      detectedLang === 'ar' ? 'bg-mint-100 text-mint-700' : 'bg-brand-100 text-brand-700'
+                    )}>
+                      {detectedLang === 'ar' ? t('voice.detected_ar') : t('voice.detected_en')}
+                    </span>
+                  )}
                 </div>
                 <div className="text-ink-strong">{transcript}</div>
               </div>
@@ -244,14 +302,28 @@ export function VoiceCommander({ babyId, lang = 'en' }: { babyId: string; lang?:
               </div>
             )}
 
-            {/* Examples — shown when nothing has been said yet */}
+            {/* Examples — shown when nothing has been said yet. Both
+                languages are shown so the user knows either works. */}
             {!transcript && !intent && (
-              <div className="mt-4 grid grid-cols-1 gap-1.5 text-[11px]">
-                <Example>{lang === 'ar' ? '«سجّل رضعة ١٢٠ مل زجاجة»' : '"Log a feeding 120 ml bottle"'}</Example>
-                <Example>{lang === 'ar' ? '«حفاضة كبيرة»'           : '"Diaper change large"'}</Example>
-                <Example>{lang === 'ar' ? '«نام ٤٥ دقيقة»'           : '"Nap 45 minutes"'}</Example>
-                <Example>{lang === 'ar' ? '«حرارة ٣٧.٥»'             : '"Temperature 37.5"'}</Example>
-                <Example>{lang === 'ar' ? '«ركلة»'                    : '"Kick"'}</Example>
+              <div className="mt-4 space-y-2">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1">English</div>
+                  <div className="grid grid-cols-1 gap-1.5 text-[11px]">
+                    <Example>&ldquo;Log a feeding 120 ml bottle&rdquo;</Example>
+                    <Example>&ldquo;Diaper change large&rdquo;</Example>
+                    <Example>&ldquo;Nap 45 minutes&rdquo;</Example>
+                    <Example>&ldquo;Temperature 37.5&rdquo;</Example>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1">العربية</div>
+                  <div className="grid grid-cols-1 gap-1.5 text-[11px]" dir="rtl">
+                    <Example>«سجّل رضعة ١٢٠ مل زجاجة»</Example>
+                    <Example>«حفاضة كبيرة»</Example>
+                    <Example>«نام ٤٥ دقيقة»</Example>
+                    <Example>«حرارة ٣٧.٥»</Example>
+                  </div>
+                </div>
               </div>
             )}
           </div>

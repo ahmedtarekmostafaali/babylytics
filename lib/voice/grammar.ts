@@ -68,7 +68,9 @@ export function parseNumber(s: string): number | null {
   return null;
 }
 
-/** Top-level entry point — returns null when nothing matches. */
+/** Top-level entry point for a single language — returns null when
+ *  nothing matches. Prefer parseVoiceCommandAuto when you don't yet
+ *  know whether the speaker used English or Arabic. */
 export function parseVoiceCommand(transcriptRaw: string, lang: 'en' | 'ar'): Intent | null {
   if (!transcriptRaw) return null;
   // Normalize: lower-case (Arabic case-folding is a no-op), collapse
@@ -90,6 +92,48 @@ export function parseVoiceCommand(transcriptRaw: string, lang: 'en' | 'ar'): Int
     ?? parseKick(t, lang)
     ?? null
   );
+}
+
+/**
+ * Detect the language of a transcript by counting Arabic-script
+ * codepoints. Returns 'ar' when at least one Arabic letter is present,
+ * otherwise 'en'. Useful as a tiebreaker when both parsers match
+ * (rare — but possible for short commands like "kick" / «ركلة»).
+ */
+export function detectLang(s: string): 'en' | 'ar' {
+  // Arabic block U+0600–U+06FF + Arabic Supplement / Extended-A.
+  return /[؀-ۿݐ-ݿࢠ-ࣿ]/.test(s) ? 'ar' : 'en';
+}
+
+/**
+ * Bilingual auto-detect parser. Runs both English and Arabic grammars
+ * against the same transcript and returns whichever matches.
+ *
+ * The Web Speech API recognizer biases its phonetics toward whatever
+ * `lang` you set on it, but the resulting *text* often contains the
+ * other language's words verbatim — especially for short, vocab-heavy
+ * commands like "feeding 120 ml" or «حفاضة». Running both parsers
+ * lets us recover those mixed cases.
+ *
+ * Tiebreaker order:
+ *   1. If only one parser matches → use that one.
+ *   2. If both match → pick whichever matches the script of the
+ *      transcript itself (Arabic letters present → Arabic intent).
+ *   3. Both match and script is ambiguous → default to English.
+ */
+export function parseVoiceCommandAuto(transcriptRaw: string):
+  | { intent: Intent; lang: 'en' | 'ar' }
+  | null
+{
+  const en = parseVoiceCommand(transcriptRaw, 'en');
+  const ar = parseVoiceCommand(transcriptRaw, 'ar');
+  if (!en && !ar) return null;
+  if (en && !ar) return { intent: en, lang: 'en' };
+  if (ar && !en) return { intent: ar, lang: 'ar' };
+  // Both matched — tie-break on script.
+  const script = detectLang(transcriptRaw);
+  if (script === 'ar' && ar) return { intent: ar, lang: 'ar' };
+  return { intent: en!, lang: 'en' };
 }
 
 // ---------- Feeding -------------------------------------------------------

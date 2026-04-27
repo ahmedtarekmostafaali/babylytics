@@ -310,8 +310,8 @@ export default async function Landing() {
             body="Daily report and full report — one tap to save as PDF or image, ready to send your paediatrician. Includes comments, audit trail, and KPIs for any time window." />
           <SmallSpotlight tint="lavender" Icon={Languages} title="English + العربية + RTL"
             body="Switch language any time — even before signing up. Right-to-left layouts auto-flip. Full Arabic copy across forms, dashboards, reports, and the cow's-milk allergy guide." />
-          <SmallSpotlight tint="coral" Icon={Mic} title="Voice logging"
-            body="Tap the mic and say &ldquo;feeding 120 ml bottle&rdquo; or «سجّل رضعة ١٢٠ مل زجاجة». Babylytics parses the command and shows a confirm card before saving — no auto-writes." />
+          <SmallSpotlight tint="coral" Icon={Mic} title="Voice logging — bilingual auto-detect"
+            body="Tap the mic and just speak — English, العربية, or mix them in the same session. Babylytics auto-detects which language you used and parses the command, then always shows a confirm card before saving." />
           <SmallSpotlight tint="mint" Icon={MessagesSquare} title="WhatsApp dose reminders"
             body="Active medications can ping caregivers on WhatsApp when a dose is due — handy when you and the other parent split responsibilities." />
         </div>
