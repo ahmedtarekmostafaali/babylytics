@@ -14,6 +14,8 @@ import {
   Activity, Pill, Stethoscope, Syringe, Plus, ArrowRight,
   ClipboardList, Sparkles, ScanLine, Baby,
 } from 'lucide-react';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor, type TFunc } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Medical Profile' };
@@ -49,6 +51,8 @@ type LabItem = {
 export default async function MedicalProfile({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
   const { isParent: canEdit } = await assertRole(params.babyId, {});
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
 
   const [
     { data: baby },
@@ -190,23 +194,23 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
       {/* Toolbar — excluded from export */}
       <div className="flex items-center justify-between flex-wrap gap-3 no-export">
         <div>
-          <Link href={`/babies/${params.babyId}`} className="text-sm text-ink-muted hover:underline">← Overview</Link>
+          <Link href={`/babies/${params.babyId}`} className="text-sm text-ink-muted hover:underline">{t('mp.back_overview')}</Link>
           <h1 className="text-2xl font-bold text-ink-strong mt-1 inline-flex items-center gap-2">
-            <HeartPulse className="h-6 w-6 text-coral-500" /> Medical profile
+            <HeartPulse className="h-6 w-6 text-coral-500" /> {t('mp.title')}
           </h1>
-          <p className="text-sm text-ink-muted">A portable health record you can share with any clinician.</p>
+          <p className="text-sm text-ink-muted">{t('mp.subtitle')}</p>
         </div>
-        <ExportButton filenameHint={`${baby.name} — Medical Profile`} label="Save / Share" />
+        <ExportButton filenameHint={t('mp.export_filename', { name: baby.name })} label={t('mp.save_share')} />
       </div>
 
       {/* Quick-add bar */}
       {canEdit && (
         <div className="flex flex-wrap gap-2 no-export">
-          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/allergies/new`} icon={AlertTriangle} label="Add allergy" tint="coral" />
-          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/conditions/new`} icon={Activity}      label="Add condition" tint="brand" />
-          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/admissions/new`} icon={Hospital}     label="Add admission" tint="lavender" />
-          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/discharges/new`} icon={DischargeIcon} label="Add discharge" tint="mint" />
-          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/labs/new`}       icon={FlaskConical} label="Add lab result" tint="peach" />
+          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/allergies/new`} icon={AlertTriangle} label={t('mp.qa_allergy')} tint="coral" />
+          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/conditions/new`} icon={Activity}      label={t('mp.qa_condition')} tint="brand" />
+          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/admissions/new`} icon={Hospital}     label={t('mp.qa_admission')} tint="lavender" />
+          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/discharges/new`} icon={DischargeIcon} label={t('mp.qa_discharge')} tint="mint" />
+          <QuickAddLink href={`/babies/${params.babyId}/medical-profile/labs/new`}       icon={FlaskConical} label={t('mp.qa_lab')} tint="peach" />
         </div>
       )}
 
@@ -217,10 +221,10 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
           <div className="flex items-center gap-3">
             <BabyAvatar url={avatarUrl} size="md" />
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-ink-muted">Medical profile</div>
+              <div className="text-[11px] uppercase tracking-wider text-ink-muted">{t('mp.eyebrow')}</div>
               <h2 className="text-xl font-bold text-ink-strong">{baby.name}</h2>
               <p className="text-xs text-ink-muted">
-                {fmtDate(dob)} · {ageStr} · {baby.gender ?? 'unspecified'} · Blood type {carePlan.blood_type ?? baby.blood_type ?? '—'}
+                {fmtDate(dob)} · {ageStr} · {baby.gender ?? t('mp.gender_unspecified')} · {t('mp.blood_type_label')} {carePlan.blood_type ?? baby.blood_type ?? '—'}
               </p>
             </div>
           </div>
@@ -231,76 +235,82 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
         <section className="rounded-2xl bg-gradient-to-br from-brand-50 via-lavender-50 to-coral-50 border border-brand-200 p-5">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4 text-brand-600" />
-            <h3 className="text-sm font-bold text-brand-700 uppercase tracking-wide">Summary at a glance</h3>
+            <h3 className="text-sm font-bold text-brand-700 uppercase tracking-wide">{t('mp.summary_eyebrow')}</h3>
           </div>
           <ul className="text-sm text-ink-strong space-y-1.5 leading-relaxed">
             <li>
-              <strong>{baby.name}</strong> is {ageStr} old ({baby.gender ?? 'unspecified'}, blood type{' '}
-              <strong>{carePlan.blood_type ?? baby.blood_type ?? 'unknown'}</strong>).
+              {t('mp.summary_is_old', { name: '__N__', age: ageStr, gender: baby.gender ?? t('mp.gender_unspecified') }).split('__N__').map((part, i, arr) =>
+                i < arr.length - 1
+                  ? <span key={i}><strong>{baby.name}</strong>{part}</span>
+                  : <span key={i}>{part}</span>
+              )}
+              <strong>{carePlan.blood_type ?? baby.blood_type ?? t('mp.blood_unknown')}</strong>
+              {t('mp.summary_is_old_tail')}
               {latestMeasurement && (
-                <> Latest measurements:{' '}
+                <>{t('mp.summary_latest_meas')}
                   {latestMeasurement.weight_kg ? `${fmtKg(latestMeasurement.weight_kg)}` : '—'}
                   {latestMeasurement.height_cm ? ` · ${fmtCm(latestMeasurement.height_cm)}` : ''}
-                  {' '}({fmtRelative(latestMeasurement.measured_at)}).
+                  {t('mp.summary_meas_paren', { rel: fmtRelative(latestMeasurement.measured_at) })}
                 </>
               )}
             </li>
             {severeAllergies.length > 0 && (
               <li className="text-coral-700">
-                <strong>⚠ Severe / life-threatening allergies:</strong>{' '}
-                {severeAllergies.map(a => `${a.allergen} (${prettySeverity(a.severity)})`).join(', ')}.
+                <strong>{t('mp.summary_severe')}</strong>{' '}
+                {severeAllergies.map(a => `${a.allergen} (${prettySeverity(a.severity, t)})`).join(', ')}.
               </li>
             )}
             {otherAllergies.length > 0 && (
               <li>
-                <strong>Other active allergies:</strong>{' '}
+                <strong>{t('mp.summary_other_aller')}</strong>{' '}
                 {otherAllergies.map(a => a.allergen).join(', ')}.
               </li>
             )}
             {activeConditions.length > 0 && (
               <li>
-                <strong>Active / chronic conditions:</strong>{' '}
+                <strong>{t('mp.summary_active_cond')}</strong>{' '}
                 {activeConditions.map(c => c.name).join(', ')}.
               </li>
             )}
             {(activeMeds && activeMeds.length > 0) && (
               <li>
-                <strong>Current medications:</strong>{' '}
+                <strong>{t('mp.summary_current_meds')}</strong>{' '}
                 {activeMeds.map(m => `${m.name}${m.dosage ? ` (${m.dosage})` : ''}`).join(', ')}.
               </li>
             )}
             {admissions.length > 0 && (
               <li>
-                <strong>Hospitalizations on file:</strong> {admissions.length}
-                {admissions[0] && <> — most recent {fmtDate(admissions[0].admitted_at)}{admissions[0].hospital ? ` at ${admissions[0].hospital}` : ''}{admissions[0].reason ? `, ${admissions[0].reason}` : ''}.</>}
+                <strong>{t('mp.summary_hosp')}</strong> {admissions.length}
+                {admissions[0] && <> — {t('mp.summary_hosp_recent', { date: fmtDate(admissions[0].admitted_at) })}{admissions[0].hospital ? t('mp.summary_at_hospital', { hospital: admissions[0].hospital }) : ''}{admissions[0].reason ? t('mp.summary_hosp_reason', { reason: admissions[0].reason }) : '.'}</>}
               </li>
             )}
             {recentAbnormalLabs.length > 0 && (
               <li className="text-peach-800">
-                <strong>Recent abnormal labs (90d):</strong>{' '}
+                <strong>{t('mp.summary_recent_abn')}</strong>{' '}
                 {recentAbnormalLabs.map(p => p.panel_name).join(', ')}.
-                {recentAbnormalRows.length > 0 && <> Specifically flagged: {recentAbnormalRows.slice(0, 5).map(r => `${r.test_name}${r.flag ? ` (${r.flag})` : ''}`).join(', ')}.</>}
+                {recentAbnormalRows.length > 0 && <> {t('mp.summary_specifically')} {recentAbnormalRows.slice(0, 5).map(r => `${r.test_name}${r.flag ? ` (${r.flag})` : ''}`).join(', ')}.</>}
               </li>
             )}
             <li>
-              <strong>Vaccinations:</strong> {givenVax} given{dueVax > 0 ? `, ${dueVax} scheduled` : ''}.
+              <strong>{t('mp.summary_vax')}</strong> {t('mp.summary_vax_given', { n: givenVax })}{dueVax > 0 ? t('mp.summary_vax_scheduled', { n: dueVax }) : ''}.
             </li>
             {doctors.length > 0 && (
               <li>
-                <strong>Care team:</strong>{' '}
-                {doctors.map(d => `${d.name}${d.specialty ? ` (${d.specialty})` : ''}${d.is_primary ? ' [primary]' : ''}`).join(' · ')}.
+                <strong>{t('mp.summary_care_team')}</strong>{' '}
+                {doctors.map(d => `${d.name}${d.specialty ? ` (${d.specialty})` : ''}${d.is_primary ? ' ' + t('mp.summary_primary') : ''}`).join(' · ')}.
               </li>
             )}
           </ul>
           <p className="mt-3 text-[10px] text-ink-muted">
-            Generated {fmtDateTime(generatedAt.toISOString())} · auto-compiled from this profile · double-check before clinical use.
+            {t('mp.summary_generated', { when: fmtDateTime(generatedAt.toISOString()) })}
           </p>
         </section>
 
         {/* === ALLERGIES === */}
-        <ProfileSection icon={AlertTriangle} title="Allergies" tint="coral"
+        <ProfileSection icon={AlertTriangle} title={t('mp.sec_allergies')} tint="coral"
           empty={allergies.length === 0}
-          emptyText="No allergies recorded."
+          emptyText={t('mp.empty_allergies')}
+          addLabel={t('mp.add')}
           addHref={canEdit ? `/babies/${params.babyId}/medical-profile/allergies/new` : null}>
           <div className="grid gap-3 sm:grid-cols-2">
             {allergies.map(a => (
@@ -312,13 +322,13 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
                   <div className="min-w-0">
                     <div className="font-semibold text-ink-strong">{a.allergen}</div>
                     <div className="text-[11px] uppercase tracking-wider text-ink-muted mt-0.5">
-                      {a.category ?? 'unknown'} · {prettySeverity(a.severity)} · {a.status}
+                      {a.category ?? t('mp.aller_unknown_cat')} · {prettySeverity(a.severity, t)} · {a.status}
                     </div>
-                    {a.reaction && <div className="text-xs text-ink mt-1.5">Reaction: {a.reaction}</div>}
+                    {a.reaction && <div className="text-xs text-ink mt-1.5">{t('mp.aller_reaction')} {a.reaction}</div>}
                     {a.notes && <div className="text-xs text-ink-muted mt-1">{a.notes}</div>}
-                    {a.diagnosed_at && <div className="text-[11px] text-ink-muted mt-1">Diagnosed {fmtDate(a.diagnosed_at)}</div>}
+                    {a.diagnosed_at && <div className="text-[11px] text-ink-muted mt-1">{t('mp.aller_diagnosed', { date: fmtDate(a.diagnosed_at) })}</div>}
                   </div>
-                  {canEdit && <EditLink href={`/babies/${params.babyId}/medical-profile/allergies/${a.id}`} />}
+                  {canEdit && <EditLink href={`/babies/${params.babyId}/medical-profile/allergies/${a.id}`} t={t} />}
                 </div>
               </div>
             ))}
@@ -326,8 +336,9 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
         </ProfileSection>
 
         {/* === CONDITIONS === */}
-        <ProfileSection icon={Activity} title="Medical conditions" tint="brand"
-          empty={conditions.length === 0} emptyText="No conditions recorded."
+        <ProfileSection icon={Activity} title={t('mp.sec_conditions')} tint="brand"
+          empty={conditions.length === 0} emptyText={t('mp.empty_conditions')}
+          addLabel={t('mp.add')}
           addHref={canEdit ? `/babies/${params.babyId}/medical-profile/conditions/new` : null}>
           <div className="grid gap-3 sm:grid-cols-2">
             {conditions.map(c => (
@@ -336,12 +347,12 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
                   <div className="min-w-0">
                     <div className="font-semibold text-ink-strong">{c.name}</div>
                     <div className="text-[11px] uppercase tracking-wider text-ink-muted mt-0.5">
-                      {c.status}{c.icd_code ? ` · ${c.icd_code}` : ''}{c.diagnosed_at ? ` · dx ${fmtDate(c.diagnosed_at)}` : ''}
+                      {c.status}{c.icd_code ? ` · ${c.icd_code}` : ''}{c.diagnosed_at ? ` · ${t('mp.cond_dx', { date: fmtDate(c.diagnosed_at) })}` : ''}
                     </div>
-                    {c.treatment && <div className="text-xs text-ink mt-1.5"><strong>Plan:</strong> {c.treatment}</div>}
+                    {c.treatment && <div className="text-xs text-ink mt-1.5"><strong>{t('mp.cond_plan')}</strong> {c.treatment}</div>}
                     {c.notes && <div className="text-xs text-ink-muted mt-1">{c.notes}</div>}
                   </div>
-                  {canEdit && <EditLink href={`/babies/${params.babyId}/medical-profile/conditions/${c.id}`} />}
+                  {canEdit && <EditLink href={`/babies/${params.babyId}/medical-profile/conditions/${c.id}`} t={t} />}
                 </div>
               </div>
             ))}
@@ -349,23 +360,23 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
         </ProfileSection>
 
         {/* === HOSPITALIZATIONS (admissions + discharges interleaved) === */}
-        <ProfileSection icon={Hospital} title="Hospitalizations & major events" tint="lavender"
+        <ProfileSection icon={Hospital} title={t('mp.sec_hosp')} tint="lavender"
           empty={admissions.length === 0 && discharges.length === 0}
-          emptyText="No admissions or discharges on file."
+          emptyText={t('mp.empty_hosp')}
           addHref={canEdit ? `/babies/${params.babyId}/medical-profile/admissions/new` : null}
-          addLabel="Add admission">
+          addLabel={t('mp.add_admission')}>
           <div className="space-y-3">
             {[
               ...admissions.map(a => ({ kind: 'admission' as const, at: a.admitted_at, item: a })),
               ...discharges.map(d => ({ kind: 'discharge' as const, at: d.discharged_at, item: d })),
             ].sort((x, y) => +new Date(y.at) - +new Date(x.at)).map(entry => (
               entry.kind === 'admission' ? (
-                <HospEvent key={`a-${entry.item.id}`} icon={Hospital} title="Admitted"
+                <HospEvent key={`a-${entry.item.id}`} icon={Hospital} title={t('mp.hosp_admitted')} t={t}
                   whenIso={entry.item.admitted_at} where={entry.item.hospital} dept={entry.item.department}
                   reason={entry.item.reason} diagnosis={entry.item.diagnosis} notes={entry.item.notes}
                   editHref={canEdit ? `/babies/${params.babyId}/medical-profile/admissions/${entry.item.id}` : null} />
               ) : (
-                <HospEvent key={`d-${entry.item.id}`} icon={DischargeIcon} title="Discharged"
+                <HospEvent key={`d-${entry.item.id}`} icon={DischargeIcon} title={t('mp.hosp_discharged')} t={t}
                   whenIso={entry.item.discharged_at} where={entry.item.hospital}
                   reason={entry.item.diagnosis} treatment={entry.item.treatment} followUp={entry.item.follow_up}
                   notes={entry.item.notes} discharge
@@ -376,8 +387,9 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
         </ProfileSection>
 
         {/* === LAB RESULTS === */}
-        <ProfileSection icon={FlaskConical} title="Lab & analysis results" tint="peach"
-          empty={labPanels.length === 0} emptyText="No lab results recorded."
+        <ProfileSection icon={FlaskConical} title={t('mp.sec_labs')} tint="peach"
+          empty={labPanels.length === 0} emptyText={t('mp.empty_labs')}
+          addLabel={t('mp.add')}
           addHref={canEdit ? `/babies/${params.babyId}/medical-profile/labs/new` : null}>
           <div className="space-y-3">
             {labPanels.map(p => {
@@ -388,25 +400,25 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
                     <div className="min-w-0">
                       <div className="font-semibold text-ink-strong">
                         {p.panel_name}
-                        {p.abnormal && <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-coral-700 bg-coral-100 px-1.5 py-0.5 rounded">Abnormal</span>}
+                        {p.abnormal && <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-coral-700 bg-coral-100 px-1.5 py-0.5 rounded">{t('mp.lab_abnormal')}</span>}
                       </div>
                       <div className="text-[11px] uppercase tracking-wider text-ink-muted mt-0.5">
                         {p.panel_kind} · {fmtDate(p.result_at)}{p.lab_name ? ` · ${p.lab_name}` : ''}
                       </div>
                       {p.summary && <div className="text-xs text-ink mt-1.5">{p.summary}</div>}
                     </div>
-                    {canEdit && <EditLink href={`/babies/${params.babyId}/medical-profile/labs/${p.id}`} />}
+                    {canEdit && <EditLink href={`/babies/${params.babyId}/medical-profile/labs/${p.id}`} t={t} />}
                   </div>
                   {items.length > 0 && (
                     <div className="mt-2 overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="text-left text-[10px] uppercase tracking-wider text-ink-muted">
-                            <th className="py-1 pr-3">Test</th>
-                            <th className="py-1 pr-3">Value</th>
-                            <th className="py-1 pr-3">Unit</th>
-                            <th className="py-1 pr-3">Reference</th>
-                            <th className="py-1">Flag</th>
+                            <th className="py-1 pr-3">{t('mp.lab_th_test')}</th>
+                            <th className="py-1 pr-3">{t('mp.lab_th_value')}</th>
+                            <th className="py-1 pr-3">{t('mp.lab_th_unit')}</th>
+                            <th className="py-1 pr-3">{t('mp.lab_th_ref')}</th>
+                            <th className="py-1">{t('mp.lab_th_flag')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -416,7 +428,7 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
                               <td className="py-1 pr-3">{it.value ?? '—'}</td>
                               <td className="py-1 pr-3">{it.unit ?? ''}</td>
                               <td className="py-1 pr-3">{it.reference ?? ''}</td>
-                              <td className="py-1 uppercase">{it.flag ?? (it.is_abnormal ? 'abn' : '')}</td>
+                              <td className="py-1 uppercase">{it.flag ?? (it.is_abnormal ? t('mp.lab_abn_short') : '')}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -430,16 +442,16 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
         </ProfileSection>
 
         {/* === ACTIVE MEDICATIONS (read from existing meds table) === */}
-        <ProfileSection icon={Pill} title="Active medications" tint="lavender"
+        <ProfileSection icon={Pill} title={t('mp.sec_active_meds')} tint="lavender"
           empty={!activeMeds || activeMeds.length === 0}
-          emptyText="No active medications on file."
+          emptyText={t('mp.empty_meds')}
           addHref={null}>
           <div className="grid gap-3 sm:grid-cols-2">
             {(activeMeds ?? []).map((m: { id: string; name: string; dosage: string | null; route: string; starts_at: string; ends_at: string | null }) => (
               <div key={m.id} className="rounded-xl border border-slate-200 bg-white p-3">
                 <div className="font-semibold text-ink-strong">{m.name}</div>
                 <div className="text-[11px] uppercase tracking-wider text-ink-muted mt-0.5">
-                  {m.dosage ?? '—'} · {m.route} · since {fmtDate(m.starts_at)}{m.ends_at ? ` until ${fmtDate(m.ends_at)}` : ''}
+                  {m.dosage ?? '—'} · {m.route} · {fmtDate(m.starts_at)}{m.ends_at ? ` → ${fmtDate(m.ends_at)}` : ''}
                 </div>
               </div>
             ))}
@@ -447,7 +459,7 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
         </ProfileSection>
 
         {/* === CARE PLAN === */}
-        <ProfileSection icon={ClipboardList} title="Care plan" tint="mint"
+        <ProfileSection icon={ClipboardList} title={t('mp.sec_care_plan')} tint="mint"
           empty={false} addHref={null}>
           <CarePlanInline babyId={params.babyId}
             initial={{
@@ -460,20 +472,20 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
         </ProfileSection>
 
         {/* === CARE TEAM === */}
-        <ProfileSection icon={Stethoscope} title="Care team" tint="brand"
-          empty={doctors.length === 0} emptyText="No doctors linked yet."
+        <ProfileSection icon={Stethoscope} title={t('mp.sec_care_team')} tint="brand"
+          empty={doctors.length === 0} emptyText={t('mp.empty_doctors')}
           addHref={canEdit ? `/babies/${params.babyId}/doctors/new` : null}
-          addLabel="Add doctor">
+          addLabel={t('mp.add_doctor')}>
           <div className="grid gap-3 sm:grid-cols-2">
             {doctors.map(d => (
               <div key={d.id} className="rounded-xl border border-slate-200 bg-white p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="font-semibold text-ink-strong">
-                      {d.name}{d.is_primary && <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-brand-700 bg-brand-100 px-1.5 py-0.5 rounded">Primary</span>}
+                      {d.name}{d.is_primary && <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-brand-700 bg-brand-100 px-1.5 py-0.5 rounded">{t('mp.care_primary')}</span>}
                     </div>
                     <div className="text-[11px] uppercase tracking-wider text-ink-muted mt-0.5">
-                      {d.specialty ?? 'general'}{d.clinic ? ` · ${d.clinic}` : ''}
+                      {d.specialty ?? t('mp.care_general')}{d.clinic ? ` · ${d.clinic}` : ''}
                     </div>
                     {d.phone && <div className="text-xs text-ink mt-1">{d.phone}</div>}
                   </div>
@@ -484,10 +496,10 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
         </ProfileSection>
 
         {/* === VACCINATIONS (compact) === */}
-        <ProfileSection icon={Syringe} title="Vaccinations" tint="peach"
-          empty={vaxes.length === 0} emptyText="No vaccinations recorded."
+        <ProfileSection icon={Syringe} title={t('mp.sec_vaccinations')} tint="peach"
+          empty={vaxes.length === 0} emptyText={t('mp.empty_vax')}
           addHref={null}>
-          <p className="text-sm text-ink mb-2">{givenVax} given · {dueVax} scheduled</p>
+          <p className="text-sm text-ink mb-2">{t('mp.vax_summary', { given: givenVax, due: dueVax })}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {vaxes.slice(0, 8).map((v, i) => (
               <div key={i} className="text-xs flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white border border-slate-200">
@@ -495,7 +507,7 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
                 <span className="font-semibold text-ink-strong truncate">{v.vaccine_name}</span>
                 {v.dose_number && <span className="text-ink-muted">d{v.dose_number}{v.total_doses ? `/${v.total_doses}` : ''}</span>}
                 <span className="ml-auto text-[10px] text-ink-muted uppercase">
-                  {v.status === 'administered' && v.administered_at ? fmtDate(v.administered_at) : v.scheduled_at ? `due ${fmtDate(v.scheduled_at)}` : v.status}
+                  {v.status === 'administered' && v.administered_at ? fmtDate(v.administered_at) : v.scheduled_at ? t('mp.vax_due', { date: fmtDate(v.scheduled_at) }) : v.status}
                 </span>
               </div>
             ))}
@@ -507,31 +519,31 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
           <div id="pregnancy-history" />
         )}
         {hasPregnancyData && (
-          <ProfileSection icon={Baby} title="Pregnancy history" tint="lavender"
+          <ProfileSection icon={Baby} title={t('mp.sec_preg_history')} tint="lavender"
             empty={false} addHref={null}>
             <div className="space-y-4">
               {pregProfile && (
                 <div className="rounded-xl border border-lavender-200 bg-lavender-50/40 p-4 grid gap-3 sm:grid-cols-2">
-                  <PregField label="EDD"  value={baby.edd ? fmtDate(baby.edd) : null} />
-                  <PregField label="LMP"  value={baby.lmp ? fmtDate(baby.lmp) : null} />
-                  <PregField label="Mother's DOB"        value={pregProfile.mother_dob ? fmtDate(pregProfile.mother_dob) : null} />
-                  <PregField label="Mother's blood type" value={pregProfile.mother_blood_type} mono />
-                  <PregField label="Gravida / Para" value={
+                  <PregField label={t('mp.preg_edd')}  value={baby.edd ? fmtDate(baby.edd) : null} emptyLabel={t('mp.preg_not_set')} />
+                  <PregField label={t('mp.preg_lmp')}  value={baby.lmp ? fmtDate(baby.lmp) : null} emptyLabel={t('mp.preg_not_set')} />
+                  <PregField label={t('mp.preg_mother_dob')}    value={pregProfile.mother_dob ? fmtDate(pregProfile.mother_dob) : null} emptyLabel={t('mp.preg_not_set')} />
+                  <PregField label={t('mp.preg_mother_blood')}  value={pregProfile.mother_blood_type} emptyLabel={t('mp.preg_not_set')} mono />
+                  <PregField label={t('mp.preg_grav_para')} value={
                     pregProfile.gravida != null || pregProfile.para != null
                       ? `${pregProfile.gravida ?? '—'} / ${pregProfile.para ?? '—'}` : null
-                  } />
-                  <PregField label="Pre-pregnancy weight" value={pregProfile.pre_pregnancy_weight_kg ? `${pregProfile.pre_pregnancy_weight_kg} kg` : null} />
-                  <PregField label="Conception" value={baby.conception_method} />
-                  <PregField label="Height" value={pregProfile.pre_pregnancy_height_cm ? `${pregProfile.pre_pregnancy_height_cm} cm` : null} />
+                  } emptyLabel={t('mp.preg_not_set')} />
+                  <PregField label={t('mp.preg_pre_weight')} value={pregProfile.pre_pregnancy_weight_kg ? `${pregProfile.pre_pregnancy_weight_kg} kg` : null} emptyLabel={t('mp.preg_not_set')} />
+                  <PregField label={t('mp.preg_conception')} value={baby.conception_method} emptyLabel={t('mp.preg_not_set')} />
+                  <PregField label={t('mp.preg_height')} value={pregProfile.pre_pregnancy_height_cm ? `${pregProfile.pre_pregnancy_height_cm} cm` : null} emptyLabel={t('mp.preg_not_set')} />
                   {pregProfile.risk_factors && (
                     <div className="sm:col-span-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Risk factors</div>
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{t('mp.preg_risk')}</div>
                       <div className="mt-1 text-sm text-ink-strong whitespace-pre-wrap">{pregProfile.risk_factors}</div>
                     </div>
                   )}
                   {pregProfile.notes && (
                     <div className="sm:col-span-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Notes</div>
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{t('mp.preg_notes')}</div>
                       <div className="mt-1 text-sm text-ink-strong whitespace-pre-wrap">{pregProfile.notes}</div>
                     </div>
                   )}
@@ -540,14 +552,14 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
 
               {/* Counts row */}
               <div className="grid gap-3 grid-cols-3 text-center">
-                <PregCount label="Prenatal visits" value={visits.length} icon={Stethoscope} tint="lavender" />
-                <PregCount label="Ultrasounds"      value={ultrasounds.length} icon={ScanLine} tint="brand" />
-                <PregCount label="Kicks logged"      value={totalKicks} sub={`${totalKickMinutes} min`} icon={Activity} tint="coral" />
+                <PregCount label={t('mp.preg_count_visits')} value={visits.length} icon={Stethoscope} tint="lavender" />
+                <PregCount label={t('mp.preg_count_us')}      value={ultrasounds.length} icon={ScanLine} tint="brand" />
+                <PregCount label={t('mp.preg_count_kicks')}    value={totalKicks} sub={t('mp.preg_min_suffix', { n: totalKickMinutes })} icon={Activity} tint="coral" />
               </div>
 
               {ultrasounds.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-bold text-ink-strong uppercase tracking-wider mb-2 mt-2">Ultrasound timeline</h4>
+                  <h4 className="text-xs font-bold text-ink-strong uppercase tracking-wider mb-2 mt-2">{t('mp.preg_us_timeline')}</h4>
                   <ul className="space-y-2">
                     {ultrasounds.map(u => {
                       const ga = u.gestational_week != null ? `${u.gestational_week}w${u.gestational_day != null ? ` ${u.gestational_day}d` : ''}` : null;
@@ -580,18 +592,18 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
 
               {visits.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-bold text-ink-strong uppercase tracking-wider mb-2 mt-2">Prenatal visits</h4>
+                  <h4 className="text-xs font-bold text-ink-strong uppercase tracking-wider mb-2 mt-2">{t('mp.preg_visits_h')}</h4>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-left text-[10px] uppercase tracking-wider text-ink-muted">
-                          <th className="py-1 pr-3">Date</th>
-                          <th className="py-1 pr-3">GA</th>
-                          <th className="py-1 pr-3">Weight</th>
-                          <th className="py-1 pr-3">BP</th>
-                          <th className="py-1 pr-3">FHR</th>
-                          <th className="py-1 pr-3">Fundal</th>
-                          <th className="py-1">Notes</th>
+                          <th className="py-1 pr-3">{t('mp.preg_th_date')}</th>
+                          <th className="py-1 pr-3">{t('mp.preg_th_ga')}</th>
+                          <th className="py-1 pr-3">{t('mp.preg_th_weight')}</th>
+                          <th className="py-1 pr-3">{t('mp.preg_th_bp')}</th>
+                          <th className="py-1 pr-3">{t('mp.preg_th_fhr')}</th>
+                          <th className="py-1 pr-3">{t('mp.preg_th_fundal')}</th>
+                          <th className="py-1">{t('mp.preg_th_notes')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -617,20 +629,20 @@ export default async function MedicalProfile({ params }: { params: { babyId: str
 
         {/* Footer in export */}
         <div className="pt-3 border-t border-slate-200 text-[10px] text-ink-muted">
-          This record is parent-maintained and not a substitute for professional medical advice. Always verify against original clinical documents.
+          {t('mp.footer_disclaimer')}
         </div>
       </div>
     </div>
   );
 }
 
-function PregField({ label, value, mono }: { label: string; value: string | null | undefined; mono?: boolean }) {
+function PregField({ label, value, emptyLabel, mono }: { label: string; value: string | null | undefined; emptyLabel: string; mono?: boolean }) {
   const empty = !value;
   return (
     <div>
       <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</div>
       <div className={`mt-1 ${mono ? 'font-mono' : ''} ${empty ? 'text-ink-muted italic' : 'text-ink-strong'}`}>
-        {empty ? 'Not set' : value}
+        {empty ? emptyLabel : value}
       </div>
     </div>
   );
@@ -661,8 +673,13 @@ function PregCount({ label, value, sub, icon: Icon, tint }: {
 // Helpers / sub-components
 // ============================================================================
 
-function prettySeverity(s: 'mild'|'moderate'|'severe'|'life_threatening'): string {
-  return s === 'life_threatening' ? 'Life-threatening' : s.charAt(0).toUpperCase() + s.slice(1);
+function prettySeverity(s: 'mild'|'moderate'|'severe'|'life_threatening', t: TFunc): string {
+  switch (s) {
+    case 'life_threatening': return t('mp.sev_life');
+    case 'severe':           return t('mp.sev_severe');
+    case 'moderate':         return t('mp.sev_moderate');
+    case 'mild':             return t('mp.sev_mild');
+  }
 }
 
 function QuickAddLink({ href, icon: Icon, label, tint }: {
@@ -719,7 +736,7 @@ function ProfileSection({
       </div>
       {empty ? (
         <div className="text-sm text-ink-muted italic px-3 py-4 rounded-xl bg-slate-50/60 border border-dashed border-slate-200">
-          {emptyText ?? 'Nothing here yet.'}
+          {emptyText}
         </div>
       ) : children}
     </section>
@@ -727,7 +744,7 @@ function ProfileSection({
 }
 
 function HospEvent({
-  icon: Icon, title, whenIso, where, dept, reason, diagnosis, treatment, followUp, notes, discharge, editHref,
+  icon: Icon, title, whenIso, where, dept, reason, diagnosis, treatment, followUp, notes, discharge, editHref, t,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
@@ -741,6 +758,7 @@ function HospEvent({
   notes?: string | null;
   discharge?: boolean;
   editHref: string | null;
+  t: TFunc;
 }) {
   return (
     <div className={`rounded-xl border p-3 ${discharge ? 'bg-mint-50/40 border-mint-200' : 'bg-lavender-50/40 border-lavender-200'}`}>
@@ -753,15 +771,15 @@ function HospEvent({
             <div className="font-semibold text-ink-strong">
               {title} · {fmtDate(whenIso)}
             </div>
-            {editHref && <EditLink href={editHref} />}
+            {editHref && <EditLink href={editHref} t={t} />}
           </div>
           <div className="text-[11px] uppercase tracking-wider text-ink-muted">
             {[where, dept].filter(Boolean).join(' · ') || '—'}
           </div>
-          {reason     && <div className="text-xs text-ink mt-1.5"><strong>{discharge ? 'Diagnosis' : 'Reason'}:</strong> {reason}</div>}
-          {diagnosis && !discharge && <div className="text-xs text-ink mt-1"><strong>Diagnosis:</strong> {diagnosis}</div>}
-          {treatment && <div className="text-xs text-ink mt-1"><strong>Treatment:</strong> {treatment}</div>}
-          {followUp  && <div className="text-xs text-ink mt-1"><strong>Follow-up:</strong> {followUp}</div>}
+          {reason     && <div className="text-xs text-ink mt-1.5"><strong>{discharge ? t('mp.hosp_diagnosis') : t('mp.hosp_reason')}</strong> {reason}</div>}
+          {diagnosis && !discharge && <div className="text-xs text-ink mt-1"><strong>{t('mp.hosp_diagnosis')}</strong> {diagnosis}</div>}
+          {treatment && <div className="text-xs text-ink mt-1"><strong>{t('mp.hosp_treatment')}</strong> {treatment}</div>}
+          {followUp  && <div className="text-xs text-ink mt-1"><strong>{t('mp.hosp_followup')}</strong> {followUp}</div>}
           {notes     && <div className="text-xs text-ink-muted mt-1">{notes}</div>}
         </div>
       </div>
@@ -769,10 +787,10 @@ function HospEvent({
   );
 }
 
-function EditLink({ href }: { href: string }) {
+function EditLink({ href, t }: { href: string; t: TFunc }) {
   return (
     <Link href={href} className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-brand-600 hover:underline no-export">
-      Edit <ArrowRight className="h-3 w-3" />
+      {t('mp.edit')} <ArrowRight className="h-3 w-3" />
     </Link>
   );
 }
