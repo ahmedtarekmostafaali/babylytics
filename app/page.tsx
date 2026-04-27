@@ -4,9 +4,12 @@ import { Wordmark } from '@/components/Wordmark';
 import { HeroOrbit } from '@/components/HeroOrbit';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import {
-  Milk, Moon, Baby, Check, ArrowRight,
-  BarChart3, Brain, Clipboard, Sparkles, Apple, Smartphone,
-  LayoutDashboard,
+  Milk, Moon, Baby, Check, ArrowRight, Brain, Sparkles, Apple, Smartphone,
+  LayoutDashboard, Heart, Activity, Pill, Syringe, Stethoscope, Thermometer,
+  Ruler, ScanLine, FileText, BarChart3, Shield, BookOpen,
+  CalendarDays, AlertTriangle, MessageCircle, Tv, Smile, FlaskConical,
+  Languages, Bell, ClipboardList, ShieldCheck, Megaphone, Droplet,
+  HeartPulse, MessagesSquare, ChevronRight,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -14,9 +17,6 @@ export const dynamic = 'force-dynamic';
 export default async function Landing() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  // Logged-in visitors keep access to the marketing page so they can revisit
-  // the product story / share the link. The header swaps in a "Dashboard"
-  // CTA in place of Log in / Get started free for these visitors.
   const isAuthed = !!user;
 
   return (
@@ -26,9 +26,13 @@ export default async function Landing() {
         <div className="max-w-6xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/"><Wordmark size="md" /></Link>
           <nav className="hidden md:flex items-center gap-7 text-sm text-ink">
-            <a href="#features"     className="hover:text-ink-strong">Features</a>
-            <a href="#how"          className="hover:text-ink-strong">How it works</a>
-            <a href="#ocr"          className="hover:text-ink-strong">Smart Scan</a>
+            <a href="#features"   className="hover:text-ink-strong">Features</a>
+            <a href="#pregnancy"  className="hover:text-ink-strong">Pregnancy</a>
+            <a href="#family"     className="hover:text-ink-strong">Family</a>
+            <a href="#smart-scan" className="hover:text-ink-strong">Smart Scan</a>
+            <Link href="/updates" className="hover:text-ink-strong inline-flex items-center gap-1">
+              <Megaphone className="h-3.5 w-3.5 text-mint-600" /> What&apos;s new
+            </Link>
           </nav>
           <div className="flex items-center gap-2">
             <LanguageToggle />
@@ -50,119 +54,243 @@ export default async function Landing() {
       {/* ======= Hero ======= */}
       <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-12 lg:pt-16 pb-10 grid lg:grid-cols-2 gap-10 items-center">
         <div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-mint-100 text-mint-700 text-[11px] font-bold uppercase tracking-wider px-3 py-1">
+            <Sparkles className="h-3 w-3" /> From the first kick to first words
+          </div>
+          <h1 className="mt-4 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]">
             <span className="text-coral-500">Track today.</span><br />
             <span className="text-mint-600">Nurture tomorrow.</span>
           </h1>
-          <p className="mt-5 text-lg text-ink max-w-lg">
-            Smart baby tracking for modern parents. Feedings, stool, medications, growth, and medical records — with handwritten-note OCR for English and Arabic.
+          <p className="mt-5 text-lg text-ink max-w-xl">
+            One app for the entire journey — pregnancy, newborn, infant, toddler.
+            Feedings, sleep, meds, pregnancy weight gain, kick counts, maternal
+            symptoms, growth charts, vaccinations, and a portable medical record
+            you can share with any clinician. Bilingual English &amp; Arabic.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/register"
               className="inline-flex items-center gap-2 rounded-lg bg-coral-500 px-5 py-3 text-white font-medium hover:bg-coral-600 shadow-sm">
               Get started free <ArrowRight className="h-4 w-4" />
             </Link>
-            <a href="#how"
+            <a href="#features"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 font-medium text-ink hover:bg-slate-50">
               <span className="h-6 w-6 rounded-full bg-brand-100 text-brand-700 grid place-items-center">
                 <Sparkles className="h-3.5 w-3.5" />
               </span>
-              Watch demo
+              See everything you can track
             </a>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2 text-xs">
+            <Pill2 tint="coral"    icon={Languages}>EN · العربية · RTL</Pill2>
+            <Pill2 tint="mint"     icon={Shield}>Per-baby roles &amp; audit trail</Pill2>
+            <Pill2 tint="lavender" icon={ScanLine}>Smart Scan OCR</Pill2>
+            <Pill2 tint="peach"    icon={Bell}>WhatsApp dose reminders</Pill2>
           </div>
         </div>
 
         <div className="relative"><HeroOrbit /></div>
       </section>
 
-      {/* ======= Feature cards ======= */}
-      <section id="features" className="max-w-6xl mx-auto px-4 lg:px-8 py-6 grid gap-5 md:grid-cols-3">
-        <FeatureCard
-          tint="coral" Icon={Milk}
-          title="Feeding tracker"
-          text="Log breastfeeding, bottles, and solid foods. Get smart reminders and daily targets based on weight."
-        />
-        <FeatureCard
-          tint="lavender" Icon={Moon}
-          title="Sleep & quiet time"
-          text="Record sleep logs and downtime. Track rest patterns across the week so you know what's normal for your baby."
-        />
-        <FeatureCard
-          tint="peach" Icon={Baby}
-          title="Diaper & health"
-          text="Monitor diapers, stool patterns, medication doses and health changes over time — with clinical audit trail."
-        />
-      </section>
-
-      {/* ======= Patterns / Dashboard ======= */}
-      <section className="max-w-6xl mx-auto px-4 lg:px-8 py-16 grid lg:grid-cols-2 gap-10 items-center">
-        <div>
-          <div className="text-xs font-semibold tracking-wider text-mint-600 uppercase">Smart insights</div>
+      {/* ======= Lifecycle stages ======= */}
+      <section className="max-w-6xl mx-auto px-4 lg:px-8 pb-10">
+        <div className="text-center mb-8">
+          <div className="text-xs font-semibold tracking-wider text-mint-600 uppercase">Built for the whole journey</div>
           <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">
-            Understand your baby&apos;s patterns effortlessly.
+            One app, four stages, no swapping.
           </h2>
-          <ul className="mt-5 space-y-3 text-ink">
-            <Bullet tint="mint">Personalized daily summaries</Bullet>
-            <Bullet tint="brand">Detect trends and out-of-pattern changes</Bullet>
-            <Bullet tint="peach">Gentle, evidence-based recommendations</Bullet>
-            <Bullet tint="lavender">Medication adherence at a glance</Bullet>
-          </ul>
-          <div className="mt-7">
-            <Link href="/register" className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-white text-sm font-medium hover:bg-brand-600 shadow-sm">
-              Explore the dashboard <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+          <p className="mt-2 text-sm text-ink max-w-2xl mx-auto">
+            Babylytics adapts as your baby grows. Start tracking pregnancy, hit
+            &ldquo;Mark as born&rdquo; the moment they arrive, and the dashboard
+            transforms into a newborn / infant / toddler view — without losing
+            any of the history.
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StageCard tint="lavender" Icon={Heart}    eyebrow="Stage 1" title="Pregnancy"
+            text="Kick counts, maternal vitals, weight gain bands (IOM), prenatal visits, ultrasounds with EFW, daily fetal size, what-to-expect rollups, maternal symptoms (nausea, swelling, contractions…)." />
+          <StageCard tint="coral"    Icon={Baby}     eyebrow="Stage 2" title="Newborn"
+            text="Feedings (breast/bottle/mixed) with ml-per-kg targets, diaper logs, sleep, temperature, measurements, vaccinations, paediatrician visits, and your medical profile." />
+          <StageCard tint="mint"     Icon={Activity} eyebrow="Stage 3" title="Infant"
+            text="Growth charts vs WHO percentiles, milestone reference (rolling, sitting, crawling, walking), feed pace KPIs, weekly insight cards, and timeline of every event." />
+          <StageCard tint="peach"    Icon={Smile}    eyebrow="Stage 4" title="Toddler"
+            text="Teething, speaking milestones, screen-time, activities, allergies (with cow's-milk allergy guide), labs &amp; scans archive, shareable PDF reports." />
+        </div>
+      </section>
+
+      {/* ======= Feature deep dive ======= */}
+      <section id="features" className="max-w-6xl mx-auto px-4 lg:px-8 py-12">
+        <div className="text-center mb-10">
+          <div className="text-xs font-semibold tracking-wider text-coral-500 uppercase">What you can track</div>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">
+            Every detail, organised so it&apos;s easy to find.
+          </h2>
         </div>
 
-        {/* Dashboard mockup */}
-        <div className="rounded-2xl bg-white shadow-panel border border-slate-200 p-4 sm:p-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold text-ink-strong">Dashboard</div>
-            <span className="text-xs text-ink-muted">Today</span>
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Vital signs */}
+          <CategoryCard tint="coral" title="Vital signs" Icon={HeartPulse}>
+            <FeatureChip Icon={Milk}        title="Feedings"      sub="Breast, bottle, formula, mixed, solid. Daily ml-per-kg targets. Rolling 7-day pace." />
+            <FeatureChip Icon={Droplet}     title="Stool"         sub="Size, color, consistency, diaper rash flag. Daily breakdown chart." />
+            <FeatureChip Icon={Moon}        title="Sleep"         sub="Live timer or manual entry. Location + quality. Weekly hours line." />
+            <FeatureChip Icon={Thermometer} title="Temperature"   sub="Axillary, oral, ear, forehead, rectal. Fever alerts at ≥ 38°C." />
+            <FeatureChip Icon={Ruler}       title="Measurements"  sub="Weight, height, head circumference. WHO percentile charts." />
+          </CategoryCard>
+
+          {/* Care */}
+          <CategoryCard tint="lavender" title="Care &amp; medical" Icon={Stethoscope}>
+            <FeatureChip Icon={Pill}         title="Medications"   sub="Schedules, doses, missed/skipped/taken, overdue alerts, OCR-imported prescriptions." />
+            <FeatureChip Icon={Syringe}      title="Vaccinations"  sub="Plan + history, dose number, batch, provider, overdue chips." />
+            <FeatureChip Icon={AlertTriangle} title="Allergies"    sub="11 quick-pick templates incl. a full cow's-milk allergy (CMPA) guide for parents." />
+            <FeatureChip Icon={FlaskConical} title="Labs &amp; Scans" sub="Lab panels with per-marker results. Ultrasounds with biometry &amp; EFW." />
+            <FeatureChip Icon={Stethoscope}  title="Doctors"       sub="Multi-doctor list, primary tag, contact info, appointments per doctor." />
+            <FeatureChip Icon={CalendarDays} title="Appointments"  sub="Schedule, reminders, post-visit conclusion, attached uploads." />
+          </CategoryCard>
+
+          {/* Pregnancy */}
+          <CategoryCard tint="mint" title="Pregnancy mode" Icon={Heart}>
+            <FeatureChip Icon={Heart}        title="Daily fetal size"        sub="What baby looks like today — interpolated cm + grams + fruit emoji." />
+            <FeatureChip Icon={ScanLine}     title="Ultrasounds"             sub="BPD, HC, AC, FL, EFW, FHR, anomaly notes. Auto-fill from scan PDFs via OCR." />
+            <FeatureChip Icon={Activity}     title="Kick counter"            sub="Live session timer + tally, ≥10-in-2-hours guidance after 28 weeks." />
+            <FeatureChip Icon={HeartPulse}   title="Maternal symptoms"       sub="Nausea, vomiting, dizziness, headache, swelling, contractions on a 1–5 scale." />
+            <FeatureChip Icon={Heart}        title="Maternal vitals + IOM band" sub="BP, weight, FHR. Pre-preg BMI → recommended weight-gain range with on-track chip." />
+            <FeatureChip Icon={BookOpen}     title="What-to-expect rollups"  sub="This week, this month, this trimester — for mom, baby, and your to-do list." />
+          </CategoryCard>
+
+          {/* Development */}
+          <CategoryCard tint="peach" title="Development &amp; growth" Icon={Activity}>
+            <FeatureChip Icon={Smile}        title="Teething"      sub="Eruption + symptom logs by tooth, with a visual chart." />
+            <FeatureChip Icon={MessageCircle} title="Speaking"     sub="First words, sentences, language milestones." />
+            <FeatureChip Icon={Tv}           title="Screen time"   sub="Daily exposure with AAP-band reminders." />
+            <FeatureChip Icon={Activity}     title="Activities"    sub="Tummy time, swimming, music, outdoor, mood + intensity." />
+            <FeatureChip Icon={BarChart3}    title="Growth charts" sub="WHO percentile lines for weight / height / head, with growth-spurt heads-up." />
+            <FeatureChip Icon={ClipboardList} title="Milestones reference" sub="Crawling, sitting, walking, words — typical age windows + your baby's progress dot." />
+          </CategoryCard>
+        </div>
+      </section>
+
+      {/* ======= Pregnancy spotlight ======= */}
+      <section id="pregnancy" className="max-w-6xl mx-auto px-4 lg:px-8 py-16 grid lg:grid-cols-[1.1fr_1fr] gap-10 items-center">
+        <div>
+          <div className="text-xs font-semibold tracking-wider text-lavender-700 uppercase">Pregnancy mode</div>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">
+            A pregnancy companion that doesn&apos;t end at delivery.
+          </h2>
+          <p className="mt-3 text-ink max-w-lg">
+            Track from the moment you have a positive test. When baby arrives,
+            your whole pregnancy timeline becomes a shareable archive in their
+            medical profile — every prenatal visit, every ultrasound, every
+            symptom logged.
+          </p>
+          <ul className="mt-5 space-y-3 text-ink">
+            <Bullet tint="mint">IOM weight-gain bands by pre-pregnancy BMI</Bullet>
+            <Bullet tint="lavender">Daily fetal size — what your baby is roughly the size of today</Bullet>
+            <Bullet tint="coral">Ultrasound EFW overlaid on the daily-size card so you can see how on-track baby is</Bullet>
+            <Bullet tint="peach">Symptom tracker (nausea, dizziness, contractions, mood swings…) with severity 1–5</Bullet>
+            <Bullet tint="brand">What-to-expect cards rolled up at week, month, and trimester scale</Bullet>
+            <Bullet tint="mint">Mark-as-born flow that keeps your pregnancy archive intact</Bullet>
+          </ul>
+        </div>
+
+        {/* Pregnancy mockup */}
+        <div className="rounded-3xl border border-lavender-200 bg-gradient-to-br from-lavender-50 via-white to-coral-50 p-5 shadow-card">
+          <div className="rounded-2xl border border-coral-200 bg-white/80 p-4 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="text-5xl leading-none">🥭</div>
+              <div className="flex-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-coral-700">Today, baby is the size of</div>
+                <div className="text-xl font-bold text-ink-strong">a mango</div>
+                <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                  <span className="rounded-full bg-mint-50 text-mint-700 border border-mint-200 px-2 py-0.5 font-semibold">15.3 cm</span>
+                  <span className="rounded-full bg-coral-50 text-coral-700 border border-coral-200 px-2 py-0.5 font-semibold">≈ 240 g</span>
+                  <span className="rounded-full bg-slate-50 text-ink-muted border border-slate-200 px-2 py-0.5">19w 2d</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <MockKpi tint="peach"    icon={<Milk  className="h-4 w-4" />} title="Feeding" value="5 feeds" sub="680 ml" />
-            <MockKpi tint="lavender" icon={<Moon  className="h-4 w-4" />} title="Sleep"   value="8h 45m"  sub="score 85" />
-            <MockKpi tint="mint"     icon={<Baby  className="h-4 w-4" />} title="Diaper"  value="4 times" sub="normal"  />
+          <div className="rounded-2xl bg-white border border-slate-200 p-4 mb-3">
+            <div className="flex items-center justify-between">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-mint-700">Weight gain · normal BMI</div>
+              <div className="text-[10px] text-ink-muted">IOM 11.5–16 kg</div>
+            </div>
+            <div className="mt-2 text-2xl font-bold text-ink-strong">+5.2 kg</div>
+            <div className="relative h-2 rounded-full bg-slate-100 mt-2">
+              <div className="absolute inset-y-0 bg-mint-200" style={{ left: '20%', width: '50%' }} />
+              <div className="absolute inset-y-0 bg-mint-400" style={{ left: '28%', width: '14%' }} />
+              <div className="absolute -top-0.5 h-3 w-1 rounded-full bg-coral-600 shadow-sm" style={{ left: '34%' }} />
+            </div>
+            <div className="text-[10px] text-mint-700 font-semibold mt-2">✓ On track</div>
           </div>
-          <MockBarChart />
-          <div className="mt-4 text-xs font-semibold text-ink-muted uppercase tracking-wider">Daily timeline</div>
-          <div className="mt-2 divide-y divide-slate-100 text-sm">
-            <TimelineRow time="08:00" tint="coral"    icon={<Milk className="h-3.5 w-3.5" />} title="Breastfeeding" sub="Left 15 min, Right 10 min" />
-            <TimelineRow time="10:30" tint="peach"    icon={<Baby className="h-3.5 w-3.5" />} title="Diaper change" sub="Pee" />
-            <TimelineRow time="13:00" tint="lavender" icon={<Moon className="h-3.5 w-3.5" />} title="Nap"           sub="1 h 30m" />
+          <div className="rounded-2xl bg-white border border-slate-200 p-3 text-xs">
+            <div className="flex items-center gap-2 mb-2">
+              <HeartPulse className="h-3 w-3 text-lavender-600" />
+              <div className="font-semibold text-ink-strong">Recent symptoms</div>
+              <span className="ml-auto text-[10px] text-lavender-700 bg-lavender-50 rounded-full px-1.5">Last 7d · 4</span>
+            </div>
+            <div className="space-y-1.5">
+              <SympLine emoji="🤢" label="Nausea"    sev={3} />
+              <SympLine emoji="😵‍💫" label="Dizziness" sev={2} />
+              <SympLine emoji="🦶" label="Swelling"  sev={2} />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ======= How it works ======= */}
-      <section id="how" className="max-w-6xl mx-auto px-4 lg:px-8 py-16">
-        <div className="text-center">
-          <div className="text-xs font-semibold tracking-wider text-mint-600 uppercase">How it works</div>
-          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">Three steps to a clearer picture.</h2>
-        </div>
-        <div className="mt-10 grid md:grid-cols-3 gap-8 relative">
-          {/* Dashed connectors (desktop only) */}
-          <svg className="hidden md:block absolute top-10 left-[16%] right-[16%] h-6 pointer-events-none" viewBox="0 0 400 24" preserveAspectRatio="none">
-            <path d="M0,12 C80,-8 120,32 200,12 C280,-8 320,32 400,12" stroke="#C2D9EE" strokeWidth="1.5" strokeDasharray="3 4" fill="none" />
-          </svg>
-          <Step n={1} tint="brand"    Icon={Clipboard} title="Log daily activities" text="Feedings, stools, meds, measurements — entered in seconds or uploaded as handwritten notes." />
-          <Step n={2} tint="mint"     Icon={Brain}     title="Automatic analysis"   text="Every entry runs through smart rules and aggregations — no spreadsheets, no manual math." />
-          <Step n={3} tint="coral"    Icon={BarChart3} title="Get smart insights"   text="Daily &amp; full reports, trend charts, adherence tracking. Print for your pediatrician." />
+      {/* ======= Family & roles ======= */}
+      <section id="family" className="bg-gradient-to-r from-mint-50 via-white to-brand-50 border-y border-slate-200/70 py-16">
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 grid lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <div className="text-xs font-semibold tracking-wider text-mint-600 uppercase">Family &amp; clinicians</div>
+            <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">
+              Everyone who cares for your baby, on the same page.
+            </h2>
+            <p className="mt-3 text-ink max-w-lg">
+              Babylytics is built for households, not just one parent. Invite
+              the other parent, a grandparent, a nanny, or your paediatrician
+              — each with their own role and only the access they need.
+            </p>
+            <ul className="mt-5 space-y-3 text-ink">
+              <Bullet tint="mint">Five roles: parent, editor, doctor, nurse, viewer — fine-grained per baby</Bullet>
+              <Bullet tint="lavender">Per-record audit trail — see &ldquo;Logged by Sarah · 2h ago&rdquo; and &ldquo;Edited by Ahmed&rdquo;</Bullet>
+              <Bullet tint="coral">Comments threads scoped to a date or a specific log — leave notes for the next caregiver</Bullet>
+              <Bullet tint="peach">Personal notification feed — broadcasts (e.g. &ldquo;Smart Scan needs review&rdquo;) read independently per user</Bullet>
+              <Bullet tint="brand">Doctor view: read-only with an &ldquo;Add comment&rdquo; box — perfect for sharing during a visit</Bullet>
+            </ul>
+          </div>
+          <div className="rounded-3xl bg-white border border-slate-200 shadow-card p-5">
+            <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-3">Today&apos;s caregiver feed</div>
+            <ul className="divide-y divide-slate-100">
+              <CaregiverRow tint="coral"    name="Sarah"  role="parent" what="logged a feeding" detail="180 ml · bottle · 2 hours ago" />
+              <CaregiverRow tint="lavender" name="Ahmed"  role="parent" what="logged a temperature" detail="37.2 °C · axillary · 1 hour ago" />
+              <CaregiverRow tint="mint"     name="Mona"   role="nanny"  what="logged a sleep session" detail="1 h 45 m · crib · 30 min ago" />
+              <CaregiverRow tint="peach"    name="Dr. K." role="doctor" what="commented on the appointment" detail="&ldquo;Continue probiotics for one more week.&rdquo; · just now" />
+            </ul>
+            <div className="mt-3 flex items-center gap-2 rounded-xl bg-mint-50 border border-mint-200 p-2.5 text-xs text-mint-900">
+              <ShieldCheck className="h-3.5 w-3.5 text-mint-700 shrink-0" />
+              <span>Every change is captured in the audit log — including who, when, and what changed.</span>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ======= Smart Scan (OCR) ======= */}
-      <section id="ocr" className="max-w-6xl mx-auto px-4 lg:px-8 py-16 grid lg:grid-cols-2 gap-10 items-center">
+      <section id="smart-scan" className="max-w-6xl mx-auto px-4 lg:px-8 py-16 grid lg:grid-cols-2 gap-10 items-center">
         <div>
           <div className="text-xs font-semibold tracking-wider text-coral-500 uppercase">Smart Scan · OCR</div>
           <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">
-            From handwritten notes to smart data.
+            From handwritten notes &amp; PDFs to structured data.
           </h2>
+          <p className="mt-3 text-ink max-w-lg">
+            Photograph a daily-log notebook page, an ultrasound report, or a
+            lab printout. Babylytics extracts the events, items, and values —
+            you review and confirm before anything lands in your tracker.
+            Nothing is auto-applied.
+          </p>
           <ul className="mt-5 space-y-3 text-ink">
-            <Bullet tint="coral">Scan daily logs — English, Arabic, or mixed</Bullet>
-            <Bullet tint="mint">Auto-detect feeding &amp; stool data</Bullet>
-            <Bullet tint="peach">Edit &amp; confirm before saving — nothing is auto-applied</Bullet>
+            <Bullet tint="coral">Daily notes — feedings, stools, sleep, temperature, meds</Bullet>
+            <Bullet tint="brand">Ultrasound reports — auto-fills BPD / HC / AC / FL / EFW / FHR</Bullet>
+            <Bullet tint="mint">Lab panels — extracts each marker with units</Bullet>
+            <Bullet tint="lavender">Prescriptions — creates active medication entries</Bullet>
+            <Bullet tint="peach">Confidence flag — low-confidence extractions surface in your inbox for review</Bullet>
           </ul>
           <div className="mt-7">
             <Link href="/register" className="inline-flex items-center gap-2 rounded-lg bg-coral-500 px-4 py-2.5 text-white text-sm font-medium hover:bg-coral-600 shadow-sm">
@@ -174,8 +302,61 @@ export default async function Landing() {
         <OcrBeforeAfter />
       </section>
 
-      {/* ======= CTA with app-store buttons ======= */}
-      <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-16 pb-24">
+      {/* ======= Reports + bilingual + WhatsApp ======= */}
+      <section className="max-w-6xl mx-auto px-4 lg:px-8 py-12">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <SmallSpotlight tint="brand" Icon={FileText} title="Shareable reports"
+            body="Daily report and full report — one tap to save as PDF or image, ready to send your paediatrician. The full report inlines comments, audit trail, and KPIs for any time window." />
+          <SmallSpotlight tint="lavender" Icon={Languages} title="English + العربية + RTL"
+            body="Switch language any time — even before you sign up. Right-to-left layouts auto-flip. Full Arabic copy across forms, dashboards, reports, and the cow's-milk allergy guide." />
+          <SmallSpotlight tint="mint" Icon={MessagesSquare} title="WhatsApp dose reminders"
+            body="Active medications can ping caregivers on WhatsApp when a dose is due — handy when you and the other parent split responsibilities." />
+        </div>
+      </section>
+
+      {/* ======= How it works (kept, tightened) ======= */}
+      <section id="how" className="max-w-6xl mx-auto px-4 lg:px-8 pt-4 pb-16">
+        <div className="text-center">
+          <div className="text-xs font-semibold tracking-wider text-mint-600 uppercase">How it works</div>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">Three steps to a clearer picture.</h2>
+        </div>
+        <div className="mt-10 grid md:grid-cols-3 gap-8 relative">
+          <svg className="hidden md:block absolute top-10 left-[16%] right-[16%] h-6 pointer-events-none" viewBox="0 0 400 24" preserveAspectRatio="none">
+            <path d="M0,12 C80,-8 120,32 200,12 C280,-8 320,32 400,12" stroke="#C2D9EE" strokeWidth="1.5" strokeDasharray="3 4" fill="none" />
+          </svg>
+          <Step n={1} tint="brand" Icon={ClipboardList} title="Log it"
+            text="Type it in seconds, snap a handwritten page, or import an ultrasound PDF — every input goes through Smart Scan when relevant." />
+          <Step n={2} tint="mint"  Icon={Brain} title="See the patterns"
+            text="The dashboard auto-aggregates feedings, sleep, growth, and pregnancy KPIs — no spreadsheets, no manual math." />
+          <Step n={3} tint="coral" Icon={BarChart3} title="Share with your team"
+            text="Caregivers stay in sync via comments &amp; audit trail. Save a PDF for the paediatrician in one tap." />
+        </div>
+      </section>
+
+      {/* ======= What's new strip ======= */}
+      <section className="max-w-6xl mx-auto px-4 lg:px-8 pb-16">
+        <Link href="/updates"
+          className="block group rounded-2xl border border-mint-200 bg-gradient-to-r from-mint-50 via-white to-coral-50 p-5 hover:shadow-card transition">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="h-10 w-10 rounded-xl bg-mint-100 text-mint-700 grid place-items-center shrink-0">
+              <Megaphone className="h-5 w-5" />
+            </span>
+            <div className="flex-1 min-w-[240px]">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-mint-700">Recently shipped</div>
+              <div className="text-sm font-bold text-ink-strong">
+                Daily fetal-size card · Maternal symptoms tracker · Audit trail by name · Cow&apos;s-milk allergy guide
+              </div>
+              <div className="text-xs text-ink-muted mt-0.5">See the full changelog and turn on notifications for new updates.</div>
+            </div>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-mint-700 group-hover:gap-2 transition-all">
+              What&apos;s new <ChevronRight className="h-4 w-4" />
+            </span>
+          </div>
+        </Link>
+      </section>
+
+      {/* ======= CTA ======= */}
+      <section className="max-w-6xl mx-auto px-4 lg:px-8 pb-24">
         <div className="rounded-3xl bg-gradient-to-r from-coral-50 via-peach-50 to-mint-50 border border-slate-200 p-10 text-center relative overflow-hidden">
           <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-coral-100 blur-2xl" />
           <div className="absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-mint-100 blur-2xl" />
@@ -194,7 +375,6 @@ export default async function Landing() {
             </div>
             <p className="mt-2 text-xs text-ink-muted">No credit card required.</p>
 
-            {/* App store / Play store pills (coming soon links to web app for now) */}
             <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
               <StoreBadge platform="apple" />
               <StoreBadge platform="google" />
@@ -212,8 +392,10 @@ export default async function Landing() {
           </div>
           <FooterCol title="Product">
             <a href="#features">Features</a>
-            <a href="#how">How it works</a>
-            <a href="#ocr">Smart Scan</a>
+            <a href="#pregnancy">Pregnancy mode</a>
+            <a href="#smart-scan">Smart Scan</a>
+            <a href="#family">Family &amp; roles</a>
+            <Link href="/updates">What&apos;s new</Link>
             <Link href="/register">Sign up</Link>
           </FooterCol>
           <FooterCol title="Company">
@@ -222,9 +404,9 @@ export default async function Landing() {
             <a href="#">Contact</a>
           </FooterCol>
           <FooterCol title="Legal">
-            <a href="#">Privacy</a>
-            <a href="#">Terms</a>
-            <a href="#">Security</a>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/terms">Terms</Link>
+            <Link href="/disclaimer">Medical disclaimer</Link>
           </FooterCol>
         </div>
         <div className="max-w-6xl mx-auto px-4 lg:px-8 pb-8 text-center text-xs text-ink-muted">
@@ -237,37 +419,162 @@ export default async function Landing() {
 
 // ---- Sub-components -------------------------------------------------------
 
-function FeatureCard({ tint, Icon, title, text }: {
-  tint: 'coral'|'mint'|'lavender'|'peach'|'brand';
-  Icon: React.ComponentType<{ className?: string }>;
-  title: string; text: string;
+type Tint = 'brand'|'mint'|'coral'|'lavender'|'peach';
+
+function Pill2({ tint, icon: Icon, children }: {
+  tint: Tint;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
 }) {
-  const bgIcon = {
-    coral:    'bg-coral-100 text-coral-600',
-    mint:     'bg-mint-100 text-mint-600',
-    lavender: 'bg-lavender-100 text-lavender-600',
-    peach:    'bg-peach-100 text-peach-600',
-    brand:    'bg-brand-100 text-brand-600',
-  }[tint];
-  const linkColor = {
-    coral:'text-coral-600', mint:'text-mint-600', lavender:'text-lavender-600',
-    peach:'text-peach-600', brand:'text-brand-600',
+  const css = {
+    coral:    'bg-coral-100 text-coral-700',
+    mint:     'bg-mint-100 text-mint-700',
+    lavender: 'bg-lavender-100 text-lavender-700',
+    peach:    'bg-peach-100 text-peach-700',
+    brand:    'bg-brand-100 text-brand-700',
   }[tint];
   return (
-    <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-card text-center">
-      <div className={`mx-auto h-14 w-14 rounded-full grid place-items-center ${bgIcon}`}>
-        <Icon className="h-7 w-7" />
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold ${css}`}>
+      <Icon className="h-3 w-3" /> {children}
+    </span>
+  );
+}
+
+function StageCard({ tint, Icon, eyebrow, title, text }: {
+  tint: Tint;
+  Icon: React.ComponentType<{ className?: string }>;
+  eyebrow: string; title: string; text: string;
+}) {
+  const eye = {
+    coral: 'text-coral-700', mint: 'text-mint-700', lavender: 'text-lavender-700',
+    peach: 'text-peach-700', brand: 'text-brand-700',
+  }[tint];
+  const grad = {
+    coral:    'from-coral-50 to-white',
+    mint:     'from-mint-50 to-white',
+    lavender: 'from-lavender-50 to-white',
+    peach:    'from-peach-50 to-white',
+    brand:    'from-brand-50 to-white',
+  }[tint];
+  const iconBg = {
+    coral: 'bg-coral-100 text-coral-600', mint: 'bg-mint-100 text-mint-600',
+    lavender: 'bg-lavender-100 text-lavender-600', peach: 'bg-peach-100 text-peach-600',
+    brand: 'bg-brand-100 text-brand-600',
+  }[tint];
+  return (
+    <div className={`rounded-2xl border border-slate-200/70 bg-gradient-to-br ${grad} p-5 shadow-card`}>
+      <div className={`h-10 w-10 rounded-xl grid place-items-center ${iconBg}`}>
+        <Icon className="h-5 w-5" />
       </div>
-      <h3 className="mt-4 text-lg font-semibold text-ink-strong">{title}</h3>
-      <p className="mt-2 text-sm text-ink">{text}</p>
-      <a href="#features" className={`mt-4 inline-flex items-center gap-1 text-sm font-medium ${linkColor}`}>
-        Learn more <ArrowRight className="h-3.5 w-3.5" />
-      </a>
+      <div className={`mt-3 text-[10px] font-bold uppercase tracking-wider ${eye}`}>{eyebrow}</div>
+      <h3 className="mt-1 text-xl font-bold text-ink-strong">{title}</h3>
+      <p className="mt-2 text-sm text-ink leading-relaxed">{text}</p>
     </div>
   );
 }
 
-function Bullet({ tint, children }: { tint: 'brand'|'mint'|'coral'|'lavender'|'peach'; children: React.ReactNode }) {
+function CategoryCard({ tint, title, Icon, children }: {
+  tint: Tint;
+  title: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  const tintCss = {
+    coral: 'bg-coral-100 text-coral-600', mint: 'bg-mint-100 text-mint-600',
+    lavender: 'bg-lavender-100 text-lavender-600', peach: 'bg-peach-100 text-peach-600',
+    brand: 'bg-brand-100 text-brand-600',
+  }[tint];
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-card overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+        <span className={`h-9 w-9 rounded-xl grid place-items-center ${tintCss}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <h3 className="text-lg font-bold text-ink-strong" dangerouslySetInnerHTML={{ __html: title }} />
+      </div>
+      <div className="p-3 space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function FeatureChip({ Icon, title, sub }: {
+  Icon: React.ComponentType<{ className?: string }>;
+  title: string; sub: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl px-3 py-2 hover:bg-slate-50 transition">
+      <span className="h-8 w-8 rounded-lg bg-slate-100 text-ink grid place-items-center shrink-0">
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-ink-strong">{title}</div>
+        <div className="text-xs text-ink-muted leading-relaxed" dangerouslySetInnerHTML={{ __html: sub }} />
+      </div>
+    </div>
+  );
+}
+
+function SympLine({ emoji, label, sev }: { emoji: string; label: string; sev: number }) {
+  const sevCss = sev >= 4 ? 'bg-coral-100 text-coral-700'
+               : sev === 3 ? 'bg-peach-100 text-peach-700'
+               : 'bg-mint-100 text-mint-700';
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-base">{emoji}</span>
+      <span className="flex-1 font-medium text-ink-strong">{label}</span>
+      <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${sevCss}`}>{sev}/5</span>
+    </div>
+  );
+}
+
+function CaregiverRow({ tint, name, role, what, detail }: {
+  tint: Tint;
+  name: string; role: string; what: string; detail: string;
+}) {
+  const css = {
+    coral: 'bg-coral-100 text-coral-700', mint: 'bg-mint-100 text-mint-700',
+    lavender: 'bg-lavender-100 text-lavender-700', peach: 'bg-peach-100 text-peach-700',
+    brand: 'bg-brand-100 text-brand-700',
+  }[tint];
+  return (
+    <li className="flex items-start gap-3 py-3 px-1">
+      <span className={`h-9 w-9 rounded-full grid place-items-center font-bold text-sm shrink-0 ${css}`}>
+        {name[0]}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm">
+          <span className="font-semibold text-ink-strong">{name}</span>
+          <span className="text-ink-muted"> · {role}</span>
+          <span className="text-ink"> {what}</span>
+        </div>
+        <div className="text-xs text-ink-muted truncate">{detail}</div>
+      </div>
+    </li>
+  );
+}
+
+function SmallSpotlight({ tint, Icon, title, body }: {
+  tint: Tint;
+  Icon: React.ComponentType<{ className?: string }>;
+  title: string; body: string;
+}) {
+  const css = {
+    coral: 'bg-coral-100 text-coral-700', mint: 'bg-mint-100 text-mint-700',
+    lavender: 'bg-lavender-100 text-lavender-700', peach: 'bg-peach-100 text-peach-700',
+    brand: 'bg-brand-100 text-brand-700',
+  }[tint];
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+      <span className={`h-10 w-10 rounded-xl grid place-items-center ${css}`}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <h3 className="mt-3 text-base font-bold text-ink-strong">{title}</h3>
+      <p className="mt-1 text-sm text-ink leading-relaxed">{body}</p>
+    </div>
+  );
+}
+
+function Bullet({ tint, children }: { tint: Tint; children: React.ReactNode }) {
   const bg = {
     brand: 'bg-brand-100 text-brand-700',
     mint:  'bg-mint-100 text-mint-700',
@@ -277,7 +584,7 @@ function Bullet({ tint, children }: { tint: 'brand'|'mint'|'coral'|'lavender'|'p
   }[tint];
   return (
     <li className="flex items-start gap-3">
-      <span className={`mt-0.5 h-6 w-6 rounded-full grid place-items-center ${bg}`}>
+      <span className={`mt-0.5 h-6 w-6 rounded-full grid place-items-center shrink-0 ${bg}`}>
         <Check className="h-3.5 w-3.5" />
       </span>
       <span>{children}</span>
@@ -285,69 +592,8 @@ function Bullet({ tint, children }: { tint: 'brand'|'mint'|'coral'|'lavender'|'p
   );
 }
 
-function MockKpi({ tint, title, value, sub, icon }: {
-  tint:'peach'|'lavender'|'mint'|'brand'|'coral';
-  title:string; value:string; sub:string;
-  icon:React.ReactNode;
-}) {
-  const bg = { peach:'bg-peach-50', lavender:'bg-lavender-50', mint:'bg-mint-50', brand:'bg-brand-50', coral:'bg-coral-50' }[tint];
-  const fg = { peach:'text-peach-600', lavender:'text-lavender-600', mint:'text-mint-600', brand:'text-brand-600', coral:'text-coral-600' }[tint];
-  return (
-    <div className={`rounded-lg ${bg} p-3`}>
-      <div className="flex items-center justify-between">
-        <div className="text-[10px] uppercase tracking-wider text-ink-muted">{title}</div>
-        <div className={fg}>{icon}</div>
-      </div>
-      <div className="mt-1 text-lg font-bold text-ink-strong">{value}</div>
-      <div className="text-xs text-ink-muted">{sub}</div>
-    </div>
-  );
-}
-
-function MockBarChart() {
-  const bars = [30, 45, 60, 75, 50, 80, 95];
-  return (
-    <div className="mt-5 rounded-lg bg-brand-50 p-4">
-      <div className="flex items-end gap-2 h-24">
-        {bars.map((h, i) => (
-          <div key={i} className="flex-1 rounded-t bg-peach-500" style={{ height: `${h}%` }} />
-        ))}
-      </div>
-      <div className="mt-2 flex justify-between text-[10px] text-ink-muted">
-        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-      </div>
-    </div>
-  );
-}
-
-function TimelineRow({ time, tint, title, sub, icon }: {
-  time:string;
-  tint:'coral'|'peach'|'lavender'|'mint'|'brand';
-  title:string; sub:string;
-  icon:React.ReactNode;
-}) {
-  const bg = {
-    coral: 'bg-coral-100 text-coral-700',
-    peach: 'bg-peach-100 text-peach-700',
-    lavender: 'bg-lavender-100 text-lavender-700',
-    mint: 'bg-mint-100 text-mint-700',
-    brand: 'bg-brand-100 text-brand-700',
-  }[tint];
-  return (
-    <div className="flex items-center gap-3 py-2">
-      <span className="w-12 text-xs text-ink-muted">{time}</span>
-      <span className={`h-7 w-7 rounded-full grid place-items-center ${bg}`}>{icon}</span>
-      <span className="flex-1">
-        <span className="block font-medium text-ink-strong">{title}</span>
-        <span className="block text-xs text-ink-muted">{sub}</span>
-      </span>
-    </div>
-  );
-}
-
 function Step({ n, tint, Icon, title, text }: {
-  n:number;
-  tint:'brand'|'mint'|'coral'|'peach'|'lavender';
+  n:number; tint: Tint;
   Icon:React.ComponentType<{ className?: string }>;
   title:string; text:string;
 }) {
