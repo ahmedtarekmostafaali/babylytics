@@ -21,7 +21,7 @@ export type AuditFooterData = AuditSig & {
   last_updated_by_name: string | null;
 };
 
-/** Whitelist must mirror the SQL allowlist in migration 031. */
+/** Whitelist must mirror the SQL allowlist in migrations 031 + 038. */
 export type AuditTable =
   | 'feedings' | 'stool_logs' | 'sleep_logs' | 'medications' | 'medication_logs'
   | 'measurements' | 'temperature_logs' | 'vaccinations'
@@ -29,7 +29,8 @@ export type AuditTable =
   | 'developmental_milestones' | 'shopping_list_items' | 'allergies'
   | 'medical_conditions' | 'admissions' | 'discharges' | 'lab_panels' | 'lab_panel_items'
   | 'doctors' | 'appointments' | 'prenatal_visits' | 'ultrasounds' | 'fetal_movements'
-  | 'maternal_symptoms' | 'medical_files';
+  | 'maternal_symptoms' | 'medical_files'
+  | 'vital_signs_logs' | 'blood_sugar_logs';
 
 /**
  * Load audit signatures for a batch of rows in one round-trip and resolve

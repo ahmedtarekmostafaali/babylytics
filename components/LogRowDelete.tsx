@@ -20,7 +20,8 @@ export function LogRowDelete({
     | 'screen_time_logs' | 'activity_logs' | 'lab_panels'
     | 'prenatal_visits' | 'ultrasounds' | 'fetal_movements' | 'maternal_symptoms'
     | 'teething_logs' | 'speaking_logs' | 'developmental_milestones'
-    | 'shopping_list_items';
+    | 'shopping_list_items'
+    | 'vital_signs_logs' | 'blood_sugar_logs';
   id: string;
   label?: string;
 }) {

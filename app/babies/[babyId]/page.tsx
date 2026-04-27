@@ -686,10 +686,15 @@ export default async function BabyOverview({
         babyName={baby.name}
         ageDays={age}
         sex={baby.gender ?? 'unspecified'}
+        // Prefer the per-field "latest non-null weight" row over the
+        // current_weight_kg RPC, which can briefly return a stale value
+        // on the dashboard right after a weight-only measurement is
+        // logged (the RPC reads through a separate query path).
+        // lastWeightRow filters .not('weight_kg','is',null) directly.
         weightKg={
-          (currentWeight.data as number | null)
-            ?? (lastWeightRow.data?.weight_kg as number | null)
-            ?? lastMeasurement.data?.weight_kg
+          (lastWeightRow.data?.weight_kg as number | null)
+            ?? (currentWeight.data as number | null)
+            ?? (lastMeasurement.data?.weight_kg as number | null)
             ?? null
         }
         heightCm={(lastHeightRow.data?.height_cm as number | null) ?? null}

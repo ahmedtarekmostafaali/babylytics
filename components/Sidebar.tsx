@@ -14,7 +14,7 @@ import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
   Stethoscope, CalendarClock, HeartPulse, ScanLine, Activity, Heart, Tv, FlaskConical,
-  Smile, MessageCircle, ChevronDown, Settings, ShoppingCart, Megaphone,
+  Smile, MessageCircle, ChevronDown, Settings, ShoppingCart, Megaphone, MessageSquare,
 } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 
@@ -230,6 +230,8 @@ export function Sidebar() {
             active={pathname === '/dashboard'} collapsed={collapsed} tint="brand" />
           <NavItem href="/updates" icon={Megaphone} label={t('nav.updates')}
             active={pathname?.startsWith('/updates') ?? false} collapsed={collapsed} tint="mint" />
+          <NavItem href="/feedback" icon={MessageSquare} label={t('nav.feedback')}
+            active={pathname?.startsWith('/feedback') ?? false} collapsed={collapsed} tint="coral" />
         </NavGroup>
 
         {currentBabyId && (
@@ -258,6 +260,8 @@ export function Sidebar() {
                   <NavItem href={`/babies/${currentBabyId}/prenatal/kicks`}        icon={Activity}    label="Kick counter"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/kicks`) ?? false} collapsed={collapsed} tint="coral" />
                   <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}    label="Maternal vitals" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />
                   <NavItem href={`/babies/${currentBabyId}/prenatal/symptoms`}     icon={HeartPulse}  label={t('nav.symptoms')} active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/symptoms`) ?? false} collapsed={collapsed} tint="lavender" />
+                  <NavItem href={`/babies/${currentBabyId}/vitals`}                icon={Activity}    label={t('nav.vitals')}      active={pathname?.startsWith(`/babies/${currentBabyId}/vitals`) ?? false} collapsed={collapsed} tint="coral" />
+                  <NavItem href={`/babies/${currentBabyId}/blood-sugar`}           icon={Droplet}     label={t('nav.blood_sugar')} active={pathname?.startsWith(`/babies/${currentBabyId}/blood-sugar`) ?? false} collapsed={collapsed} tint="coral" />
                 </NavCategory>
 
                 <NavCategory id="preg_records" label={t('nav.cat_records')} icon={FileText} collapsed={collapsed}
@@ -279,6 +283,8 @@ export function Sidebar() {
                   <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}     label={t('nav.stool')}        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />
                   <NavItem href={`/babies/${currentBabyId}/sleep`}         icon={Moon}        label={t('nav.sleep')}        active={pathname?.startsWith(`/babies/${currentBabyId}/sleep`) ?? false} collapsed={collapsed} tint="lavender" />
                   <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label={t('nav.temperature')}  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />
+                  <NavItem href={`/babies/${currentBabyId}/vitals`}        icon={Activity}    label={t('nav.vitals')}       active={pathname?.startsWith(`/babies/${currentBabyId}/vitals`) ?? false}    collapsed={collapsed} tint="coral" />
+                  <NavItem href={`/babies/${currentBabyId}/blood-sugar`}   icon={Droplet}     label={t('nav.blood_sugar')}  active={pathname?.startsWith(`/babies/${currentBabyId}/blood-sugar`) ?? false} collapsed={collapsed} tint="coral" />
                   <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}       label={t('nav.measurements')} active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />
                 </NavCategory>
 

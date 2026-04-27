@@ -131,6 +131,8 @@ export default async function Landing() {
             <FeatureChip Icon={Droplet}     title={t('landing.feat_stool_t')} sub={t('landing.feat_stool_x')} />
             <FeatureChip Icon={Moon}        title={t('landing.feat_sleep_t')} sub={t('landing.feat_sleep_x')} />
             <FeatureChip Icon={Thermometer} title={t('landing.feat_temp_t')}  sub={t('landing.feat_temp_x')} />
+            <FeatureChip Icon={Activity}    title={t('landing.feat_vitals_t')}  sub={t('landing.feat_vitals_x')} />
+            <FeatureChip Icon={Droplet}     title={t('landing.feat_glucose_t')} sub={t('landing.feat_glucose_x')} />
             <FeatureChip Icon={Ruler}       title={t('landing.feat_meas_t')}  sub={t('landing.feat_meas_x')} />
           </CategoryCard>
 
