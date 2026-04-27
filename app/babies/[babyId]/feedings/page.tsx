@@ -14,6 +14,8 @@ import {
 } from '@/lib/dates';
 import { fmtMl } from '@/lib/units';
 import { loadUserPrefs } from '@/lib/user-prefs';
+import { loadAuditSignatures } from '@/lib/audit';
+import { AuditFooter } from '@/components/AuditFooter';
 import { tFor } from '@/lib/i18n';
 import {
   Milk, Baby as BabyIcon, Cookie, Plus, Edit3, Sparkles,
@@ -78,7 +80,8 @@ export default async function FeedingsLog({
 }) {
   const supabase = createClient();
   const range = parseRangeParam(searchParams);
-  const t = tFor((await loadUserPrefs(supabase)).language);
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
   // Kind filter — accepts a single `type=` or comma-separated list. Empty = all.
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean) as MilkType[];
   const activeTypes: MilkType[] = rawTypes.filter((t): t is MilkType => MILK_TYPES.includes(t));
@@ -98,6 +101,7 @@ export default async function FeedingsLog({
 
   const { data: rowsData } = await feedQuery.order('feeding_time', { ascending: false }).limit(500);
   const rows = (rowsData ?? []) as Row[];
+  const auditMap = await loadAuditSignatures(supabase, 'feedings', rows.map(r => r.id));
 
   // Range summary — drives the "Summary" card on the right rail. Updates
   // whenever the user changes the range tabs or picks a custom date range.
@@ -307,10 +311,8 @@ export default async function FeedingsLog({
                         </div>
                       )}
 
-                      <div className="border-t border-slate-100 pt-3">
-                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.logged_on')}</div>
-                        <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
-                      </div>
+                      <AuditFooter audit={auditMap.get(selected.id) ?? null}
+                        fallbackCreatedAt={selected.created_at} lang={userPrefs.language} />
                     </>
                   );
                 })()}

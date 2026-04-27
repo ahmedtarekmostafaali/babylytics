@@ -13,6 +13,8 @@ import {
 import { Heart, Plus, Edit3, ArrowRight, Clock } from 'lucide-react';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { tFor, type TFunc } from '@/lib/i18n';
+import { loadAuditSignatures } from '@/lib/audit';
+import { AuditFooter } from '@/components/AuditFooter';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Maternal symptoms' };
@@ -79,6 +81,9 @@ export default async function SymptomsList({
     .gte('logged_at', range.start).lte('logged_at', range.end)
     .order('logged_at', { ascending: false }).limit(500);
   const rows = (rowsData ?? []) as SymptomRow[];
+
+  // Audit signatures for the visible rows (created_by name + last edit info).
+  const auditMap = await loadAuditSignatures(supabase, 'maternal_symptoms', rows.map(r => r.id));
 
   // Group rows by day
   const buckets = new Map<string, SymptomRow[]>();
@@ -221,10 +226,8 @@ export default async function SymptomsList({
                   </div>
                 )}
 
-                <div className="border-t border-slate-100 pt-3">
-                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('prenatal.common_logged_on')}</div>
-                  <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
-                </div>
+                <AuditFooter audit={auditMap.get(selected.id) ?? null}
+                  fallbackCreatedAt={selected.created_at} lang={userPrefs.language} />
               </div>
             )}
           </section>

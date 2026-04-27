@@ -1428,6 +1428,14 @@ export const en = {
     common_logged_on:      'Logged on',
   },
 
+  // ── Audit trail (logged-by / edited-by footer) ──────────────────
+  audit: {
+    logged_by:    'Logged by',
+    logged:       'Logged',
+    edited_by:    'Last edited by',
+    edited:       'Last edited',
+  },
+
   // ── Maternal symptoms tracker ───────────────────────────────────
   symptoms: {
     title:           'Maternal symptoms',

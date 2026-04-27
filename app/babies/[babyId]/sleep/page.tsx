@@ -9,6 +9,8 @@ import { BulkDelete } from '@/components/BulkDelete';
 import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
 import { loadUserPrefs } from '@/lib/user-prefs';
+import { loadAuditSignatures } from '@/lib/audit';
+import { AuditFooter } from '@/components/AuditFooter';
 import { tFor } from '@/lib/i18n';
 import { Sparkline } from '@/components/Sparkline';
 import {
@@ -69,7 +71,8 @@ export default async function SleepLog({
   searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
-  const t = tFor((await loadUserPrefs(supabase)).language);
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
   const range = parseRangeParam(searchParams);
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const activeQualities = rawTypes.filter((t): t is SleepQuality => (SLEEP_QUALITIES as readonly string[]).includes(t));
@@ -103,6 +106,7 @@ export default async function SleepLog({
   ]);
 
   const rows = (rowsData ?? []) as Row[];
+  const auditMap = await loadAuditSignatures(supabase, 'sleep_logs', rows.map(r => r.id));
   const todays = (todayData ?? []) as { duration_min: number | null; end_at: string | null }[];
   const week   = (weekData ?? []) as { start_at: string; duration_min: number | null }[];
   const todayTotalMin = todays.reduce((a, r) => a + (r.duration_min ?? 0), 0);
@@ -286,10 +290,8 @@ export default async function SleepLog({
                       <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                     </div>
                   )}
-                  <div className="border-t border-slate-100 pt-3">
-                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.logged_on')}</div>
-                    <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
-                  </div>
+                  <AuditFooter audit={auditMap.get(selected.id) ?? null}
+                    fallbackCreatedAt={selected.created_at} lang={userPrefs.language} />
                 </div>
               );
             })()}

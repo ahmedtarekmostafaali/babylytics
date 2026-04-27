@@ -1388,6 +1388,14 @@ export const ar: Messages = {
     common_logged_on:      'تم التسجيل',
   },
 
+  // ── Audit trail (logged-by / edited-by footer) ──────────────────
+  audit: {
+    logged_by:    'سجّلها',
+    logged:       'تم التسجيل',
+    edited_by:    'آخر تعديل بواسطة',
+    edited:       'آخر تعديل',
+  },
+
   // ── Maternal symptoms tracker ───────────────────────────────────
   symptoms: {
     title:           'أعراض الأم',

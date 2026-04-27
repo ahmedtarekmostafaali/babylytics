@@ -9,6 +9,8 @@ import { BulkDelete } from '@/components/BulkDelete';
 import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
 import { loadUserPrefs } from '@/lib/user-prefs';
+import { loadAuditSignatures } from '@/lib/audit';
+import { AuditFooter } from '@/components/AuditFooter';
 import { tFor } from '@/lib/i18n';
 import {
   parseRangeParam, dayWindow, fmtDate, fmtTime, fmtDateTime, todayLocalDate, yesterdayLocalDate, localDayKey,
@@ -49,7 +51,8 @@ export default async function MedicationsLog({
   searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
-  const t = tFor((await loadUserPrefs(supabase)).language);
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
   const range = parseRangeParam(searchParams);
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const activeStatuses = rawTypes.filter((t): t is MedStatus => (MED_STATUSES as readonly string[]).includes(t));
@@ -83,6 +86,7 @@ export default async function MedicationsLog({
 
   const meds = (medsData ?? []) as Med[];
   const logs = (logsData ?? []) as LogRow[];
+  const auditMap = await loadAuditSignatures(supabase, 'medication_logs', logs.map(l => l.id));
   const todays = (todayLogs ?? []) as { status: LogRow['status'] }[];
   const medById = new Map(meds.map(m => [m.id, m]));
 
@@ -348,10 +352,8 @@ export default async function MedicationsLog({
                       <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                     </div>
                   )}
-                  <div className="border-t border-slate-100 pt-3">
-                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Logged on</div>
-                    <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
-                  </div>
+                  <AuditFooter audit={auditMap.get(selected.id) ?? null}
+                    fallbackCreatedAt={selected.created_at} lang={userPrefs.language} />
                 </div>
               );
             })()}

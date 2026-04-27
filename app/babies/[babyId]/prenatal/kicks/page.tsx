@@ -13,6 +13,8 @@ import {
 import { Activity, ArrowRight, Clock } from 'lucide-react';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { tFor, type TFunc } from '@/lib/i18n';
+import { loadAuditSignatures } from '@/lib/audit';
+import { AuditFooter } from '@/components/AuditFooter';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Kick counter' };
@@ -53,6 +55,7 @@ export default async function KicksPage({
     .gte('counted_at', range.start).lte('counted_at', range.end)
     .order('counted_at', { ascending: false }).limit(500);
   const rows = (rowsData ?? []) as KickRow[];
+  const auditMap = await loadAuditSignatures(supabase, 'fetal_movements', rows.map(r => r.id));
 
   // Group rows by day
   const buckets = new Map<string, KickRow[]>();
@@ -181,10 +184,8 @@ export default async function KicksPage({
                   </div>
                 )}
 
-                <div className="border-t border-slate-100 pt-3">
-                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('prenatal.common_logged_on')}</div>
-                  <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
-                </div>
+                <AuditFooter audit={auditMap.get(selected.id) ?? null}
+                  fallbackCreatedAt={selected.created_at} lang={userPrefs.language} />
               </div>
             )}
           </section>

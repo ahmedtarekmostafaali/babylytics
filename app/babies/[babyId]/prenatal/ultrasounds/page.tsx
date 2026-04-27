@@ -13,6 +13,8 @@ import {
 import { ScanLine, Plus, Edit3, ArrowRight, Clock, AlertTriangle } from 'lucide-react';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { tFor, type TFunc } from '@/lib/i18n';
+import { loadAuditSignatures } from '@/lib/audit';
+import { AuditFooter } from '@/components/AuditFooter';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Ultrasounds' };
@@ -57,6 +59,7 @@ export default async function UltrasoundsList({
     .gte('scanned_at', range.start).lte('scanned_at', range.end)
     .order('scanned_at', { ascending: false }).limit(500);
   const rows = (rowsData ?? []) as Row[];
+  const auditMap = await loadAuditSignatures(supabase, 'ultrasounds', rows.map(r => r.id));
 
   // Group rows by day
   const buckets = new Map<string, Row[]>();
@@ -234,10 +237,8 @@ export default async function UltrasoundsList({
                         </div>
                       )}
 
-                      <div className="border-t border-slate-100 pt-3">
-                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('prenatal.common_logged_on')}</div>
-                        <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
-                      </div>
+                      <AuditFooter audit={auditMap.get(selected.id) ?? null}
+                        fallbackCreatedAt={selected.created_at} lang={userPrefs.language} />
                     </>
                   );
                 })()}

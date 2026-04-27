@@ -9,6 +9,8 @@ import { BulkDelete } from '@/components/BulkDelete';
 import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
 import { loadUserPrefs } from '@/lib/user-prefs';
+import { loadAuditSignatures } from '@/lib/audit';
+import { AuditFooter } from '@/components/AuditFooter';
 import { tFor } from '@/lib/i18n';
 import { Sparkline } from '@/components/Sparkline';
 import {
@@ -53,7 +55,8 @@ export default async function MeasurementsLog({
   searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
-  const t = tFor((await loadUserPrefs(supabase)).language);
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
   const range = parseRangeParam(searchParams);
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean);
   const activeKinds = rawTypes.filter((t): t is MeasKind => (MEAS_KINDS as readonly string[]).includes(t));
@@ -83,6 +86,7 @@ export default async function MeasurementsLog({
         (k === 'head'   && r.head_circ_cm != null)
       ))
     : rowsAll;
+  const auditMap = await loadAuditSignatures(supabase, 'measurements', rows.map(r => r.id));
   const all  = (allRows ?? []) as Row[];
 
   const weightSpark = all.map(r => r.weight_kg != null ? Number(r.weight_kg) : NaN).filter(n => Number.isFinite(n));
@@ -232,10 +236,8 @@ export default async function MeasurementsLog({
                     <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                   </div>
                 )}
-                <div className="border-t border-slate-100 pt-3">
-                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.logged_on')}</div>
-                  <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
-                </div>
+                <AuditFooter audit={auditMap.get(selected.id) ?? null}
+                  fallbackCreatedAt={selected.created_at} lang={userPrefs.language} />
               </div>
             )}
           </section>

@@ -8,6 +8,8 @@ import { BulkDelete } from '@/components/BulkDelete';
 import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
 import { loadUserPrefs } from '@/lib/user-prefs';
+import { loadAuditSignatures } from '@/lib/audit';
+import { AuditFooter } from '@/components/AuditFooter';
 import { tFor } from '@/lib/i18n';
 import { fmtDate, fmtDateTime, fmtRelative } from '@/lib/dates';
 import {
@@ -66,7 +68,8 @@ export default async function VaccinationsLog({
   searchParams: { tab?: Tab; id?: string };
 }) {
   const supabase = createClient();
-  const t = tFor((await loadUserPrefs(supabase)).language);
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
   const perms = await assertRole(params.babyId, { requireLogs: true });
 
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
@@ -79,6 +82,7 @@ export default async function VaccinationsLog({
     .order('scheduled_at', { ascending: true, nullsFirst: false })
     .limit(300);
   const rows = (rowsRaw ?? []) as Row[];
+  const auditMap = await loadAuditSignatures(supabase, 'vaccinations', rows.map(r => r.id));
 
   const now = Date.now();
   const overdue  = rows.filter(r => r.status === 'scheduled' && r.scheduled_at && new Date(r.scheduled_at).getTime() < now);
@@ -282,12 +286,8 @@ export default async function VaccinationsLog({
                           <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                         </div>
                       )}
-                      <div className="border-t border-slate-100 pt-3">
-                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
-                          {selected.status === 'administered' ? 'Logged on' : 'Added on'}
-                        </div>
-                        <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
-                      </div>
+                      <AuditFooter audit={auditMap.get(selected.id) ?? null}
+                        fallbackCreatedAt={selected.created_at} lang={userPrefs.language} />
                     </div>
                   );
                 })()}

@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { assertRole } from '@/lib/role-guard';
 import { loadUserPrefs } from '@/lib/user-prefs';
+import { loadAuditSignatures } from '@/lib/audit';
+import { AuditFooter } from '@/components/AuditFooter';
 import { tFor } from '@/lib/i18n';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { LogRangeTabs } from '@/components/LogRangeTabs';
@@ -47,7 +49,8 @@ export default async function ScreenTimeList({
   searchParams: { range?: string; start?: string; end?: string; id?: string; type?: string };
 }) {
   const supabase = createClient();
-  const t = tFor((await loadUserPrefs(supabase)).language);
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
   const range = parseRangeParam(searchParams);
 
   const rawTypes = (searchParams.type ?? '').split(',').map(s => s.trim()).filter(Boolean) as Device[];
@@ -64,6 +67,7 @@ export default async function ScreenTimeList({
 
   const { data: rowsData } = await query.order('started_at', { ascending: false }).limit(500);
   const rows = (rowsData ?? []) as Row[];
+  const auditMap = await loadAuditSignatures(supabase, 'screen_time_logs', rows.map(r => r.id));
 
   // Group rows by day
   const buckets = new Map<string, Row[]>();
@@ -219,10 +223,8 @@ export default async function ScreenTimeList({
                   </div>
                 )}
 
-                <div className="border-t border-slate-100 pt-3">
-                  <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.logged_on')}</div>
-                  <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
-                </div>
+                <AuditFooter audit={auditMap.get(selected.id) ?? null}
+                  fallbackCreatedAt={selected.created_at} lang={userPrefs.language} />
               </div>
             )}
           </section>
