@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Download, FileImage, FileText, Loader2, X, Share2, Check } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * Capture the element matching the given selector and download it as either
@@ -17,13 +18,15 @@ import { Download, FileImage, FileText, Loader2, X, Share2, Check } from 'lucide
  */
 export function ExportButton({
   target = 'report-capture',
-  label = 'Save report',
+  label,
   filenameHint,
 }: {
   target?: string;
   label?: string;
   filenameHint?: string;
 }) {
+  const t = useT();
+  const buttonLabel = label ?? t('exporter.default_label');
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<'pdf' | 'png' | 'share' | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -34,7 +37,7 @@ export function ExportButton({
       || (typeof document !== 'undefined'
           ? document.querySelector('h1')?.textContent?.trim()
           : null)
-      || 'Babylytics report';
+      || t('exporter.default_filename');
     const safe = title.replace(/[\\/:*?"<>|]/g, '-').slice(0, 80);
     const date = new Date().toISOString().slice(0, 10);
     return `${safe} — ${date}.${ext}`;
@@ -42,7 +45,7 @@ export function ExportButton({
 
   async function capture(): Promise<{ dataUrl: string; width: number; height: number } | null> {
     const el = document.getElementById(target);
-    if (!el) { setErr(`Couldn\'t find the report on the page (missing #${target}).`); return null; }
+    if (!el) { setErr(t('exporter.not_found', { target })); return null; }
 
     // Dynamic import keeps html-to-image out of the main bundle.
     const { toPng } = await import('html-to-image');
@@ -91,7 +94,7 @@ export function ExportButton({
       setDone('png');
       setTimeout(() => { setOpen(false); setDone(null); }, 1200);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Export failed.');
+      setErr(e instanceof Error ? e.message : t('exporter.export_failed'));
     } finally {
       setBusy(null);
     }
@@ -125,7 +128,7 @@ export function ExportButton({
       setDone('pdf');
       setTimeout(() => { setOpen(false); setDone(null); }, 1200);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Export failed.');
+      setErr(e instanceof Error ? e.message : t('exporter.export_failed'));
     } finally {
       setBusy(null);
     }
@@ -154,7 +157,7 @@ export function ExportButton({
       await asPng();
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return; // user cancelled
-      setErr(e instanceof Error ? e.message : 'Share failed.');
+      setErr(e instanceof Error ? e.message : t('exporter.share_failed'));
     } finally {
       setBusy(null);
     }
@@ -166,7 +169,7 @@ export function ExportButton({
     <div className="inline-flex items-center no-export">
       <button onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 rounded-full bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold px-4 py-2 shadow-sm">
-        <Download className="h-4 w-4" /> {label}
+        <Download className="h-4 w-4" /> {buttonLabel}
       </button>
 
       {open && (
@@ -174,19 +177,19 @@ export function ExportButton({
           <div className="w-full max-w-md rounded-2xl bg-white shadow-panel p-6 relative" onClick={e => e.stopPropagation()}>
             <button onClick={() => setOpen(false)}
               className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-slate-100"
-              aria-label="Close">
+              aria-label={t('exporter.close')}>
               <X className="h-4 w-4" />
             </button>
-            <h3 className="text-lg font-bold text-ink-strong">Save this report</h3>
+            <h3 className="text-lg font-bold text-ink-strong">{t('exporter.title')}</h3>
             <p className="text-xs text-ink-muted mt-1">
-              Everything is rendered to one page — works on iPhone, Android, and desktop.
+              {t('exporter.intro')}
             </p>
 
             <div className="mt-5 grid gap-3">
               <ExportOption
                 icon={FileText}
-                title="Save as PDF"
-                body="One A4 page, fit to width. Best for sharing or printing later."
+                title={t('exporter.pdf_h')}
+                body={t('exporter.pdf_b')}
                 disabled={busy !== null}
                 busy={busy === 'pdf'}
                 done={done === 'pdf'}
@@ -195,8 +198,8 @@ export function ExportButton({
 
               <ExportOption
                 icon={FileImage}
-                title="Save as image"
-                body="High-resolution PNG. Drop it into notes, chats, or your camera roll."
+                title={t('exporter.img_h')}
+                body={t('exporter.img_b')}
                 disabled={busy !== null}
                 busy={busy === 'png'}
                 done={done === 'png'}
@@ -206,8 +209,8 @@ export function ExportButton({
               {isMobile && (
                 <ExportOption
                   icon={Share2}
-                  title="Share"
-                  body="Send straight to WhatsApp, Mail, or AirDrop via your share sheet."
+                  title={t('exporter.share_h')}
+                  body={t('exporter.share_b')}
                   disabled={busy !== null}
                   busy={busy === 'share'}
                   done={done === 'share'}
@@ -219,7 +222,7 @@ export function ExportButton({
             {err && <p className="mt-3 text-xs text-coral-600 font-medium">{err}</p>}
 
             <p className="mt-4 text-[11px] text-ink-muted">
-              Tip: the capture runs in your browser — nothing leaves your device.
+              {t('exporter.privacy_tip')}
             </p>
           </div>
         </div>

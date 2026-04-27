@@ -1699,6 +1699,77 @@ export const en = {
     min_unit:              'min',
   },
 
+  // ── Top nav (legacy fallback) ───────────────────────────────────
+  topnav: {
+    dashboard:             'Dashboard',
+    babies:                'Babies',
+    log_out:               'Log out',
+  },
+
+  // ── Export dialog ───────────────────────────────────────────────
+  exporter: {
+    default_label:         'Save report',
+    default_filename:      'Babylytics report',
+    not_found:             "Couldn't find the report on the page (missing #{target}).",
+    export_failed:         'Export failed.',
+    share_failed:          'Share failed.',
+    close:                 'Close',
+    title:                 'Save this report',
+    intro:                 'Everything is rendered to one page — works on iPhone, Android, and desktop.',
+    pdf_h:                 'Save as PDF',
+    pdf_b:                 'One A4 page, fit to width. Best for sharing or printing later.',
+    img_h:                 'Save as image',
+    img_b:                 'High-resolution PNG. Drop it into notes, chats, or your camera roll.',
+    share_h:               'Share',
+    share_b:               'Send straight to WhatsApp, Mail, or AirDrop via your share sheet.',
+    privacy_tip:           'Tip: the capture runs in your browser — nothing leaves your device.',
+  },
+
+  // ── Comments component (every log page footer) ──────────────────
+  comments: {
+    not_signed_in:         'Not signed in.',
+    delete_confirm:        'Delete this comment?',
+    delete_aria:           'Delete comment',
+    placeholder:           'Leave a note for other caregivers…',
+  },
+
+  // ── Notifications bell popup ────────────────────────────────────
+  notif: {
+    medication_due:        'Medication due',
+    medication_missed:     'Dose missed',
+    low_ocr_confidence:    'Low OCR confidence',
+    file_ready:            'File ready',
+    feeding_alert:         'Feeding alert',
+    stool_alert:           'Stool alert',
+    clear_confirm:         'Clear all notifications? Read items disappear from the list.',
+    mark_read:             'Mark read',
+    aria_label:            'Notifications',
+    header:                'Notifications',
+    n_unread:              '{n} unread',
+    close:                 'Close',
+    mark_all:              'Mark all read',
+    clear_all:             'Clear all',
+    loading:               'Loading…',
+    all_caught_up:         'All caught up.',
+    smart_scan_review:     'Smart Scan needs review',
+    smart_scan_conf:       'Smart Scan extraction at {n}% confidence — please review.',
+    smart_scan_needs:      'Smart Scan extraction needs review.',
+    med_due_msg:           'A scheduled dose is due now.',
+    med_missed_msg:        'A scheduled dose was missed.',
+    file_ready_msg:        'A file finished processing.',
+  },
+
+  // ── Legal footer ────────────────────────────────────────────────
+  footer: {
+    medical_disclaimer:    'Babylytics is not a medical device. Information shown is for tracking only — always consult your pediatrician.',
+    read_more:             'Read more',
+    copyright:             '© {year} Babylytics. Made with care.',
+    privacy:               'Privacy',
+    terms:                 'Terms',
+    medical_disclaimer_link:'Medical disclaimer',
+    contact:               'Contact',
+  },
+
   // ── OCR review ──────────────────────────────────────────────────
   ocr: {
     title:               'OCR extraction',

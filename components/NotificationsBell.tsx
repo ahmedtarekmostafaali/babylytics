@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import {
   Bell, X, Check, Pill, FileText, Milk, Droplet, AlertTriangle, BellOff, ArrowRight,
 } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 type Notification = {
   id: string;
@@ -19,17 +20,18 @@ type Notification = {
   created_at: string;
 };
 
-const KIND_META: Record<string, { icon: React.ComponentType<{ className?: string }>; tint: string; label: string }> = {
-  medication_due:      { icon: Pill,    tint: 'bg-coral-100 text-coral-700',     label: 'Medication due' },
-  medication_missed:   { icon: Pill,    tint: 'bg-coral-100 text-coral-700',     label: 'Dose missed' },
-  low_ocr_confidence:  { icon: FileText,tint: 'bg-peach-100 text-peach-700',     label: 'Smart Scan needs review' },
-  file_ready:          { icon: FileText,tint: 'bg-mint-100 text-mint-700',       label: 'File ready' },
-  feeding_alert:       { icon: Milk,    tint: 'bg-coral-100 text-coral-700',     label: 'Feeding alert' },
-  stool_alert:         { icon: Droplet, tint: 'bg-mint-100 text-mint-700',       label: 'Stool alert' },
+const KIND_META: Record<string, { icon: React.ComponentType<{ className?: string }>; tint: string; tkey: string }> = {
+  medication_due:      { icon: Pill,    tint: 'bg-coral-100 text-coral-700',     tkey: 'notif.medication_due' },
+  medication_missed:   { icon: Pill,    tint: 'bg-coral-100 text-coral-700',     tkey: 'notif.medication_missed' },
+  low_ocr_confidence:  { icon: FileText,tint: 'bg-peach-100 text-peach-700',     tkey: 'notif.smart_scan_review' },
+  file_ready:          { icon: FileText,tint: 'bg-mint-100 text-mint-700',       tkey: 'notif.file_ready' },
+  feeding_alert:       { icon: Milk,    tint: 'bg-coral-100 text-coral-700',     tkey: 'notif.feeding_alert' },
+  stool_alert:         { icon: Droplet, tint: 'bg-mint-100 text-mint-700',       tkey: 'notif.stool_alert' },
 };
 
 export function NotificationsBell({ babyId }: { babyId: string }) {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,7 +77,7 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
   }
 
   async function clearAll() {
-    if (!window.confirm('Clear all notifications? Read items disappear from the list.')) return;
+    if (!window.confirm(t('notif.clear_confirm'))) return;
     const supabase = createClient();
     const { error } = await supabase.rpc('clear_notifications', { p_baby: babyId });
     if (!error) {
@@ -111,7 +113,7 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
     <div className="relative" ref={ref}>
       <button onClick={() => setOpen(o => !o)}
         className="relative h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
-        aria-label="Notifications">
+        aria-label={t('notif.aria_label')}>
         <Bell className={`h-4 w-4 ${unread > 0 ? 'text-coral-600' : 'text-ink'}`} />
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-coral-500 text-white text-[10px] grid place-items-center font-bold">
@@ -125,14 +127,14 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-ink" />
-              <h3 className="text-sm font-bold text-ink-strong">Notifications</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('notif.header')}</h3>
               {unread > 0 && (
                 <span className="text-[10px] font-bold uppercase tracking-wider text-coral-700 bg-coral-50 px-1.5 py-0.5 rounded-full">
-                  {unread} unread
+                  {t('notif.n_unread', { n: unread })}
                 </span>
               )}
             </div>
-            <button onClick={() => setOpen(false)} className="h-7 w-7 grid place-items-center rounded-full hover:bg-slate-100" aria-label="Close">
+            <button onClick={() => setOpen(false)} className="h-7 w-7 grid place-items-center rounded-full hover:bg-slate-100" aria-label={t('notif.close')}>
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -144,42 +146,42 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
                 'inline-flex items-center gap-1 font-semibold',
                 unread === 0 ? 'text-ink-muted' : 'text-brand-600 hover:text-brand-700'
               )}>
-              <Check className="h-3.5 w-3.5" /> Mark all read
+              <Check className="h-3.5 w-3.5" /> {t('notif.mark_all')}
             </button>
             <button onClick={clearAll} disabled={items.length === 0}
               className={cn(
                 'inline-flex items-center gap-1 font-semibold',
                 items.length === 0 ? 'text-ink-muted' : 'text-coral-600 hover:text-coral-700'
               )}>
-              <BellOff className="h-3.5 w-3.5" /> Clear all
+              <BellOff className="h-3.5 w-3.5" /> {t('notif.clear_all')}
             </button>
           </div>
 
           {/* List */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <p className="p-6 text-center text-xs text-ink-muted">Loading…</p>
+              <p className="p-6 text-center text-xs text-ink-muted">{t('notif.loading')}</p>
             ) : items.length === 0 ? (
               <div className="p-6 text-center text-sm text-ink-muted">
                 <BellOff className="h-7 w-7 mx-auto opacity-50" />
-                <p className="mt-2">All caught up.</p>
+                <p className="mt-2">{t('notif.all_caught_up')}</p>
               </div>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {items.map(n => {
-                  const meta = KIND_META[n.kind] ?? { icon: AlertTriangle, tint: 'bg-slate-100 text-ink', label: n.kind };
+                  const meta = KIND_META[n.kind] ?? { icon: AlertTriangle, tint: 'bg-slate-100 text-ink', tkey: '' };
                   const Icon = meta.icon;
                   const href = hrefFor(n);
                   const message = (() => {
                     if (typeof n.payload?.message === 'string') return n.payload.message as string;
                     if (n.kind === 'low_ocr_confidence') {
                       const conf = typeof n.payload?.confidence === 'number' ? Math.round(n.payload.confidence * 100) : null;
-                      return conf != null ? `Smart Scan extraction at ${conf}% confidence — please review.` : 'Smart Scan extraction needs review.';
+                      return conf != null ? t('notif.smart_scan_conf', { n: conf }) : t('notif.smart_scan_needs');
                     }
-                    if (n.kind === 'medication_due')    return 'A scheduled dose is due now.';
-                    if (n.kind === 'medication_missed') return 'A scheduled dose was missed.';
-                    if (n.kind === 'file_ready')        return 'A file finished processing.';
-                    return meta.label;
+                    if (n.kind === 'medication_due')    return t('notif.med_due_msg');
+                    if (n.kind === 'medication_missed') return t('notif.med_missed_msg');
+                    if (n.kind === 'file_ready')        return t('notif.file_ready_msg');
+                    return meta.tkey ? t(meta.tkey) : n.kind;
                   })();
                   const Body = (
                     <>
@@ -208,7 +210,7 @@ export function NotificationsBell({ babyId }: { babyId: string }) {
                       {!n.read_at && (
                         <button onClick={() => dismiss(n.id)}
                           className="opacity-0 group-hover:opacity-100 transition h-6 w-6 grid place-items-center rounded-full hover:bg-slate-100"
-                          title="Mark read" aria-label="Mark read">
+                          title={t('notif.mark_read')} aria-label={t('notif.mark_read')}>
                           <Check className="h-3.5 w-3.5 text-ink-muted" />
                         </button>
                       )}

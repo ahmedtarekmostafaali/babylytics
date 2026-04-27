@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { MessageCircle, Send, Trash2 } from 'lucide-react';
 import { fmtRelative } from '@/lib/dates';
+import { useT } from '@/lib/i18n/client';
 
 type TargetTable =
   | 'feedings' | 'stool_logs' | 'medications' | 'medication_logs' | 'measurements'
@@ -40,6 +41,7 @@ export function Comments({
   /** If false, hides the compose form (viewer/nurse). Server RLS enforces too. */
   canPost?: boolean;
 }) {
+  const t = useT();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState('');
@@ -102,7 +104,7 @@ export function Comments({
     setPosting(true); setErr(null);
     const supabase = createClient();
     const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) { setPosting(false); setErr('Not signed in.'); return; }
+    if (!auth.user) { setPosting(false); setErr(t('comments.not_signed_in')); return; }
     const { data, error } = await supabase
       .from('comments')
       .insert({
@@ -120,7 +122,7 @@ export function Comments({
   }
 
   async function remove(id: string) {
-    if (!window.confirm('Delete this comment?')) return;
+    if (!window.confirm(t('comments.delete_confirm'))) return;
     const supabase = createClient();
     const { error } = await supabase.from('comments').update({ deleted_at: new Date().toISOString() }).eq('id', id);
     if (error) { setErr(error.message); return; }
@@ -156,7 +158,7 @@ export function Comments({
                   </span>
                   <span className="text-ink-muted">{fmtRelative(c.created_at)}</span>
                   {isMine && (
-                    <button onClick={() => remove(c.id)} className="ml-auto text-ink-muted hover:text-coral-600" aria-label="Delete comment">
+                    <button onClick={() => remove(c.id)} className="ml-auto text-ink-muted hover:text-coral-600" aria-label={t('comments.delete_aria')}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -177,7 +179,7 @@ export function Comments({
             <textarea
               value={body}
               onChange={e => setBody(e.target.value)}
-              placeholder="Leave a note for other caregivers…"
+              placeholder={t('comments.placeholder')}
               rows={2}
               className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
             />
