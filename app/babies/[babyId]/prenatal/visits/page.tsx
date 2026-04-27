@@ -11,6 +11,8 @@ import {
   todayLocalDate, yesterdayLocalDate, localDayKey,
 } from '@/lib/dates';
 import { Stethoscope, Plus, Edit3, ArrowRight, Clock } from 'lucide-react';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor, type TFunc } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Prenatal visits' };
@@ -30,12 +32,12 @@ type VisitRow = {
   created_at: string;
 };
 
-function groupHeading(iso: string): string {
+function groupHeading(iso: string, t: TFunc): string {
   const today = todayLocalDate();
   const y = yesterdayLocalDate();
   const k = localDayKey(iso);
-  if (k === today) return `Today, ${fmtDate(iso)}`;
-  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  if (k === today) return `${t('prenatal.today_prefix')}${fmtDate(iso)}`;
+  if (k === y)     return `${t('prenatal.yesterday_prefix')}${fmtDate(iso)}`;
   return fmtDate(iso);
 }
 
@@ -48,6 +50,8 @@ export default async function VisitsList({
   const supabase = createClient();
   const range = parseRangeParam(searchParams);
   const perms = await assertRole(params.babyId, {});
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
 
   const [{ data: rowsData }, { data: doctors }] = await Promise.all([
     supabase.from('prenatal_visits')
@@ -69,29 +73,29 @@ export default async function VisitsList({
     buckets.get(k)!.push(r);
   }
   const groups = Array.from(buckets.entries()).map(([k, list]) => ({
-    k, heading: groupHeading(list[0]!.visited_at), list,
+    k, heading: groupHeading(list[0]!.visited_at, t), list,
   }));
 
   const selected = searchParams.id ? rows.find(r => r.id === searchParams.id) : rows[0];
 
   return (
     <PageShell max="5xl">
-      <PageHeader backHref={`/babies/${params.babyId}`} backLabel="Pregnancy"
-        eyebrow="Prenatal" eyebrowTint="lavender"
-        title="Prenatal visits"
-        subtitle="All recorded prenatal check-ups."
+      <PageHeader backHref={`/babies/${params.babyId}`} backLabel={t('prenatal.back_label')}
+        eyebrow={t('prenatal.eyebrow')} eyebrowTint="lavender"
+        title={t('prenatal.visits_title')}
+        subtitle={t('prenatal.visits_subtitle')}
         right={
           perms.canWriteLogs ? (
             <div className="flex items-center gap-2">
               <BulkDelete babyId={params.babyId} table="prenatal_visits" timeColumn="visited_at"
-                visibleIds={rows.map(r => r.id)} kindLabel="visits" />
+                visibleIds={rows.map(r => r.id)} kindLabel={t('prenatal.visits_title').toLowerCase()} />
               <Link href={`/babies/${params.babyId}/prenatal/visits/new`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 hover:brightness-105 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-                <Plus className="h-4 w-4" /> Log visit
+                <Plus className="h-4 w-4" /> {t('prenatal.visits_add')}
               </Link>
             </div>
           ) : (
-            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">Read-only</span>
+            <span className="text-xs text-ink-muted rounded-full bg-slate-100 px-3 py-1">{t('page.read_only')}</span>
           )
         } />
 
@@ -104,7 +108,7 @@ export default async function VisitsList({
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
           {groups.length === 0 && (
             <div className="p-10 text-center text-sm text-ink-muted">
-              No prenatal visits in this window.
+              {t('prenatal.visits_none')}
             </div>
           )}
 
@@ -132,7 +136,7 @@ export default async function VisitsList({
                           <Stethoscope className="h-5 w-5" />
                         </span>
                         <div className="min-w-0">
-                          <div className="font-semibold text-ink-strong truncate">Prenatal visit</div>
+                          <div className="font-semibold text-ink-strong truncate">{t('prenatal.visits_label')}</div>
                           {subline && <div className="text-xs text-ink-muted truncate">{subline}</div>}
                         </div>
                         <div className="flex items-center gap-2">
@@ -149,7 +153,7 @@ export default async function VisitsList({
 
           {rows.length >= 500 && (
             <div className="px-5 py-3 text-center border-t border-slate-100 bg-slate-50/60">
-              <span className="text-xs text-brand-700 font-semibold">Showing most recent 500 entries. Narrow the range to see more.</span>
+              <span className="text-xs text-brand-700 font-semibold">{t('page.showing_recent_500')}</span>
             </div>
           )}
         </div>
@@ -158,12 +162,12 @@ export default async function VisitsList({
         <div className="space-y-4 lg:sticky lg:top-4 self-start">
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-ink-strong">Visit details</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('prenatal.visits_details')}</h3>
               {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/prenatal/visits/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                    <Edit3 className="h-3 w-3" /> Edit
+                    <Edit3 className="h-3 w-3" /> {t('prenatal.common_edit')}
                   </Link>
                   <LogRowDelete table="prenatal_visits" id={selected.id} />
                 </div>
@@ -172,7 +176,7 @@ export default async function VisitsList({
 
             {!selected ? (
               <div className="p-8 text-center text-sm text-ink-muted">
-                Pick an item from the list to see details.
+                {t('prenatal.common_pick')}
               </div>
             ) : (
               <div className="p-5 space-y-4">
@@ -187,7 +191,7 @@ export default async function VisitsList({
                           <Stethoscope className="h-5 w-5" />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="font-bold text-ink-strong">Prenatal visit</div>
+                          <div className="font-bold text-ink-strong">{t('prenatal.visits_full_label')}</div>
                           <div className="text-xs text-ink-muted flex items-center gap-1">
                             <Clock className="h-3 w-3" /> {fmtDateTime(selected.visited_at)}
                           </div>
@@ -200,45 +204,45 @@ export default async function VisitsList({
                       </div>
 
                       {docName && (
-                        <div className="text-sm text-ink">Seen by <span className="font-semibold">{docName}</span></div>
+                        <div className="text-sm text-ink">{t('prenatal.visits_seen_by')} <span className="font-semibold">{docName}</span></div>
                       )}
 
                       <div className="grid grid-cols-2 gap-2">
                         {selected.maternal_weight_kg != null && (
                           <div className="rounded-xl bg-brand-50 border border-brand-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-brand-700 font-semibold">Weight</div>
-                            <div className="text-xl font-bold text-ink-strong leading-tight">{selected.maternal_weight_kg.toFixed(1)}<span className="text-xs text-ink-muted ml-1 font-normal">kg</span></div>
+                            <div className="text-[10px] uppercase tracking-wider text-brand-700 font-semibold">{t('prenatal.visits_weight')}</div>
+                            <div className="text-xl font-bold text-ink-strong leading-tight">{selected.maternal_weight_kg.toFixed(1)}<span className="text-xs text-ink-muted ml-1 font-normal">{t('prenatal.visits_kg')}</span></div>
                           </div>
                         )}
                         {bp && (
                           <div className="rounded-xl bg-coral-50 border border-coral-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-coral-700 font-semibold">Blood pressure</div>
+                            <div className="text-[10px] uppercase tracking-wider text-coral-700 font-semibold">{t('prenatal.visits_bp')}</div>
                             <div className="text-xl font-bold text-ink-strong leading-tight">{bp}</div>
                           </div>
                         )}
                         {selected.fetal_heart_rate_bpm != null && (
                           <div className="rounded-xl bg-peach-50 border border-peach-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-peach-700 font-semibold">Fetal HR</div>
-                            <div className="text-xl font-bold text-ink-strong leading-tight">{selected.fetal_heart_rate_bpm}<span className="text-xs text-ink-muted ml-1 font-normal">bpm</span></div>
+                            <div className="text-[10px] uppercase tracking-wider text-peach-700 font-semibold">{t('prenatal.visits_fhr')}</div>
+                            <div className="text-xl font-bold text-ink-strong leading-tight">{selected.fetal_heart_rate_bpm}<span className="text-xs text-ink-muted ml-1 font-normal">{t('prenatal.visits_bpm')}</span></div>
                           </div>
                         )}
                         {selected.fundal_height_cm != null && (
                           <div className="rounded-xl bg-mint-50 border border-mint-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-mint-700 font-semibold">Fundal height</div>
-                            <div className="text-xl font-bold text-ink-strong leading-tight">{selected.fundal_height_cm}<span className="text-xs text-ink-muted ml-1 font-normal">cm</span></div>
+                            <div className="text-[10px] uppercase tracking-wider text-mint-700 font-semibold">{t('prenatal.visits_fundal')}</div>
+                            <div className="text-xl font-bold text-ink-strong leading-tight">{selected.fundal_height_cm}<span className="text-xs text-ink-muted ml-1 font-normal">{t('prenatal.visits_cm')}</span></div>
                           </div>
                         )}
                       </div>
 
                       {selected.notes && (
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Notes</div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('prenatal.visits_notes')}</div>
                           <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                         </div>
                       )}
 
                       <div className="border-t border-slate-100 pt-3">
-                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Logged on</div>
+                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('prenatal.common_logged_on')}</div>
                         <div className="text-sm text-ink">{fmtDateTime(selected.created_at)}</div>
                       </div>
                     </>
@@ -251,7 +255,7 @@ export default async function VisitsList({
       </div>
 
       <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
-        pageScope="prenatal_visits_list" title="Page comments" />
+        pageScope="prenatal_visits_list" title={t('page.page_comments')} />
     </PageShell>
   );
 }

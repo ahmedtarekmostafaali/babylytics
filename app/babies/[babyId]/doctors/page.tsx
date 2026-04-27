@@ -7,6 +7,8 @@ import {
   Stethoscope, Plus, CalendarClock, Phone, Mail, MapPin, Star,
   ArrowRight, CheckCircle2, AlertTriangle, XCircle, RotateCcw,
 } from 'lucide-react';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Doctors & appointments' };
@@ -22,18 +24,20 @@ type Appointment = {
   notes: string | null; created_at: string;
 };
 
-const STATUS_META: Record<Appointment['status'], { icon: React.ComponentType<{ className?: string }>; chip: string; label: string }> = {
-  scheduled:   { icon: CalendarClock, chip: 'bg-brand-100    text-brand-700',    label: 'Scheduled' },
-  completed:   { icon: CheckCircle2,  chip: 'bg-mint-100     text-mint-700',     label: 'Completed' },
-  cancelled:   { icon: XCircle,       chip: 'bg-slate-100    text-ink',          label: 'Cancelled' },
-  missed:      { icon: AlertTriangle, chip: 'bg-coral-100    text-coral-700',    label: 'Missed' },
-  rescheduled: { icon: RotateCcw,     chip: 'bg-peach-100    text-peach-700',    label: 'Rescheduled' },
+const STATUS_META: Record<Appointment['status'], { icon: React.ComponentType<{ className?: string }>; chip: string; tkey: string }> = {
+  scheduled:   { icon: CalendarClock, chip: 'bg-brand-100    text-brand-700',    tkey: 'doctors_page.s_scheduled' },
+  completed:   { icon: CheckCircle2,  chip: 'bg-mint-100     text-mint-700',     tkey: 'doctors_page.s_completed' },
+  cancelled:   { icon: XCircle,       chip: 'bg-slate-100    text-ink',          tkey: 'doctors_page.s_cancelled' },
+  missed:      { icon: AlertTriangle, chip: 'bg-coral-100    text-coral-700',    tkey: 'doctors_page.s_missed' },
+  rescheduled: { icon: RotateCcw,     chip: 'bg-peach-100    text-peach-700',    tkey: 'doctors_page.s_rescheduled' },
 };
 
 export default async function DoctorsPage({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
 
   // Role gate — non-parents are bounced back to the overview.
   const { data: { user } } = await supabase.auth.getUser();
@@ -69,18 +73,18 @@ export default async function DoctorsPage({ params }: { params: { babyId: string
   return (
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Health" eyebrowTint="lavender"
-        title="Doctors & appointments"
-        subtitle={`${doctors.length} doctor${doctors.length === 1 ? '' : 's'} · ${upcoming.length} upcoming`}
+        eyebrow={t('doctors_page.eyebrow')} eyebrowTint="lavender"
+        title={t('doctors_page.title')}
+        subtitle={doctors.length === 1 ? t('doctors_page.sub_count_one', { n: upcoming.length }) : t('doctors_page.sub_count_n', { d: doctors.length, n: upcoming.length })}
         right={
           <div className="flex items-center gap-2">
             <Link href={`/babies/${params.babyId}/doctors/new`}
               className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-              <Plus className="h-4 w-4" /> Doctor
+              <Plus className="h-4 w-4" /> {t('doctors_page.add_doctor')}
             </Link>
             <Link href={`/babies/${params.babyId}/doctors/appointments/new`}
               className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-              <CalendarClock className="h-4 w-4" /> Book appointment
+              <CalendarClock className="h-4 w-4" /> {t('doctors_page.book')}
             </Link>
           </div>
         } />
@@ -90,18 +94,18 @@ export default async function DoctorsPage({ params }: { params: { babyId: string
           <div className="mx-auto h-16 w-16 rounded-full bg-lavender-100 text-lavender-600 grid place-items-center">
             <Stethoscope className="h-8 w-8" />
           </div>
-          <p className="mt-3 text-ink-muted">No doctors added yet.</p>
-          <p className="text-xs text-ink-muted mt-1">Add your pediatrician and any specialists so appointments and phone numbers are always handy.</p>
+          <p className="mt-3 text-ink-muted">{t('doctors_page.none_h')}</p>
+          <p className="text-xs text-ink-muted mt-1">{t('doctors_page.none_p')}</p>
           <Link href={`/babies/${params.babyId}/doctors/new`}
             className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold px-4 py-1.5">
-            <Plus className="h-4 w-4" /> Add your first doctor
+            <Plus className="h-4 w-4" /> {t('doctors_page.add_first')}
           </Link>
         </div>
       )}
 
       {upcoming.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Upcoming appointments</h2>
+          <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">{t('doctors_page.upcoming_h')}</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {upcoming.map(a => {
               const doc = a.doctor_id ? doctorById.get(a.doctor_id) : undefined;
@@ -114,15 +118,15 @@ export default async function DoctorsPage({ params }: { params: { babyId: string
                       <CalendarClock className="h-5 w-5" />
                     </div>
                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.chip}`}>
-                      <meta.icon className="h-3 w-3" /> {meta.label}
+                      <meta.icon className="h-3 w-3" /> {t(meta.tkey)}
                     </span>
                   </div>
                   <div className="mt-3">
                     <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider">{fmtRelative(a.scheduled_at)}</div>
                     <div className="text-lg font-bold text-ink-strong leading-tight">{fmtDateTime(a.scheduled_at)}</div>
                     {a.purpose && <div className="text-sm text-ink mt-0.5">{a.purpose}</div>}
-                    {doc && <div className="text-xs text-ink-muted mt-1">with <span className="font-semibold">{doc.name}</span>{doc.specialty ? ` · ${doc.specialty}` : ''}</div>}
-                    {a.location && <div className="text-xs text-ink-muted">at {a.location}</div>}
+                    {doc && <div className="text-xs text-ink-muted mt-1">{t('doctors_page.with_doctor')} <span className="font-semibold">{doc.name}</span>{doc.specialty ? ` · ${doc.specialty}` : ''}</div>}
+                    {a.location && <div className="text-xs text-ink-muted">{t('doctors_page.at_location')} {a.location}</div>}
                   </div>
                 </Link>
               );
@@ -134,9 +138,9 @@ export default async function DoctorsPage({ params }: { params: { babyId: string
       {doctors.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Doctors</h2>
+            <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">{t('caregivers.label_doctor')}</h2>
             <Link href={`/babies/${params.babyId}/doctors/new`}
-              className="text-xs text-brand-700 font-semibold hover:underline">+ Add another</Link>
+              className="text-xs text-brand-700 font-semibold hover:underline">{t('doctors_page.add_another')}</Link>
           </div>
           <ul className="grid gap-3 sm:grid-cols-2">
             {doctors.map(d => (
@@ -150,7 +154,7 @@ export default async function DoctorsPage({ params }: { params: { babyId: string
                       <div className="font-bold text-ink-strong truncate">{d.name}</div>
                       {d.is_primary && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-peach-100 text-peach-700 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5">
-                          <Star className="h-3 w-3 fill-peach-500 text-peach-600" /> Primary
+                          <Star className="h-3 w-3 fill-peach-500 text-peach-600" /> {t('doctors_page.primary')}
                         </span>
                       )}
                     </div>
@@ -164,19 +168,19 @@ export default async function DoctorsPage({ params }: { params: { babyId: string
                   </div>
                   <Link href={`/babies/${params.babyId}/doctors/${d.id}`}
                     className="rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                    Edit
+                    {t('doctors_page.edit')}
                   </Link>
                 </div>
                 <div className="mt-3 flex gap-2">
                   <Link href={`/babies/${params.babyId}/doctors/appointments/new?doctor=${d.id}`}
                     className="flex-1 text-center rounded-xl bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-xs font-semibold px-3 py-2">
                     <CalendarClock className="inline h-3 w-3 mr-1" />
-                    Book appointment
+                    {t('doctors_page.book_short')}
                   </Link>
                   {d.phone && (
                     <a href={`tel:${d.phone}`}
                       className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-2 text-ink-strong">
-                      <Phone className="inline h-3 w-3 mr-1" /> Call
+                      <Phone className="inline h-3 w-3 mr-1" /> {t('doctors_page.call')}
                     </a>
                   )}
                 </div>
@@ -188,7 +192,7 @@ export default async function DoctorsPage({ params }: { params: { babyId: string
 
       {past.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Past appointments</h2>
+          <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">{t('doctors_page.past_h')}</h2>
           <ul className="rounded-2xl bg-white border border-slate-200 shadow-card divide-y divide-slate-100">
             {past.map(a => {
               const doc = a.doctor_id ? doctorById.get(a.doctor_id) : undefined;
@@ -202,7 +206,7 @@ export default async function DoctorsPage({ params }: { params: { babyId: string
                     </span>
                     <div className="min-w-0">
                       <div className="font-semibold text-ink-strong truncate">
-                        {a.purpose ?? (doc ? `Visit with ${doc.name}` : 'Appointment')}
+                        {a.purpose ?? (doc ? t('doctors_page.visit_with', { name: doc.name }) : t('doctors_page.appointment'))}
                       </div>
                       <div className="text-xs text-ink-muted truncate">
                         {fmtDate(a.scheduled_at)}{doc ? ` · ${doc.name}` : ''}{a.location ? ` · ${a.location}` : ''}
@@ -210,7 +214,7 @@ export default async function DoctorsPage({ params }: { params: { babyId: string
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${meta.chip}`}>
-                        <meta.icon className="h-3 w-3" /> {meta.label}
+                        <meta.icon className="h-3 w-3" /> {t(meta.tkey)}
                       </span>
                       <ArrowRight className="h-4 w-4 text-ink-muted" />
                     </div>

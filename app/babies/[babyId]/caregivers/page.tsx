@@ -9,27 +9,29 @@ import {
   Shield, Stethoscope, Heart, Users, Eye, Lock, UserCog,
   Edit3, BarChart3, ShieldCheck, History,
 } from 'lucide-react';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor, type TFunc } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Caregivers' };
 
 type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor';
 
-const ROLE_META: Record<Role, { label: string; tint: string; icon: React.ComponentType<{ className?: string }> }> = {
-  owner:     { label: 'Owner',     tint: 'bg-brand-100    text-brand-700',    icon: Shield },
-  parent:    { label: 'Parent',    tint: 'bg-mint-100     text-mint-700',     icon: Shield },
-  editor:    { label: 'Parent',    tint: 'bg-mint-100     text-mint-700',     icon: Shield }, // legacy
-  doctor:    { label: 'Doctor',    tint: 'bg-lavender-100 text-lavender-700', icon: Stethoscope },
-  nurse:     { label: 'Nurse',     tint: 'bg-coral-100    text-coral-700',    icon: Heart },
-  caregiver: { label: 'Nurse',     tint: 'bg-coral-100    text-coral-700',    icon: Heart }, // legacy → nurse
-  viewer:    { label: 'Viewer',    tint: 'bg-slate-100    text-ink',          icon: Eye },
+const ROLE_META: Record<Role, { tkey: string; tint: string; icon: React.ComponentType<{ className?: string }> }> = {
+  owner:     { tkey: 'caregivers.label_owner',  tint: 'bg-brand-100    text-brand-700',    icon: Shield },
+  parent:    { tkey: 'caregivers.label_parent', tint: 'bg-mint-100     text-mint-700',     icon: Shield },
+  editor:    { tkey: 'caregivers.label_parent', tint: 'bg-mint-100     text-mint-700',     icon: Shield }, // legacy
+  doctor:    { tkey: 'caregivers.label_doctor', tint: 'bg-lavender-100 text-lavender-700', icon: Stethoscope },
+  nurse:     { tkey: 'caregivers.label_nurse',  tint: 'bg-coral-100    text-coral-700',    icon: Heart },
+  caregiver: { tkey: 'caregivers.label_nurse',  tint: 'bg-coral-100    text-coral-700',    icon: Heart }, // legacy → nurse
+  viewer:    { tkey: 'caregivers.label_viewer', tint: 'bg-slate-100    text-ink',          icon: Eye },
 };
 
-const ROLE_DEFS: { role: Role; title: string; perms: string }[] = [
-  { role: 'parent', title: 'Parent / Guardian', perms: 'Full access — write logs, upload files, invite caregivers.' },
-  { role: 'doctor', title: 'Doctor',            perms: 'Read logs, add comments, export reports.' },
-  { role: 'nurse',  title: 'Nurse',             perms: 'Read-only — view logs, no adds or edits.' },
-  { role: 'viewer', title: 'Viewer',            perms: 'Overview page only.' },
+const ROLE_DEFS: { role: Role; titleKey: string; permsKey: string }[] = [
+  { role: 'parent', titleKey: 'caregivers.role_parent_t', permsKey: 'caregivers.role_parent_p' },
+  { role: 'doctor', titleKey: 'caregivers.role_doctor_t', permsKey: 'caregivers.role_doctor_p' },
+  { role: 'nurse',  titleKey: 'caregivers.role_nurse_t',  permsKey: 'caregivers.role_nurse_p' },
+  { role: 'viewer', titleKey: 'caregivers.role_viewer_t', permsKey: 'caregivers.role_viewer_p' },
 ];
 
 function initials(s: string) {
@@ -43,6 +45,8 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
   const { data: { user } } = await supabase.auth.getUser();
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
 
   type Row = { baby_id: string; user_id: string; role: Role; created_at: string };
   const { data: rowsRaw } = await supabase
@@ -65,9 +69,9 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
   return (
     <PageShell max="3xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Team" eyebrowTint="mint"
-        title={<>Caregivers <span className="inline-flex items-center gap-1 text-mint-600 ml-1"><Users className="h-5 w-5" /></span></>}
-        subtitle={`Manage who can access ${baby.name}'s data and what they can do.`} />
+        eyebrow={t('caregivers.eyebrow')} eyebrowTint="mint"
+        title={<>{t('caregivers.title')} <span className="inline-flex items-center gap-1 text-mint-600 ml-1"><Users className="h-5 w-5" /></span></>}
+        subtitle={t('caregivers.subtitle', { name: baby.name })} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* LEFT — 2/3: current caregivers + invite */}
@@ -77,9 +81,9 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-ink-strong">Current caregivers</h2>
+                <h2 className="text-lg font-bold text-ink-strong">{t('caregivers.current_h')}</h2>
                 <span className="rounded-full bg-mint-100 text-mint-700 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5">
-                  {rows.length} caregiver{rows.length === 1 ? '' : 's'}
+                  {rows.length === 1 ? t('caregivers.count_one') : t('caregivers.count_n', { n: rows.length })}
                 </span>
               </div>
             </div>
@@ -87,7 +91,7 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
             <ul className="divide-y divide-slate-100">
               {rows.length === 0 && (
                 <li className="px-5 py-8 text-center text-sm text-ink-muted">
-                  No caregivers yet.
+                  {t('caregivers.none')}
                 </li>
               )}
               {rows.map(r => {
@@ -106,17 +110,17 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                         </span>
                         <div className="min-w-0">
                           <div className="font-semibold text-ink-strong truncate">
-                            {isSelf ? 'You' : name}
-                            {r.role === 'owner' && <span className="text-ink-muted font-normal"> (Owner)</span>}
+                            {isSelf ? t('caregivers.you') : name}
+                            {r.role === 'owner' && <span className="text-ink-muted font-normal">{t('caregivers.owner_suffix')}</span>}
                           </div>
                           <div className="text-xs text-ink-muted truncate">{prof?.email ?? r.user_id}</div>
                           {/* Mobile-only meta: role chip + joined under email */}
                           <div className="mt-1 flex items-center gap-2 sm:hidden">
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.tint}`}>
                               <meta.icon className="h-3 w-3" />
-                              {meta.label}
+                              {t(meta.tkey)}
                             </span>
-                            <span className="text-[10px] text-ink-muted">Joined {fmtDate(r.created_at)}</span>
+                            <span className="text-[10px] text-ink-muted">{t('caregivers.joined', { date: fmtDate(r.created_at) })}</span>
                           </div>
                         </div>
                       </div>
@@ -125,12 +129,12 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                       <div className="hidden sm:flex items-center gap-2 shrink-0">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.tint}`}>
                           <meta.icon className="h-3 w-3" />
-                          {meta.label}
+                          {t(meta.tkey)}
                         </span>
                         <div className="flex items-center gap-1">
-                          <PermIcon role={r.role} kind="view" />
-                          <PermIcon role={r.role} kind="edit" />
-                          <PermIcon role={r.role} kind="reports" />
+                          <PermIcon role={r.role} kind="view" t={t} />
+                          <PermIcon role={r.role} kind="edit" t={t} />
+                          <PermIcon role={r.role} kind="reports" t={t} />
                         </div>
                         <span className="text-[11px] text-ink-muted whitespace-nowrap">{fmtDate(r.created_at)}</span>
                       </div>
@@ -148,7 +152,7 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
 
             <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 text-xs text-ink-muted flex items-center gap-1 justify-center">
               <History className="h-3.5 w-3.5" />
-              Every change is audited.
+              {t('caregivers.audited')}
             </div>
           </section>
 
@@ -161,8 +165,8 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                     <span className="text-xl">💌</span>
                   </span>
                   <div>
-                    <h2 className="text-lg font-bold text-ink-strong">Invite a caregiver</h2>
-                    <p className="text-xs text-ink-muted">By email or shareable link with a pre-assigned role.</p>
+                    <h2 className="text-lg font-bold text-ink-strong">{t('caregivers.invite_h')}</h2>
+                    <p className="text-xs text-ink-muted">{t('caregivers.invite_sub')}</p>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -174,7 +178,7 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
 
           {!canManage && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-ink-muted">
-              Only the owner and parents can invite or change caregivers. Ask the baby&apos;s owner if you need a different role.
+              {t('caregivers.no_perm')}
             </div>
           )}
         </div>
@@ -182,20 +186,17 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
         {/* RIGHT — 1/3: About + role cards */}
         <div className="space-y-6">
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
-            <h3 className="text-sm font-bold text-ink-strong mb-3">About caregiver access</h3>
+            <h3 className="text-sm font-bold text-ink-strong mb-3">{t('caregivers.about_h')}</h3>
             <div className="space-y-4">
-              <Pillar icon={ShieldCheck} tint="mint" title="Secure & private"
-                body="All data is encrypted and scoped to this baby." />
-              <Pillar icon={UserCog} tint="lavender" title="Role-based access"
-                body="You control what each caregiver can see or do." />
-              <Pillar icon={Edit3} tint="peach" title="Editable anytime"
-                body="You can update or remove access at any time." />
+              <Pillar icon={ShieldCheck} tint="mint"     title={t('caregivers.pillar_secure_t')} body={t('caregivers.pillar_secure_b')} />
+              <Pillar icon={UserCog}     tint="lavender" title={t('caregivers.pillar_role_t')}   body={t('caregivers.pillar_role_b')} />
+              <Pillar icon={Edit3}       tint="peach"    title={t('caregivers.pillar_edit_t')}   body={t('caregivers.pillar_edit_b')} />
             </div>
           </section>
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
-            <h3 className="text-sm font-bold text-ink-strong">Caregiver roles</h3>
-            <p className="text-xs text-ink-muted mt-0.5">Each role comes with different permissions.</p>
+            <h3 className="text-sm font-bold text-ink-strong">{t('caregivers.roles_h')}</h3>
+            <p className="text-xs text-ink-muted mt-0.5">{t('caregivers.roles_sub')}</p>
             <ul className="mt-4 space-y-2">
               {ROLE_DEFS.map(def => {
                 const meta = ROLE_META[def.role];
@@ -205,8 +206,8 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                       <meta.icon className="h-4 w-4" />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-ink-strong truncate">{def.title}</div>
-                      <div className="text-xs text-ink-muted">{def.perms}</div>
+                      <div className="text-sm font-semibold text-ink-strong truncate">{t(def.titleKey)}</div>
+                      <div className="text-xs text-ink-muted">{t(def.permsKey)}</div>
                     </div>
                   </li>
                 );
@@ -222,9 +223,9 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
           <Lock className="h-4 w-4 text-peach-600" />
         </span>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-ink-strong">Tips</div>
+          <div className="text-sm font-semibold text-ink-strong">{t('caregivers.tips_h')}</div>
           <p className="text-xs text-ink-muted mt-0.5">
-            Give access to trusted people only. You can review and update permissions at any time.
+            {t('caregivers.tips_b')}
           </p>
         </div>
       </div>
@@ -232,7 +233,7 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
   );
 }
 
-function PermIcon({ role, kind }: { role: Role; kind: 'edit' | 'view' | 'reports' }) {
+function PermIcon({ role, kind, t }: { role: Role; kind: 'edit' | 'view' | 'reports'; t: TFunc }) {
   // Align with lib/permissions.ts:
   //   edit    → owner/parent only (writes, uploads)
   //   reports → owner/parent/doctor (export + comments)
@@ -241,7 +242,7 @@ function PermIcon({ role, kind }: { role: Role; kind: 'edit' | 'view' | 'reports
   const canReports = canEdit || role === 'doctor';
   const state = kind === 'edit' ? canEdit : kind === 'reports' ? canReports : true;
   const Icon  = kind === 'edit' ? Edit3 : kind === 'reports' ? BarChart3 : Eye;
-  const title = kind === 'edit' ? 'Can edit logs' : kind === 'reports' ? 'Can comment + export' : 'Can view data';
+  const title = kind === 'edit' ? t('caregivers.perm_edit') : kind === 'reports' ? t('caregivers.perm_reports') : t('caregivers.perm_view');
   return (
     <span title={title}
       className={`h-7 w-7 rounded-lg grid place-items-center ${state ? 'bg-brand-50 text-brand-600' : 'bg-slate-50 text-slate-300'}`}>
