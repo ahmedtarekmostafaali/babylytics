@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { BabyAvatar } from '@/components/BabyAvatar';
 import { MarkAsBornDialog } from '@/components/MarkAsBornDialog';
 import { NotificationsBell } from '@/components/NotificationsBell';
+import { VoiceCommander } from '@/components/VoiceCommander';
 import {
   Stethoscope, ScanLine, Activity, HeartPulse, CalendarClock, Plus,
   Sparkles, ArrowRight, Pill, Heart, Apple, BookOpen, SlidersHorizontal,
@@ -111,6 +112,7 @@ export function PregnancyDashboard({
               title={t('pregd.customize')} aria-label={t('pregd.customize')}>
               <SlidersHorizontal className="h-4 w-4 text-ink" />
             </Link>
+            <VoiceCommander babyId={babyId} lang={lang} />
             <NotificationsBell babyId={babyId} />
             {canEdit && show('mark_as_born_cta') && <MarkAsBornDialog babyId={babyId} babyName={babyName} />}
           </div>

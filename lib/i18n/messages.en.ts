@@ -1476,6 +1476,56 @@ export const en = {
     common_logged_on:      'Logged on',
   },
 
+  // ── Voice commander ─────────────────────────────────────────────
+  voice: {
+    btn_title:        'Log by voice',
+    eyebrow:          'Voice command',
+    title:            'Speak to log',
+    close:            'Close',
+    listening:        'Listening… speak now',
+    tap_to_speak:     'Tap the mic to speak',
+    lang_en_hint:     'English · say things like "feeding 120 ml bottle"',
+    lang_ar_hint:     'العربية · جرّبي «سجّل رضعة ١٢٠ مل زجاجة»',
+    heard:            "We heard",
+    save:             'Confirm & save',
+    saving:           'Saving…',
+    try_again:        'Try again',
+    log_another:      'Log another',
+    unsupported:      "Voice isn't supported on this browser yet — try Chrome or Safari.",
+    err_perm:         'Microphone access blocked — enable it in your browser settings.',
+    err_no_speech:    "Didn't catch any speech. Tap the mic and try again.",
+    err_no_match:     "Didn't recognise that. Try one of the examples below.",
+    err_generic:      'Voice error',
+    kick_n:           '{n} kick(s)',
+    intent: {
+      feeding:     'Log a feeding',
+      stool:       'Log a diaper',
+      sleep:       'Log a sleep session',
+      temperature: 'Log a temperature',
+      kick:        'Log a kick',
+      note:        'Save a caregiver note',
+    },
+    milk: {
+      breast:  'Breastfeeding',
+      bottle:  'Bottle',
+      formula: 'Formula',
+      mixed:   'Mixed',
+      solid:   'Solid food',
+    },
+    size: {
+      small: 'Small',
+      medium: 'Medium',
+      large: 'Large',
+    },
+    method: {
+      axillary: 'Axillary',
+      ear:      'Ear',
+      oral:     'Oral',
+      rectal:   'Rectal',
+      forehead: 'Forehead',
+    },
+  },
+
   // ── Audit trail (logged-by / edited-by footer) ──────────────────
   audit: {
     logged_by:    'Logged by',

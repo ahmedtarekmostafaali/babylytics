@@ -9,7 +9,7 @@ import {
   Ruler, ScanLine, FileText, BarChart3, Shield, BookOpen,
   CalendarDays, AlertTriangle, MessageCircle, Tv, Smile, FlaskConical,
   Languages, Bell, ClipboardList, ShieldCheck, Megaphone, Droplet,
-  HeartPulse, MessagesSquare, ChevronRight,
+  HeartPulse, MessagesSquare, ChevronRight, Mic,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -84,6 +84,7 @@ export default async function Landing() {
             <Pill2 tint="coral"    icon={Languages}>EN · العربية · RTL</Pill2>
             <Pill2 tint="mint"     icon={Shield}>Per-baby roles &amp; audit trail</Pill2>
             <Pill2 tint="lavender" icon={ScanLine}>Smart Scan OCR</Pill2>
+            <Pill2 tint="brand"    icon={Mic}>Voice logging</Pill2>
             <Pill2 tint="peach"    icon={Bell}>WhatsApp dose reminders</Pill2>
           </div>
         </div>
@@ -302,13 +303,15 @@ export default async function Landing() {
         <OcrBeforeAfter />
       </section>
 
-      {/* ======= Reports + bilingual + WhatsApp ======= */}
+      {/* ======= Reports + bilingual + voice + WhatsApp ======= */}
       <section className="max-w-6xl mx-auto px-4 lg:px-8 py-12">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <SmallSpotlight tint="brand" Icon={FileText} title="Shareable reports"
-            body="Daily report and full report — one tap to save as PDF or image, ready to send your paediatrician. The full report inlines comments, audit trail, and KPIs for any time window." />
+            body="Daily report and full report — one tap to save as PDF or image, ready to send your paediatrician. Includes comments, audit trail, and KPIs for any time window." />
           <SmallSpotlight tint="lavender" Icon={Languages} title="English + العربية + RTL"
-            body="Switch language any time — even before you sign up. Right-to-left layouts auto-flip. Full Arabic copy across forms, dashboards, reports, and the cow's-milk allergy guide." />
+            body="Switch language any time — even before signing up. Right-to-left layouts auto-flip. Full Arabic copy across forms, dashboards, reports, and the cow's-milk allergy guide." />
+          <SmallSpotlight tint="coral" Icon={Mic} title="Voice logging"
+            body="Tap the mic and say &ldquo;feeding 120 ml bottle&rdquo; or «سجّل رضعة ١٢٠ مل زجاجة». Babylytics parses the command and shows a confirm card before saving — no auto-writes." />
           <SmallSpotlight tint="mint" Icon={MessagesSquare} title="WhatsApp dose reminders"
             body="Active medications can ping caregivers on WhatsApp when a dose is due — handy when you and the other parent split responsibilities." />
         </div>

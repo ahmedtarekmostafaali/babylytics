@@ -8,6 +8,7 @@ import { Sparkline } from '@/components/Sparkline';
 import { Comments } from '@/components/Comments';
 import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import { NotificationsBell } from '@/components/NotificationsBell';
+import { VoiceCommander } from '@/components/VoiceCommander';
 import { GrowthInsights } from '@/components/GrowthInsights';
 import { MilestoneReferenceCard } from '@/components/MilestoneReference';
 import { FeedPaceCard } from '@/components/FeedPaceCard';
@@ -516,6 +517,7 @@ export default async function BabyOverview({
             <SlidersHorizontal className="h-4 w-4 text-ink" />
           </Link>
           <DayPicker babyId={babyId} value={focusDate} />
+          <VoiceCommander babyId={babyId} lang={userPrefs.language} />
           <NotificationsBell babyId={babyId} />
         </div>
       </header>

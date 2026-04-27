@@ -1436,6 +1436,56 @@ export const ar: Messages = {
     common_logged_on:      'تم التسجيل',
   },
 
+  // ── Voice commander ─────────────────────────────────────────────
+  voice: {
+    btn_title:        'تسجيل صوتي',
+    eyebrow:          'أمر صوتي',
+    title:            'تكلمي للتسجيل',
+    close:            'إغلاق',
+    listening:        'أستمع… تكلمي الآن',
+    tap_to_speak:     'اضغطي على المايك للتحدث',
+    lang_en_hint:     'English · say things like "feeding 120 ml bottle"',
+    lang_ar_hint:     'العربية · جرّبي «سجّل رضعة ١٢٠ مل زجاجة»',
+    heard:            'سمعنا',
+    save:             'تأكيد وحفظ',
+    saving:           'جارٍ الحفظ…',
+    try_again:        'حاولي مجددًا',
+    log_another:      'تسجيل آخر',
+    unsupported:      'الصوت غير مدعوم على هذا المتصفح بعد — جرّبي كروم أو سفاري.',
+    err_perm:         'تم حظر الميكروفون — فعّليه من إعدادات المتصفح.',
+    err_no_speech:    'لم نسمع أي كلام. اضغطي على المايك وحاولي مجددًا.',
+    err_no_match:     'لم نفهم ذلك. جرّبي أحد الأمثلة بالأسفل.',
+    err_generic:      'خطأ صوتي',
+    kick_n:           '{n} ركلة',
+    intent: {
+      feeding:     'تسجيل رضعة',
+      stool:       'تسجيل حفاضة',
+      sleep:       'تسجيل نوم',
+      temperature: 'تسجيل حرارة',
+      kick:        'تسجيل ركلة',
+      note:        'حفظ ملاحظة',
+    },
+    milk: {
+      breast:  'رضاعة طبيعية',
+      bottle:  'زجاجة',
+      formula: 'حليب صناعي',
+      mixed:   'مختلط',
+      solid:   'طعام صلب',
+    },
+    size: {
+      small: 'صغيرة',
+      medium: 'متوسطة',
+      large: 'كبيرة',
+    },
+    method: {
+      axillary: 'تحت الإبط',
+      ear:      'الأذن',
+      oral:     'الفم',
+      rectal:   'الشرج',
+      forehead: 'الجبين',
+    },
+  },
+
   // ── Audit trail (logged-by / edited-by footer) ──────────────────
   audit: {
     logged_by:    'سجّلها',
