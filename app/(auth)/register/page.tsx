@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Wordmark } from '@/components/Wordmark';
 import { Check } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -21,8 +23,8 @@ export default function RegisterPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null); setMsg(null);
-    if (!ageOK) { setErr('Please confirm you are 18+.'); return; }
-    if (!consent) { setErr('Please accept the Privacy Policy and Terms to continue.'); return; }
+    if (!ageOK) { setErr(t('auth.register_age_18_required')); return; }
+    if (!consent) { setErr(t('auth.register_consent_required')); return; }
     setLoading(true);
     const supabase = createClient();
     const { data, error } = await supabase.auth.signUp({
@@ -32,7 +34,7 @@ export default function RegisterPage() {
     setLoading(false);
     if (error) { setErr(error.message); return; }
     if (!data.session) {
-      setMsg('Account created. Check your email to confirm, then log in.');
+      setMsg(t('auth.register_check_email'));
       return;
     }
     router.push('/dashboard');
@@ -53,20 +55,20 @@ export default function RegisterPage() {
 
           <div className="space-y-6">
             <h2 className="text-4xl font-bold leading-tight text-ink-strong">
-              Start your baby&apos;s journey with us.
+              {t('auth.register_hero_title')}
             </h2>
             <p className="text-ink max-w-sm">
-              Log feedings, stools, medications and growth. Upload handwritten notes — we digitize and file them away for every pediatrician visit.
+              {t('auth.register_hero_body')}
             </p>
             <ul className="space-y-2 text-ink text-sm">
-              <PerkRow>Free forever · no credit card</PerkRow>
-              <PerkRow>English + Arabic handwritten-note OCR</PerkRow>
-              <PerkRow>Parent / doctor / nurse / viewer roles</PerkRow>
-              <PerkRow>Printable clinical reports</PerkRow>
+              <PerkRow>{t('auth.register_perk_free')}</PerkRow>
+              <PerkRow>{t('auth.register_perk_ocr')}</PerkRow>
+              <PerkRow>{t('auth.register_perk_roles')}</PerkRow>
+              <PerkRow>{t('auth.register_perk_reports')}</PerkRow>
             </ul>
           </div>
 
-          <div className="text-xs text-ink-muted">Trusted by parents and loved by babies.</div>
+          <div className="text-xs text-ink-muted">{t('auth.register_hero_trust')}</div>
         </div>
       </section>
 
@@ -74,38 +76,46 @@ export default function RegisterPage() {
       <section className="flex-1 grid place-items-center px-4 py-12 bg-white">
         <div className="w-full max-w-sm">
           <div className="lg:hidden mb-8"><Wordmark size="md" /></div>
-          <h1 className="text-4xl font-bold tracking-tight text-ink-strong">Create your account</h1>
-          <p className="mt-2 text-ink">Just a few quick things to get started.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-ink-strong">{t('auth.register_title')}</h1>
+          <p className="mt-2 text-ink">{t('auth.register_subtitle')}</p>
 
           <form className="mt-8 space-y-4" onSubmit={submit}>
-            <Field label="Your name">
-              <input required placeholder="Ahmed" value={displayName} onChange={e => setDisplayName(e.target.value)}
+            <Field label={t('auth.register_your_name')}>
+              <input required placeholder={t('auth.register_name_ph')} value={displayName} onChange={e => setDisplayName(e.target.value)}
                 className="h-12 w-full rounded-2xl bg-white border border-slate-200 px-4 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
             </Field>
-            <Field label="Email">
-              <input type="email" required placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)}
+            <Field label={t('auth.email')}>
+              <input type="email" required placeholder={t('auth.email_ph')} value={email} onChange={e => setEmail(e.target.value)}
                 className="h-12 w-full rounded-2xl bg-white border border-slate-200 px-4 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
             </Field>
-            <Field label="Password">
-              <input type="password" required minLength={8} placeholder="At least 8 characters"
+            <Field label={t('auth.password')}>
+              <input type="password" required minLength={8} placeholder={t('auth.register_password_ph')}
                 value={password} onChange={e => setPassword(e.target.value)}
                 className="h-12 w-full rounded-2xl bg-white border border-slate-200 px-4 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
             </Field>
             <label className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-ink cursor-pointer">
               <input type="checkbox" checked={ageOK} onChange={e => setAgeOK(e.target.checked)}
                 className="mt-0.5 h-4 w-4 accent-coral-500" />
-              <span>I confirm I&apos;m at least <strong>18 years old</strong> and a parent or legal guardian of any baby I&apos;ll add.</span>
+              <span>
+                {t('auth.register_age_confirm_pre')}
+                <strong>{t('auth.register_age_confirm_strong')}</strong>
+                {t('auth.register_age_confirm_post')}
+              </span>
             </label>
 
             <label className="flex items-start gap-2.5 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs text-ink cursor-pointer">
               <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}
                 className="mt-0.5 h-4 w-4 accent-coral-500" />
               <span>
-                I have read and agree to the{' '}
-                <Link href="/privacy" target="_blank" className="text-brand-700 underline font-semibold">Privacy Policy</Link>,{' '}
-                <Link href="/terms"   target="_blank" className="text-brand-700 underline font-semibold">Terms of Service</Link> and{' '}
-                <Link href="/disclaimer" target="_blank" className="text-coral-700 underline font-semibold">Medical Disclaimer</Link>.
-                I understand Babylytics <strong>is not a medical device</strong> and does not replace advice from a healthcare professional.
+                {t('auth.register_consent_pre')}
+                <Link href="/privacy" target="_blank" className="text-brand-700 underline font-semibold">{t('auth.register_consent_privacy')}</Link>
+                {t('auth.register_consent_sep1')}
+                <Link href="/terms"   target="_blank" className="text-brand-700 underline font-semibold">{t('auth.register_consent_terms')}</Link>
+                {t('auth.register_consent_and')}
+                <Link href="/disclaimer" target="_blank" className="text-coral-700 underline font-semibold">{t('auth.register_consent_disclaimer')}</Link>
+                {t('auth.register_consent_post')}
+                <strong>{t('auth.register_consent_strong')}</strong>
+                {t('auth.register_consent_tail')}
               </span>
             </label>
 
@@ -113,13 +123,13 @@ export default function RegisterPage() {
             {msg && <p className="text-sm text-mint-700">{msg}</p>}
             <button type="submit" disabled={loading || !ageOK || !consent}
               className="w-full h-12 rounded-2xl bg-coral-500 hover:bg-coral-600 text-white font-semibold shadow-sm disabled:opacity-60">
-              {loading ? 'Creating…' : 'Create account'}
+              {loading ? t('auth.register_creating') : t('auth.register_create_cta')}
             </button>
           </form>
 
           <p className="mt-6 text-sm text-ink-muted text-center">
-            Already have an account?{' '}
-            <Link href="/login" className="text-brand-600 font-semibold hover:underline">Log in</Link>
+            {t('auth.register_have_account')}{' '}
+            <Link href="/login" className="text-brand-600 font-semibold hover:underline">{t('auth.register_login_link')}</Link>
           </p>
         </div>
       </section>

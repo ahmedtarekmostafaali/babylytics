@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Wordmark } from '@/components/Wordmark';
 import { Heart, Milk, Moon, Baby, Scale } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 function LoginForm() {
   const router = useRouter();
+  const t = useT();
   const next = useSearchParams().get('next') ?? '/dashboard';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,38 +31,39 @@ function LoginForm() {
   return (
     <div className="w-full max-w-sm">
       <div className="lg:hidden mb-8"><Wordmark size="md" /></div>
-      <h1 className="text-4xl font-bold tracking-tight text-ink-strong">Welcome back</h1>
-      <p className="mt-2 text-ink">Hello, glad to see you again.</p>
+      <h1 className="text-4xl font-bold tracking-tight text-ink-strong">{t('auth.login_welcome')}</h1>
+      <p className="mt-2 text-ink">{t('auth.login_subtitle')}</p>
 
       <form className="mt-8 space-y-4" onSubmit={submit}>
         <div>
-          <label className="block text-sm font-medium text-ink mb-1">Email</label>
-          <input type="email" required autoComplete="email" placeholder="you@example.com"
+          <label className="block text-sm font-medium text-ink mb-1">{t('auth.email')}</label>
+          <input type="email" required autoComplete="email" placeholder={t('auth.email_ph')}
             value={email} onChange={e => setEmail(e.target.value)}
             className="h-12 w-full rounded-2xl bg-white border border-slate-200 px-4 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-ink mb-1">Password</label>
-          <input type="password" required autoComplete="current-password" placeholder="••••••••"
+          <label className="block text-sm font-medium text-ink mb-1">{t('auth.password')}</label>
+          <input type="password" required autoComplete="current-password" placeholder={t('auth.password_ph')}
             value={password} onChange={e => setPassword(e.target.value)}
             className="h-12 w-full rounded-2xl bg-white border border-slate-200 px-4 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
         </div>
         {err && <p className="text-sm text-coral-600">{err}</p>}
         <button type="submit" disabled={loading}
           className="w-full h-12 rounded-2xl bg-coral-500 hover:bg-coral-600 text-white font-semibold shadow-sm disabled:opacity-60">
-          {loading ? 'Signing in…' : 'Log in'}
+          {loading ? t('auth.login_signing_in') : t('auth.login_cta')}
         </button>
       </form>
 
       <p className="mt-6 text-sm text-ink-muted text-center">
-        No account?{' '}
-        <Link href="/register" className="text-coral-600 font-semibold hover:underline">Sign up free</Link>
+        {t('auth.login_no_account')}{' '}
+        <Link href="/register" className="text-coral-600 font-semibold hover:underline">{t('auth.login_sign_up_link')}</Link>
       </p>
     </div>
   );
 }
 
 export default function LoginPage() {
+  const t = useT();
   return (
     <main className="min-h-screen flex">
       {/* Left: full-color hero panel (desktop) */}
@@ -72,7 +75,7 @@ export default function LoginPage() {
         </svg>
         <div className="relative p-12 flex flex-col justify-between w-full">
           <Link href="/" className="inline-block">
-            <span className="flex items-center gap-2 text-white text-xl font-bold">
+            <span dir="ltr" className="flex items-center gap-2 text-white text-xl font-bold">
               <img src="/Logo.png" alt="" className="h-8 w-8 rounded-md object-cover" />
               Babylytics
             </span>
@@ -81,27 +84,27 @@ export default function LoginPage() {
           <div className="text-white space-y-6">
             {/* Stacked illustrated pill badges */}
             <div className="flex flex-wrap gap-3">
-              <Badge icon={Milk}  label="feedings" />
-              <Badge icon={Moon}  label="sleep" />
-              <Badge icon={Baby}  label="diaper" />
-              <Badge icon={Scale} label="growth" />
-              <Badge icon={Heart} label="health" />
+              <Badge icon={Milk}  label={t('auth.hero_badge_feedings')} />
+              <Badge icon={Moon}  label={t('auth.hero_badge_sleep')} />
+              <Badge icon={Baby}  label={t('auth.hero_badge_diaper')} />
+              <Badge icon={Scale} label={t('auth.hero_badge_growth')} />
+              <Badge icon={Heart} label={t('auth.hero_badge_health')} />
             </div>
-            <h2 className="text-4xl font-bold leading-tight">Track today.<br />Nurture tomorrow.</h2>
+            <h2 className="text-4xl font-bold leading-tight">{t('auth.hero_track_today')}<br />{t('auth.hero_nurture_tomorrow')}</h2>
             <p className="text-white/80 max-w-sm">
-              Welcome back — your data is right where you left it. Pick up where you paused, and your pediatrician thanks you.
+              {t('auth.hero_welcome_back')}
             </p>
           </div>
 
           <div className="text-xs text-white/60">
-            Made with ❤️ for parents everywhere.
+            {t('auth.hero_made_with_love')}
           </div>
         </div>
       </section>
 
       {/* Right: form */}
       <section className="flex-1 grid place-items-center px-4 py-12 bg-white">
-        <Suspense fallback={<div className="text-sm text-ink-muted">Loading…</div>}>
+        <Suspense fallback={<div className="text-sm text-ink-muted">{t('auth.loading')}</div>}>
           <LoginForm />
         </Suspense>
       </section>

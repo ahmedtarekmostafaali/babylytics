@@ -14,6 +14,7 @@ import {
   Camera, Trash2, Save, Info, Gift, Stethoscope, StickyNote,
   Loader2,
 } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type BabyProfileValue = {
   id: string;
@@ -37,11 +38,12 @@ export type BabyProfileValue = {
 // 'prefs' was removed — language / timezone / unit preferences now live on
 // the global /preferences page so we don't surface a duplicate empty tab here.
 type Tab = 'basic' | 'birth' | 'health' | 'notes';
-const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: 'basic',  label: 'Basic Info',   icon: Info },
-  { key: 'birth',  label: 'Birth Stats',  icon: Gift },
-  { key: 'health', label: 'Health Info',  icon: Stethoscope },
-  { key: 'notes',  label: 'Notes',        icon: StickyNote },
+type TabMeta = { key: Tab; tkey: string; icon: React.ComponentType<{ className?: string }> };
+const TABS: TabMeta[] = [
+  { key: 'basic',  tkey: 'forms.bp_tab_basic',  icon: Info },
+  { key: 'birth',  tkey: 'forms.bp_tab_birth',  icon: Gift },
+  { key: 'health', tkey: 'forms.bp_tab_health', icon: Stethoscope },
+  { key: 'notes',  tkey: 'forms.bp_tab_notes',  icon: StickyNote },
 ];
 
 const AVATAR_BUCKET = 'medical-files';
@@ -58,6 +60,7 @@ export function BabyProfileForm({
   avatarUrl: string | null;
 }) {
   const router = useRouter();
+  const t = useT();
   const [tab, setTab] = useState<Tab>('basic');
 
   // Basic
@@ -99,7 +102,7 @@ export function BabyProfileForm({
   async function onAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) { setErr('Please choose an image.'); return; }
+    if (!file.type.startsWith('image/')) { setErr(t('forms.bp_choose_image')); return; }
     setErr(null); setMsg(null); setUploadingAvatar(true);
     const supabase = createClient();
     const path = `babies/${baby.id}/avatar/${Date.now()}_${sanitize(file.name)}`;
@@ -112,19 +115,19 @@ export function BabyProfileForm({
     const { data: signed } = await supabase.storage.from(AVATAR_BUCKET).createSignedUrl(path, 600);
     setLocalAvatar(signed?.signedUrl ?? null);
     setUploadingAvatar(false);
-    setMsg('Photo updated.');
+    setMsg(t('forms.bp_photo_updated'));
     router.refresh();
   }
 
   async function onAvatarClear() {
-    if (!window.confirm('Remove baby photo?')) return;
+    if (!window.confirm(t('forms.bp_remove_confirm'))) return;
     setUploadingAvatar(true);
     const supabase = createClient();
     const { error } = await supabase.from('babies').update({ avatar_path: null }).eq('id', baby.id);
     setUploadingAvatar(false);
     if (error) { setErr(error.message); return; }
     setLocalAvatar(null);
-    setMsg('Photo removed.');
+    setMsg(t('forms.bp_photo_removed'));
     router.refresh();
   }
 
@@ -166,12 +169,12 @@ export function BabyProfileForm({
     const { error } = await supabase.from('babies').update(payload).eq('id', baby.id);
     setSaving(false);
     if (error) { setErr(error.message); return; }
-    setMsg('Saved.');
+    setMsg(t('forms.bp_saved'));
     router.refresh();
   }
 
   async function onSoftDelete() {
-    if (!window.confirm(`Delete ${baby.name}'s profile? Logs remain in the database but the baby disappears from your dashboard.`)) return;
+    if (!window.confirm(t('forms.bp_delete_confirm', { name: baby.name }))) return;
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.from('babies').update({ deleted_at: new Date().toISOString() }).eq('id', baby.id);
@@ -199,27 +202,27 @@ export function BabyProfileForm({
         <div className="relative">
           <BabyAvatar url={localAvatar} size="2xl" />
           <button type="button" onClick={() => fileRef.current?.click()} disabled={uploadingAvatar}
-            title="Change photo"
+            title={t('forms.bp_change_photo')}
             className="absolute -bottom-1 -right-1 h-9 w-9 rounded-full bg-white grid place-items-center shadow-card border border-slate-200 text-ink hover:bg-slate-50">
             {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={onAvatarChange} className="hidden" />
         </div>
         <div className="relative min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-mint-700">Baby profile</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-mint-700">{t('forms.bp_eyebrow')}</div>
           <div className="mt-1 flex items-center gap-2 flex-wrap">
-            <h2 className="text-3xl font-bold tracking-tight text-ink-strong">{name || 'Unnamed'}</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-ink-strong">{name || t('forms.bp_unnamed')}</h2>
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-sm">
-            <Chip tint="coral">{gender}</Chip>
+            <Chip tint="coral">{gender === 'male' ? t('forms.bp_chip_male') : t('forms.bp_chip_female')}</Chip>
             {currentWeightKg != null && <Chip tint="mint">{fmtKg(currentWeightKg)}</Chip>}
-            <Chip tint="brand">Healthy</Chip>
+            <Chip tint="brand">{t('forms.bp_chip_healthy')}</Chip>
             {blood && blood !== 'unknown' && <Chip tint="peach">{blood}</Chip>}
           </div>
           {localAvatar && !uploadingAvatar && (
             <button type="button" onClick={onAvatarClear}
               className="mt-2 inline-flex items-center gap-1 text-xs text-ink-muted hover:text-coral-700">
-              <Trash2 className="h-3 w-3" /> Remove photo
+              <Trash2 className="h-3 w-3" /> {t('forms.bp_remove_photo')}
             </button>
           )}
         </div>
@@ -228,17 +231,17 @@ export function BabyProfileForm({
       {/* Tabs */}
       <div className="border-b border-slate-200">
         <div className="flex flex-wrap gap-2 sm:gap-6 -mb-px">
-          {TABS.map(t => {
-            const active = tab === t.key;
-            const Icon = t.icon;
-            if (t.key === 'health' && !canEditHealth) return null;
+          {TABS.map(meta => {
+            const active = tab === meta.key;
+            const Icon = meta.icon;
+            if (meta.key === 'health' && !canEditHealth) return null;
             return (
-              <button key={t.key} type="button" onClick={() => setTab(t.key)}
+              <button key={meta.key} type="button" onClick={() => setTab(meta.key)}
                 className={cn(
                   'inline-flex items-center gap-1.5 px-2 py-3 text-sm border-b-2 transition whitespace-nowrap',
                   active ? 'border-coral-500 text-coral-700 font-semibold' : 'border-transparent text-ink-muted hover:text-ink',
                 )}>
-                <Icon className="h-4 w-4" /> {t.label}
+                <Icon className="h-4 w-4" /> {t(meta.tkey)}
               </button>
             );
           })}
@@ -247,29 +250,29 @@ export function BabyProfileForm({
 
       {/* Tab panels */}
       {tab === 'basic' && (
-        <SectionCard icon={Info} tint="coral" title="Basic Information">
+        <SectionCard icon={Info} tint="coral" title={t('forms.bp_basic_title')}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Full name">
+            <Field label={t('forms.bp_full_name')}>
               <Input value={name} onChange={e => setName(e.target.value)} required />
             </Field>
-            <Field label="Nickname (optional)">
-              <Input value={nick} onChange={e => setNick(e.target.value)} placeholder="Juju" />
+            <Field label={t('forms.bp_nickname')}>
+              <Input value={nick} onChange={e => setNick(e.target.value)} placeholder={t('forms.bp_nickname_ph')} />
             </Field>
-            <Field label="Date & time of birth">
+            <Field label={t('forms.bp_dob')}>
               <Input type="datetime-local" value={dob} onChange={e => setDob(e.target.value)} required />
             </Field>
-            <Field label="Gender">
+            <Field label={t('forms.bp_gender')}>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { v: 'female', label: 'Female' },
-                  { v: 'male',   label: 'Male' },
+                  { v: 'female', tkey: 'forms.baby_gender_female' },
+                  { v: 'male',   tkey: 'forms.baby_gender_male' },
                 ].map(o => (
                   <button type="button" key={o.v} onClick={() => setGender(o.v as typeof gender)}
                     className={cn(
                       'rounded-xl border px-3 py-2 text-sm font-semibold transition',
                       gender === o.v ? 'border-coral-500 bg-coral-50 text-coral-700' : 'border-slate-200 bg-white hover:bg-slate-50',
                     )}>
-                    {o.label}
+                    {t(o.tkey)}
                   </button>
                 ))}
               </div>
@@ -279,39 +282,39 @@ export function BabyProfileForm({
       )}
 
       {tab === 'birth' && (
-        <SectionCard icon={Gift} tint="mint" title="Birth Stats">
+        <SectionCard icon={Gift} tint="mint" title={t('forms.bp_birth_title')}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Birth weight">
+            <Field label={t('forms.bp_birth_weight')}>
               <div className="flex gap-2">
-                <Input type="number" step="0.001" min={0} max={10} value={bw} onChange={e => setBw(e.target.value)} placeholder="3.25" />
+                <Input type="number" step="0.001" min={0} max={10} value={bw} onChange={e => setBw(e.target.value)} placeholder={t('forms.bp_birth_weight_ph')} />
                 <span className="h-10 px-3 rounded-md border border-slate-200 bg-slate-50 grid place-items-center text-sm text-ink-muted">kg</span>
               </div>
             </Field>
-            <Field label="Birth height">
+            <Field label={t('forms.bp_birth_height')}>
               <div className="flex gap-2">
-                <Input type="number" step="0.1" min={0} max={80} value={bh} onChange={e => setBh(e.target.value)} placeholder="51" />
+                <Input type="number" step="0.1" min={0} max={80} value={bh} onChange={e => setBh(e.target.value)} placeholder={t('forms.bp_birth_height_ph')} />
                 <span className="h-10 px-3 rounded-md border border-slate-200 bg-slate-50 grid place-items-center text-sm text-ink-muted">cm</span>
               </div>
             </Field>
-            <Field label="Feeding factor (ml / kg / day)" className="sm:col-span-2">
+            <Field label={t('forms.bp_feed_factor')} className="sm:col-span-2">
               <Input type="number" step="1" min={50} max={250} value={factor} onChange={e => setFactor(e.target.value)} />
               <div className="mt-2 rounded-xl bg-mint-50 px-3 py-2 text-xs text-mint-900">
                 {fmtKg(weightForCalc)} × {factor || '—'} ml/kg/day = <span className="font-semibold">{fmtMl(previewRecommended)}</span>
-                {currentWeightKg == null && <span className="ml-2 text-peach-700">(using birth weight)</span>}
+                {currentWeightKg == null && <span className="ml-2 text-peach-700">{t('forms.bp_feed_using_birth')}</span>}
               </div>
-              <p className="text-xs text-ink-muted mt-1">Recommended: 150 – 200 ml / kg / day for newborns.</p>
+              <p className="text-xs text-ink-muted mt-1">{t('forms.bp_feed_factor_help')}</p>
             </Field>
           </div>
         </SectionCard>
       )}
 
       {tab === 'health' && canEditHealth && (
-        <SectionCard icon={Stethoscope} tint="lavender" title="Health Information">
+        <SectionCard icon={Stethoscope} tint="lavender" title={t('forms.bp_health_title')}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Blood type">
+            <Field label={t('forms.bp_blood_type')}>
               <Select value={blood} onChange={e => setBlood(e.target.value)}>
                 {['unknown','A+','A-','B+','B-','AB+','AB-','O+','O-'].map(b =>
-                  <option key={b} value={b}>{b}</option>
+                  <option key={b} value={b}>{b === 'unknown' ? t('forms.preg_unknown') : b}</option>
                 )}
               </Select>
             </Field>
@@ -321,19 +324,18 @@ export function BabyProfileForm({
               <Stethoscope className="h-5 w-5" />
             </span>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-ink-strong">Doctors &amp; appointments moved</div>
+              <div className="text-sm font-bold text-ink-strong">{t('forms.bp_doctors_moved_title')}</div>
               <p className="text-xs text-ink-muted mt-0.5">
-                You can now add <strong>multiple doctors</strong> (pediatrician, specialist, dentist) and book
-                appointments with each of them from their own dedicated page.
+                {t('forms.bp_doctors_moved_body')}
               </p>
               <a href={`/babies/${baby.id}/doctors`}
                 className="mt-2 inline-flex items-center gap-1 rounded-full bg-lavender-500 hover:bg-lavender-600 text-white text-xs font-semibold px-3 py-1.5">
-                Open Doctors &amp; appointments →
+                {t('forms.bp_doctors_moved_cta')}
               </a>
             </div>
           </div>
           <div className="mt-3 text-xs text-ink-muted">
-            Doctor details and appointments are visible to parents and owners only — doctors, nurses and caregivers don&apos;t see this section.
+            {t('forms.bp_doctors_moved_note')}
           </div>
           {/* Hidden fields kept to preserve the form's state contract. */}
           <input type="hidden" value={docName ?? ''} readOnly />
@@ -345,9 +347,9 @@ export function BabyProfileForm({
       )}
 
       {tab === 'notes' && (
-        <SectionCard icon={StickyNote} tint="peach" title="Notes">
+        <SectionCard icon={StickyNote} tint="peach" title={t('forms.bp_notes_title')}>
           <Textarea rows={6} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
-            placeholder="Anything other caregivers should know…" />
+            placeholder={t('forms.bp_notes_ph')} />
         </SectionCard>
       )}
 
@@ -357,12 +359,12 @@ export function BabyProfileForm({
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={saving}
           className="flex-1 h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-coral-500 to-coral-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : 'Save changes'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : t('forms.bp_save_changes')}
         </Button>
         {canDelete && (
           <Button type="button" variant="danger" onClick={onSoftDelete} disabled={saving}
             className="h-14 rounded-2xl">
-            <Trash2 className="h-4 w-4" /> Delete
+            <Trash2 className="h-4 w-4" /> {t('forms.bp_delete')}
           </Button>
         )}
       </div>
