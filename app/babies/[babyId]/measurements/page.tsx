@@ -73,9 +73,14 @@ export default async function MeasurementsLog({
       .gte('measured_at', range.start).lte('measured_at', range.end)
       .order('measured_at', { ascending: false }).limit(200),
     supabase.from('measurements')
-      .select('measured_at,weight_kg,height_cm,head_circ_cm')
+      .select('measured_at,weight_kg,height_cm,head_circ_cm,created_at')
       .eq('baby_id', params.babyId).is('deleted_at', null)
-      .order('measured_at', { ascending: true }).limit(500),
+      // Order by measured_at primarily; tiebreak with created_at so two
+      // entries with the same logical timestamp still resolve in insert
+      // order. Ascending so all[all.length-1] is the most recent.
+      .order('measured_at', { ascending: true })
+      .order('created_at', { ascending: true })
+      .limit(500),
   ]);
 
   const rowsAll = (rowsData ?? []) as Row[];

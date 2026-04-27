@@ -36,6 +36,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [babies, setBabies] = useState<BabyRow[]>([]);
   const [avatars, setAvatars] = useState<Record<string, string | null>>({});
   const [babySwitcherOpen, setBabySwitcherOpen] = useState(false);
@@ -53,7 +54,18 @@ export function Sidebar() {
     } catch { /* ignore */ }
 
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    // Pull both the auth email and the profile display_name. The footer
+    // shows whichever is friendlier — display_name first, email-prefix
+    // fallback (everything before "@"), full email last.
+    supabase.auth.getUser().then(async ({ data }) => {
+      const u = data.user;
+      if (!u) return;
+      setEmail(u.email ?? null);
+      const { data: prof } = await supabase.from('profiles')
+        .select('display_name').eq('id', u.id).maybeSingle();
+      const dn = (prof?.display_name as string | undefined)?.trim() || null;
+      setDisplayName(dn);
+    });
     supabase.from('babies')
       .select('id,name,dob,avatar_path,lifecycle_stage,edd,lmp')
       .is('deleted_at', null)
@@ -348,25 +360,34 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* User footer */}
+      {/* User footer — show the friendliest name available:
+          display_name (from profiles) > email-prefix > full email > "U". */}
       <div className={cn('border-t border-slate-200/80 bg-white/60', collapsed ? 'p-2' : 'p-3')}>
-        {!collapsed ? (
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-700 grid place-items-center shrink-0 text-xs font-bold">
-              {(email ?? 'U').charAt(0).toUpperCase()}
+        {(() => {
+          const friendlyName = displayName
+            ?? (email ? email.split('@')[0] : null)
+            ?? null;
+          const initial = (friendlyName ?? 'U').charAt(0).toUpperCase();
+          return !collapsed ? (
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-brand-100 text-brand-700 grid place-items-center shrink-0 text-xs font-bold">
+                {initial}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-ink-strong truncate" title={email ?? undefined}>
+                  {friendlyName ?? 'Signed in'}
+                </div>
+                <button onClick={logout} className="text-xs text-ink-muted hover:text-coral-600 inline-flex items-center gap-1">
+                  <LogOut className="h-3 w-3" /> Log out
+                </button>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs text-ink truncate">{email ?? 'Signed in'}</div>
-              <button onClick={logout} className="text-xs text-ink-muted hover:text-coral-600 inline-flex items-center gap-1">
-                <LogOut className="h-3 w-3" /> Log out
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button onClick={logout} className="w-full grid place-items-center h-10 rounded-lg hover:bg-slate-100 text-ink-muted" title="Log out">
-            <LogOut className="h-4 w-4" />
-          </button>
-        )}
+          ) : (
+            <button onClick={logout} className="w-full grid place-items-center h-10 rounded-lg hover:bg-slate-100 text-ink-muted" title="Log out">
+              <LogOut className="h-4 w-4" />
+            </button>
+          );
+        })()}
       </div>
     </div>
   );
@@ -382,7 +403,7 @@ export function Sidebar() {
         >
           <Menu className="h-5 w-5 text-ink" />
         </button>
-        <Link href="/dashboard"><Wordmark size="sm" /></Link>
+        <Link href="/"><Wordmark size="sm" /></Link>
       </div>
 
       {/* Mobile drawer */}
