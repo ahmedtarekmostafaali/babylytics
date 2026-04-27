@@ -463,9 +463,15 @@ export default async function BabyOverview({
   const thisWeek = (weekFeeds.data ?? []).length;
 
   // ───────── Growth progress: latest vs birth
+  // Use the per-field latest-non-null row (lastWeightRow) for the headline
+  // number so a parent who just logged a weight sees that weight here, even
+  // if the weight_trend RPC's array hasn't refreshed yet. Sparkline still
+  // uses the series so the trendline reflects history.
   const weightRows = (weightSeries.data ?? []) as { measured_at: string; weight_kg: number | null }[];
   const weightPoints = weightRows.filter(r => r.weight_kg != null).map(r => Number(r.weight_kg));
-  const growthLatest = weightPoints.length ? weightPoints[weightPoints.length - 1] : null;
+  const growthLatest = lastWeightRow.data?.weight_kg != null
+    ? Number(lastWeightRow.data.weight_kg)
+    : (weightPoints.length ? weightPoints[weightPoints.length - 1] : null);
   const growthDelta = growthLatest != null && baby.birth_weight_kg
     ? growthLatest - Number(baby.birth_weight_kg) : null;
 
@@ -504,7 +510,7 @@ export default async function BabyOverview({
             {showPregnancyArchive && (
               <Link href={`/babies/${babyId}/medical-profile#pregnancy-history`}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-lavender-100 hover:bg-lavender-200 text-lavender-700 text-[11px] font-semibold px-3 py-1">
-                <Sparkles className="h-3 w-3" /> Pregnancy archive available <ArrowRight className="h-3 w-3" />
+                <Sparkles className="h-3 w-3" /> {t('overview.pregnancy_archive_avail')} <ArrowRight className="h-3 w-3" />
               </Link>
             )}
           </div>
@@ -512,8 +518,8 @@ export default async function BabyOverview({
         <div className="flex items-center gap-2">
           <Link href={`/babies/${babyId}/dashboard-settings`}
             className="h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
-            title="Customize dashboard"
-            aria-label="Customize dashboard">
+            title={t('overview.customize_dashboard')}
+            aria-label={t('overview.customize_dashboard')}>
             <SlidersHorizontal className="h-4 w-4 text-ink" />
           </Link>
           <DayPicker babyId={babyId} value={focusDate} />
@@ -843,16 +849,16 @@ export default async function BabyOverview({
                 <div className="relative">
                   <div className="flex items-center gap-2">
                     <CalendarClock className="h-4 w-4 opacity-90" />
-                    <div className="text-xs uppercase tracking-wider opacity-90">Next appointment</div>
+                    <div className="text-xs uppercase tracking-wider opacity-90">{t('overview.next_appointment')}</div>
                   </div>
                   <div className="mt-2 text-xl font-bold leading-tight">{fmtDateTime(appt.scheduled_at)}</div>
                   <div className="text-sm opacity-95 mt-0.5 truncate">
-                    {appt.purpose ?? 'Visit'}
+                    {appt.purpose ?? t('overview.appt_visit')}
                     {appt.doctor_name ? ` · ${appt.doctor_name}` : ''}
                   </div>
-                  {appt.location && <div className="text-xs opacity-80 truncate mt-0.5">at {appt.location}</div>}
+                  {appt.location && <div className="text-xs opacity-80 truncate mt-0.5">{t('overview.appt_at_loc', { loc: appt.location })}</div>}
                   <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold bg-white/20 rounded-full px-3 py-1">
-                    <Stethoscope className="h-3 w-3" /> Open appointment
+                    <Stethoscope className="h-3 w-3" /> {t('overview.appt_open')}
                     <ArrowRight className="h-3 w-3" />
                   </div>
                 </div>
@@ -869,13 +875,13 @@ export default async function BabyOverview({
             const totalShown = shownMeds + vaxCount;
             const subtitle =
               totalShown === 0
-                ? 'no active meds'
+                ? t('overview.reminders_no_active')
                 : overdueCount > 0
-                  ? `${overdueCount} due now · ${totalShown - overdueCount} upcoming`
-                  : `${totalShown} upcoming`;
+                  ? t('overview.reminders_due_upcoming', { due: overdueCount, up: totalShown - overdueCount })
+                  : t('overview.reminders_upcoming', { n: totalShown });
             return (
           <Panel
-            title="Upcoming reminders"
+            title={t('overview.panel_reminders')}
             subtitle={subtitle}
             icon={Bell}
             tint={overdueCount > 0 ? 'coral' : 'peach'}
@@ -884,10 +890,10 @@ export default async function BabyOverview({
             {reminders.length === 0 ? (
               <EmptyBlock
                 icon={Pill}
-                title="No active medications"
-                body="Add a prescription to start getting reminders."
+                title={t('overview.reminders_no_meds_title')}
+                body={t('overview.reminders_no_meds_body')}
                 actionHref={`/babies/${babyId}/medications/new`}
-                actionLabel="Add medication"
+                actionLabel={t('overview.reminders_add_med')}
               />
             ) : (
               <ul className="space-y-2">
@@ -908,16 +914,16 @@ export default async function BabyOverview({
                         <span className="text-sm font-semibold text-ink-strong truncate">{r.name}</span>
                         {r.isOverdue && (
                           <span className="text-[9px] font-bold uppercase tracking-wider rounded-full bg-coral-500 text-white px-1.5 py-0.5">
-                            due now
+                            {t('overview.reminders_due_now')}
                           </span>
                         )}
                       </div>
                       <div className={`text-[11px] truncate ${r.isOverdue ? 'text-coral-700 font-medium' : 'text-ink-muted'}`}>
                         {r.nextAt
                           ? (r.isOverdue
-                              ? `Was due ${fmtRelative(r.nextAt)}`
-                              : `Next ${fmtDateTime(r.nextAt)}`)
-                          : 'no schedule yet'}
+                              ? t('overview.reminders_was_due', { when: fmtRelative(r.nextAt) })
+                              : t('overview.reminders_next', { when: fmtDateTime(r.nextAt) }))
+                          : t('overview.reminders_no_schedule')}
                       </div>
                     </div>
                     <Link href={`/babies/${babyId}/medications/log?m=${r.medId}`}
@@ -926,7 +932,7 @@ export default async function BabyOverview({
                           ? 'bg-coral-600 hover:bg-coral-700 font-semibold'
                           : 'bg-lavender-500 hover:bg-lavender-600'
                       }`}>
-                      Log
+                      {t('overview.reminders_log_btn')}
                     </Link>
                   </li>
                 ))}
@@ -941,11 +947,11 @@ export default async function BabyOverview({
                         {v.dose_number && v.total_doses ? <span className="text-ink-muted font-normal"> · {v.dose_number}/{v.total_doses}</span> : null}
                       </div>
                       <div className="text-[11px] text-ink-muted truncate">
-                        {v.scheduled_at ? `scheduled ${fmtDate(v.scheduled_at)}` : 'TBD'}
+                        {v.scheduled_at ? t('overview.reminders_scheduled', { when: fmtDate(v.scheduled_at) }) : t('overview.reminders_tbd')}
                       </div>
                     </div>
                     <Link href={`/babies/${babyId}/vaccinations/${v.id}`} className="text-[11px] text-lavender-700 hover:underline whitespace-nowrap">
-                      Open
+                      {t('overview.reminders_open')}
                     </Link>
                   </li>
                 ))}
@@ -957,30 +963,30 @@ export default async function BabyOverview({
 
           {/* Growth progress */}
           <Panel
-            title="Growth progress"
-            subtitle={w ? fmtKg(w) : 'no weight yet'}
+            title={t('overview.panel_growth')}
+            subtitle={growthLatest != null ? fmtKg(growthLatest) : t('overview.growth_no_weight_yet')}
             icon={Scale}
             tint="brand"
             compact
           >
-            {weightPoints.length === 0 ? (
+            {growthLatest == null ? (
               <EmptyBlock
                 icon={Scale}
-                title="No weight history"
-                body="Add a measurement to see the growth line."
+                title={t('overview.growth_no_history_title')}
+                body={t('overview.growth_no_history_body')}
                 actionHref={`/babies/${babyId}/measurements/new`}
-                actionLabel="Add measurement"
+                actionLabel={t('overview.growth_add_measurement')}
               />
             ) : (
               <div>
                 <div className="flex items-end gap-3">
                   <div>
                     <div className="text-2xl font-bold text-ink-strong leading-none">{fmtKg(growthLatest)}</div>
-                    <div className="text-[11px] text-ink-muted mt-1">current</div>
+                    <div className="text-[11px] text-ink-muted mt-1">{t('overview.growth_current')}</div>
                   </div>
                   {growthDelta != null && (
                     <div className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${growthDelta >= 0 ? 'bg-mint-100 text-mint-700' : 'bg-peach-100 text-peach-700'}`}>
-                      <ArrowUpRight className="h-3 w-3" /> {growthDelta >= 0 ? '+' : ''}{growthDelta.toFixed(2)} kg since birth
+                      <ArrowUpRight className="h-3 w-3" /> {t('overview.growth_since_birth', { sign: growthDelta >= 0 ? '+' : '', kg: growthDelta.toFixed(2) })}
                     </div>
                   )}
                 </div>

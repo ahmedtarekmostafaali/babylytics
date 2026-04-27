@@ -19,7 +19,7 @@ export type FilterOption = {
 };
 
 export function LogTypeFilter({
-  label, options, activeKeys, baseHref, extraParams, mode = 'multi',
+  label, options, activeKeys, baseHref, extraParams, mode = 'multi', allLabel = 'All',
 }: {
   label: string;
   options: FilterOption[];
@@ -29,6 +29,8 @@ export function LogTypeFilter({
   /** Extra query params to preserve, e.g. { range: '7d' } */
   extraParams?: Record<string, string | undefined>;
   mode?: 'multi' | 'single';
+  /** Translated label for the "All" chip — defaults to English "All". */
+  allLabel?: string;
 }) {
   const typeActive = activeKeys.length > 0 && activeKeys.length < options.length;
 
@@ -56,7 +58,7 @@ export function LogTypeFilter({
       <span className="px-2 py-1.5 text-xs font-semibold text-ink-muted inline-flex items-center gap-1">
         <Filter className="h-3 w-3" /> {label}
       </span>
-      <Chip href={hrefFor(null)} label="All" active={!typeActive} />
+      <Chip href={hrefFor(null)} label={allLabel} active={!typeActive} />
       {options.map(o => (
         <Chip key={o.key}
           href={hrefFor(toggle(o.key))}

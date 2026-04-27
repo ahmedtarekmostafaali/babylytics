@@ -34,19 +34,21 @@ type Row = {
   created_at: string;
 };
 
-function statusOf(c: number): { label: string; chip: string; tint: 'mint'|'peach'|'coral'|'brand'; } {
-  if (c >= 38)  return { label: 'Fever',    chip: 'bg-coral-100 text-coral-700', tint: 'coral' };
-  if (c >= 37.5) return { label: 'Elevated', chip: 'bg-peach-100 text-peach-700', tint: 'peach' };
-  if (c < 36)   return { label: 'Low',      chip: 'bg-brand-100 text-brand-700', tint: 'brand' };
-  return { label: 'Normal', chip: 'bg-mint-100 text-mint-700', tint: 'mint' };
+type TFn = (k: string, vars?: Record<string, string | number>) => string;
+
+function statusOf(c: number, t: TFn): { label: string; chip: string; tint: 'mint'|'peach'|'coral'|'brand'; } {
+  if (c >= 38)   return { label: t('trackers.temp_status_fever'),    chip: 'bg-coral-100 text-coral-700', tint: 'coral' };
+  if (c >= 37.5) return { label: t('trackers.temp_status_elevated'), chip: 'bg-peach-100 text-peach-700', tint: 'peach' };
+  if (c < 36)    return { label: t('trackers.temp_status_low'),      chip: 'bg-brand-100 text-brand-700', tint: 'brand' };
+  return { label: t('trackers.temp_status_normal'), chip: 'bg-mint-100 text-mint-700', tint: 'mint' };
 }
 
-function groupHeading(iso: string): string {
+function groupHeading(iso: string, t: TFn): string {
   const today = todayLocalDate();
   const y = yesterdayLocalDate();
   const k = localDayKey(iso);
-  if (k === today) return `Today, ${fmtDate(iso)}`;
-  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  if (k === today) return `${t('trackers.today_grp')}, ${fmtDate(iso)}`;
+  if (k === y)     return `${t('trackers.yesterday_grp')}, ${fmtDate(iso)}`;
   return fmtDate(iso);
 }
 
@@ -104,7 +106,7 @@ export default async function TemperatureLog({
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }
-  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.measured_at), list }));
+  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.measured_at, t), list }));
   const selected = searchParams.id ? rows.find(r => r.id === searchParams.id) : rows[0];
 
   return (
@@ -130,22 +132,23 @@ export default async function TemperatureLog({
 
       <div className="flex items-center gap-3 flex-wrap">
         <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
-        <LogTypeFilter label="Status"
+        <LogTypeFilter label={t('trackers.filter_status')}
           options={[
-            { key: 'normal',   label: 'Normal' },
-            { key: 'elevated', label: 'Elevated' },
-            { key: 'fever',    label: 'Fever' },
-            { key: 'low',      label: 'Low' },
+            { key: 'normal',   label: t('trackers.temp_status_normal') },
+            { key: 'elevated', label: t('trackers.temp_status_elevated') },
+            { key: 'fever',    label: t('trackers.temp_status_fever') },
+            { key: 'low',      label: t('trackers.temp_status_low') },
           ]}
           activeKeys={activeStatuses}
           baseHref={`/babies/${params.babyId}/temperature`}
-          extraParams={{ range: range.key }} />
+          extraParams={{ range: range.key }}
+          allLabel={t('trackers.filter_all')} />
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
           {groups.length === 0 && (
-            <div className="p-10 text-center text-sm text-ink-muted">No readings in this window.</div>
+            <div className="p-10 text-center text-sm text-ink-muted">{t('trackers.temp_no_in_window')}</div>
           )}
           {groups.map(g => (
             <section key={g.k}>
@@ -157,7 +160,7 @@ export default async function TemperatureLog({
                   // Local var renamed from `t` to `tempC` so it doesn't shadow
                   // the i18n translator hoisted at the top of the page.
                   const tempC = Number(r.temperature_c);
-                  const st = statusOf(tempC);
+                  const st = statusOf(tempC, t);
                   const active = selected?.id === r.id;
                   return (
                     <li key={r.id}>
@@ -189,23 +192,23 @@ export default async function TemperatureLog({
         <div className="space-y-4 lg:sticky lg:top-4 self-start">
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-ink-strong">Reading details</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.temp_reading_details')}</h3>
               {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/temperature/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                    <Edit3 className="h-3 w-3" /> Edit
+                    <Edit3 className="h-3 w-3" /> {t('trackers.edit_btn')}
                   </Link>
                   <LogRowDelete table="temperature_logs" id={selected.id} />
                 </div>
               )}
             </div>
             {!selected ? (
-              <div className="p-8 text-center text-sm text-ink-muted">Pick a reading from the list.</div>
+              <div className="p-8 text-center text-sm text-ink-muted">{t('trackers.temp_pick_to_see')}</div>
             ) : (() => {
               // Renamed `t` → `tempC` so it doesn't shadow the i18n translator.
               const tempC = Number(selected.temperature_c);
-              const st = statusOf(tempC);
+              const st = statusOf(tempC, t);
               const tintBg = { mint: 'bg-mint-50', peach: 'bg-peach-50', coral: 'bg-coral-50', brand: 'bg-brand-50' }[st.tint];
               return (
                 <div className="p-5 space-y-4">
@@ -223,13 +226,13 @@ export default async function TemperatureLog({
                   </div>
 
                   <div className={`rounded-xl px-3 py-2 ${tintBg}`}>
-                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Method</div>
+                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.temp_method_label')}</div>
                     <div className="text-sm font-semibold text-ink-strong capitalize">{selected.method}</div>
                   </div>
 
                   {selected.notes && (
                     <div>
-                      <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Notes</div>
+                      <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.notes_label')}</div>
                       <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                     </div>
                   )}
@@ -245,29 +248,29 @@ export default async function TemperatureLog({
               {hasFever ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
             </span>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold">{hasFever ? 'Fever today' : 'All clear'}</div>
+              <div className="text-sm font-bold">{hasFever ? t('trackers.temp_fever_today') : t('trackers.temp_all_clear')}</div>
               <div className={`text-xs ${hasFever ? 'text-coral-900/90' : 'text-mint-900/90'}`}>
                 {hasFever
-                  ? 'Keep a close eye — re-check in 30 minutes and call your pediatrician if it stays above 38 °C.'
+                  ? t('trackers.temp_fever_msg')
                   : todayAvg != null
-                    ? `Today's average is ${todayAvg.toFixed(1)} °C. Readings look normal.`
-                    : 'No readings logged today yet.'}
+                    ? t('trackers.temp_normal_avg_msg', { avg: todayAvg.toFixed(1) })
+                    : t('trackers.temp_no_today_msg')}
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-ink-strong">Summary · {range.label}</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.summary_label', { range: range.label })}</h3>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <MiniStat label="Readings" value={rows.length} />
-              <MiniStat label="Avg" value={todayAvg != null ? `${todayAvg.toFixed(1)} °C` : '—'} />
-              <MiniStat label="Peak" value={todayPeak != null ? `${todayPeak.toFixed(1)} °C` : '—'} />
+              <MiniStat label={t('trackers.temp_summary_readings')} value={rows.length} />
+              <MiniStat label={t('trackers.temp_summary_avg')} value={todayAvg != null ? `${todayAvg.toFixed(1)} °C` : '—'} />
+              <MiniStat label={t('trackers.temp_summary_peak')} value={todayPeak != null ? `${todayPeak.toFixed(1)} °C` : '—'} />
             </div>
             {sparkValues.length > 1 && (
               <div className="mt-4">
-                <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1">Last {sparkValues.length} readings</div>
+                <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1">{t('trackers.temp_last_n_readings', { n: sparkValues.length })}</div>
                 <Sparkline data={sparkValues} color="#F4A6A6" width={280} height={44} strokeWidth={2.5} />
               </div>
             )}

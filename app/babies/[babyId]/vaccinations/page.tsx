@@ -34,14 +34,24 @@ type Row = {
   created_at: string;
 };
 
+type TFn = (k: string, vars?: Record<string, string | number>) => string;
 type DisplayStatus = Row['status'] | 'overdue';
 
-const STATUS_META: Record<DisplayStatus, { icon: React.ComponentType<{ className?: string }>; chip: string; label: string }> = {
-  scheduled:    { icon: CalendarClock, chip: 'bg-brand-100 text-brand-700',   label: 'Scheduled' },
-  overdue:      { icon: AlertTriangle, chip: 'bg-coral-100 text-coral-700',   label: 'Overdue' },
-  administered: { icon: CheckCircle2,  chip: 'bg-mint-100  text-mint-700',    label: 'Done' },
-  skipped:      { icon: XCircle,       chip: 'bg-peach-100 text-peach-700',   label: 'Skipped' },
-  missed:       { icon: AlertTriangle, chip: 'bg-coral-100 text-coral-700',   label: 'Missed' },
+// Map effective status → the i18n key suffix in trackers.vax_status_*
+const STATUS_KEY: Record<DisplayStatus, string> = {
+  scheduled:    'scheduled',
+  overdue:      'overdue',
+  administered: 'done',
+  skipped:      'skipped',
+  missed:       'missed',
+};
+
+const STATUS_META: Record<DisplayStatus, { icon: React.ComponentType<{ className?: string }>; chip: string }> = {
+  scheduled:    { icon: CalendarClock, chip: 'bg-brand-100 text-brand-700' },
+  overdue:      { icon: AlertTriangle, chip: 'bg-coral-100 text-coral-700' },
+  administered: { icon: CheckCircle2,  chip: 'bg-mint-100  text-mint-700' },
+  skipped:      { icon: XCircle,       chip: 'bg-peach-100 text-peach-700' },
+  missed:       { icon: AlertTriangle, chip: 'bg-coral-100 text-coral-700' },
 };
 
 /** Promote "scheduled" → "overdue" when the scheduled time is already past. */
@@ -54,11 +64,11 @@ function effectiveStatus(r: Row, nowMs: number): DisplayStatus {
 
 type Tab = 'all' | 'overdue' | 'upcoming' | 'done';
 
-const TABS: { key: Tab; label: string; tint: string }[] = [
-  { key: 'all',      label: 'All',       tint: 'text-ink border-ink' },
-  { key: 'overdue',  label: 'Overdue',   tint: 'text-coral-700 border-coral-500' },
-  { key: 'upcoming', label: 'Upcoming',  tint: 'text-brand-700 border-brand-500' },
-  { key: 'done',     label: 'Done',      tint: 'text-mint-700 border-mint-500' },
+const TABS: { key: Tab; tint: string }[] = [
+  { key: 'all',      tint: 'text-ink border-ink' },
+  { key: 'overdue',  tint: 'text-coral-700 border-coral-500' },
+  { key: 'upcoming', tint: 'text-brand-700 border-brand-500' },
+  { key: 'done',     tint: 'text-mint-700 border-mint-500' },
 ];
 
 export default async function VaccinationsLog({
@@ -128,16 +138,16 @@ export default async function VaccinationsLog({
           <div className="mx-auto h-16 w-16 rounded-full bg-lavender-100 text-lavender-600 grid place-items-center">
             <Syringe className="h-8 w-8" />
           </div>
-          <p className="mt-3 text-ink-muted">No vaccinations tracked yet.</p>
+          <p className="mt-3 text-ink-muted">{t('trackers.vax_no_tracked')}</p>
           <div className="mt-4 flex items-center justify-center gap-2">
             <SeedScheduleButton babyId={params.babyId} />
             <Link href={`/babies/${params.babyId}/vaccinations/new`}
               className="rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-sm font-semibold px-4 py-1.5">
-              + Add manually
+              {t('trackers.vax_add_manual')}
             </Link>
           </div>
           <p className="mt-3 text-xs text-ink-muted">
-            <Sparkles className="inline h-3 w-3" /> Suggested schedule fills the first 12 months with a standard plan — adjust freely afterwards.
+            <Sparkles className="inline h-3 w-3" /> {t('trackers.vax_seed_hint')}
           </p>
         </div>
       )}
@@ -146,15 +156,15 @@ export default async function VaccinationsLog({
         <>
           {/* Tabs */}
           <div className="flex items-center gap-1 px-2 bg-white rounded-2xl border border-slate-200 shadow-card overflow-x-auto">
-            {TABS.map(t => {
-              const on = tab === t.key;
+            {TABS.map(tabDef => {
+              const on = tab === tabDef.key;
               return (
-                <Link key={t.key}
-                  href={`/babies/${params.babyId}/vaccinations?tab=${t.key}`}
-                  className={`inline-flex items-center gap-1.5 px-3 py-3 text-sm whitespace-nowrap border-b-2 ${on ? t.tint : 'border-transparent text-ink-muted hover:text-ink'}`}>
-                  {t.label}
+                <Link key={tabDef.key}
+                  href={`/babies/${params.babyId}/vaccinations?tab=${tabDef.key}`}
+                  className={`inline-flex items-center gap-1.5 px-3 py-3 text-sm whitespace-nowrap border-b-2 ${on ? tabDef.tint : 'border-transparent text-ink-muted hover:text-ink'}`}>
+                  {t(`trackers.vax_tab_${tabDef.key}`)}
                   <span className={`rounded-full text-[10px] font-bold px-1.5 py-0.5 ${on ? 'bg-ink text-white' : 'bg-slate-100 text-ink-muted'}`}>
-                    {tabCounts[t.key]}
+                    {tabCounts[tabDef.key]}
                   </span>
                 </Link>
               );
@@ -165,11 +175,11 @@ export default async function VaccinationsLog({
             <div className="rounded-2xl border border-coral-200 bg-coral-50 p-3 flex items-center gap-3">
               <AlertTriangle className="h-4 w-4 text-coral-600 shrink-0" />
               <div className="flex-1 text-sm text-coral-900">
-                <span className="font-bold">{overdue.length}</span> overdue — check with your pediatrician.
+                {t('trackers.vax_overdue_alert', { n: overdue.length })}
               </div>
               <Link href={`/babies/${params.babyId}/vaccinations?tab=overdue`}
                 className="rounded-full bg-coral-600 text-white text-xs font-semibold px-3 py-1.5 hover:bg-coral-700">
-                See overdue
+                {t('trackers.vax_see_overdue')}
               </Link>
             </div>
           )}
@@ -178,13 +188,14 @@ export default async function VaccinationsLog({
             <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
               {list.length === 0 && (
                 <div className="p-10 text-center text-sm text-ink-muted">
-                  Nothing in this tab.
+                  {t('trackers.vax_nothing_in_tab')}
                 </div>
               )}
               <ul className="divide-y divide-slate-100">
                 {list.map(r => {
                   const active = selected?.id === r.id;
-                  const meta = STATUS_META[effectiveStatus(r, now)];
+                  const eff = effectiveStatus(r, now);
+                  const meta = STATUS_META[eff];
                   const when = r.status === 'administered' && r.administered_at ? r.administered_at : r.scheduled_at;
                   return (
                     <li key={r.id}>
@@ -199,13 +210,13 @@ export default async function VaccinationsLog({
                             {r.dose_number && r.total_doses ? <span className="text-ink-muted font-normal"> · {r.dose_number}/{r.total_doses}</span> : null}
                           </div>
                           <div className="text-xs text-ink-muted truncate flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> {when ? fmtDate(when) : 'TBD'}
+                            <Clock className="h-3 w-3" /> {when ? fmtDate(when) : t('trackers.vax_tbd')}
                             {r.provider ? ` · ${r.provider}` : ''}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${meta.chip}`}>
-                            <meta.icon className="h-3 w-3" /> {meta.label}
+                            <meta.icon className="h-3 w-3" /> {t(`trackers.vax_status_${STATUS_KEY[eff]}`)}
                           </span>
                           <ArrowRight className="h-4 w-4 text-ink-muted" />
                         </div>
@@ -219,21 +230,22 @@ export default async function VaccinationsLog({
             <div className="space-y-4 lg:sticky lg:top-4 self-start">
               <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-                  <h3 className="text-sm font-bold text-ink-strong">Vaccination details</h3>
+                  <h3 className="text-sm font-bold text-ink-strong">{t('trackers.vax_details')}</h3>
                   {selected && perms.canWriteLogs && (
                     <div className="flex items-center gap-1.5">
                       <Link href={`/babies/${params.babyId}/vaccinations/${selected.id}`}
                         className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                        <Edit3 className="h-3 w-3" /> Edit
+                        <Edit3 className="h-3 w-3" /> {t('trackers.edit_btn')}
                       </Link>
                       <LogRowDelete table="vaccinations" id={selected.id} />
                     </div>
                   )}
                 </div>
                 {!selected ? (
-                  <div className="p-8 text-center text-sm text-ink-muted">Pick an entry from the list.</div>
+                  <div className="p-8 text-center text-sm text-ink-muted">{t('trackers.vax_pick_to_see')}</div>
                 ) : (() => {
-                  const meta = STATUS_META[effectiveStatus(selected, now)];
+                  const eff = effectiveStatus(selected, now);
+                  const meta = STATUS_META[eff];
                   return (
                     <div className="p-5 space-y-4">
                       <div className="flex items-center gap-3">
@@ -244,45 +256,45 @@ export default async function VaccinationsLog({
                           <div className="font-bold text-ink-strong">{selected.vaccine_name}</div>
                           <div className="text-xs text-ink-muted">
                             {selected.dose_number && selected.total_doses
-                              ? `Dose ${selected.dose_number} of ${selected.total_doses}`
-                              : 'Single dose'}
+                              ? t('trackers.vax_dose_x_of_y', { n: selected.dose_number, total: selected.total_doses })
+                              : t('trackers.vax_single_dose')}
                           </div>
                         </div>
                         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${meta.chip}`}>
-                          <meta.icon className="h-3 w-3" /> {meta.label}
+                          <meta.icon className="h-3 w-3" /> {t(`trackers.vax_status_${STATUS_KEY[eff]}`)}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         {selected.scheduled_at && (
                           <div className="rounded-xl bg-brand-50 border border-brand-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-brand-700 font-semibold">Scheduled</div>
+                            <div className="text-[10px] uppercase tracking-wider text-brand-700 font-semibold">{t('trackers.vax_scheduled_label')}</div>
                             <div className="text-sm font-bold text-ink-strong">{fmtDate(selected.scheduled_at)}</div>
                             <div className="text-[10px] text-ink-muted">{fmtRelative(selected.scheduled_at)}</div>
                           </div>
                         )}
                         {selected.administered_at && (
                           <div className="rounded-xl bg-mint-50 border border-mint-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-mint-700 font-semibold">Administered</div>
+                            <div className="text-[10px] uppercase tracking-wider text-mint-700 font-semibold">{t('trackers.vax_administered_label')}</div>
                             <div className="text-sm font-bold text-ink-strong">{fmtDate(selected.administered_at)}</div>
                           </div>
                         )}
                         {selected.provider && (
                           <div className="rounded-xl bg-lavender-50 border border-lavender-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-lavender-700 font-semibold">Provider</div>
+                            <div className="text-[10px] uppercase tracking-wider text-lavender-700 font-semibold">{t('trackers.vax_provider_label')}</div>
                             <div className="text-sm font-bold text-ink-strong truncate">{selected.provider}</div>
                           </div>
                         )}
                         {selected.batch_number && (
                           <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Batch</div>
+                            <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.vax_batch_label')}</div>
                             <div className="text-sm font-bold text-ink-strong truncate">{selected.batch_number}</div>
                           </div>
                         )}
                       </div>
                       {selected.notes && (
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Notes</div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.notes_label')}</div>
                           <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                         </div>
                       )}
@@ -294,11 +306,11 @@ export default async function VaccinationsLog({
               </section>
 
               <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
-                <h3 className="text-sm font-bold text-ink-strong mb-3">Plan summary</h3>
+                <h3 className="text-sm font-bold text-ink-strong mb-3">{t('trackers.vax_plan_summary')}</h3>
                 <ul className="space-y-2 text-sm">
-                  <PlanRow icon={CalendarClock}  tint="brand"    label="Upcoming"     value={upcoming.length} />
-                  <PlanRow icon={AlertTriangle}  tint="coral"    label="Overdue"      value={overdue.length} />
-                  <PlanRow icon={CheckCircle2}   tint="mint"     label="Administered" value={done.length} />
+                  <PlanRow icon={CalendarClock}  tint="brand"    label={t('trackers.vax_plan_upcoming')} value={upcoming.length} />
+                  <PlanRow icon={AlertTriangle}  tint="coral"    label={t('trackers.vax_plan_overdue')}  value={overdue.length} />
+                  <PlanRow icon={CheckCircle2}   tint="mint"     label={t('trackers.vax_plan_done')}     value={done.length} />
                 </ul>
               </section>
             </div>

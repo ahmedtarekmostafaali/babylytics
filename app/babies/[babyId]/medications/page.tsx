@@ -26,19 +26,21 @@ export const metadata = { title: 'Medications' };
 type Med = { id: string; name: string; dosage: string | null; route: string; frequency_hours: number | null; total_doses: number | null; starts_at: string; ends_at: string | null; prescribed_by: string | null; doctor_id: string | null };
 type LogRow = { id: string; medication_id: string; medication_time: string; status: 'taken'|'missed'|'skipped'; actual_dosage: string | null; notes: string | null; source: string; created_at: string };
 
-function groupHeading(iso: string): string {
+type TFn = (k: string, vars?: Record<string, string | number>) => string;
+
+function groupHeading(iso: string, t: TFn): string {
   const today = todayLocalDate();
   const y = yesterdayLocalDate();
   const k = localDayKey(iso);
-  if (k === today) return `Today, ${fmtDate(iso)}`;
-  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  if (k === today) return `${t('trackers.today_grp')}, ${fmtDate(iso)}`;
+  if (k === y)     return `${t('trackers.yesterday_grp')}, ${fmtDate(iso)}`;
   return fmtDate(iso);
 }
 
-const STATUS_META: Record<LogRow['status'], { icon: React.ComponentType<{ className?: string }>; chip: string; label: string }> = {
-  taken:   { icon: Check,          chip: 'bg-mint-100 text-mint-700',    label: 'Taken' },
-  missed:  { icon: AlertTriangle,  chip: 'bg-coral-100 text-coral-700',  label: 'Missed' },
-  skipped: { icon: XCircle,        chip: 'bg-peach-100 text-peach-700',  label: 'Skipped' },
+const STATUS_META: Record<LogRow['status'], { icon: React.ComponentType<{ className?: string }>; chip: string }> = {
+  taken:   { icon: Check,          chip: 'bg-mint-100 text-mint-700' },
+  missed:  { icon: AlertTriangle,  chip: 'bg-coral-100 text-coral-700' },
+  skipped: { icon: XCircle,        chip: 'bg-peach-100 text-peach-700' },
 };
 
 const MED_STATUSES = ['taken','missed','skipped'] as const;
@@ -138,7 +140,7 @@ export default async function MedicationsLog({
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }
-  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.medication_time), list }));
+  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.medication_time, t), list }));
   const selected = searchParams.id ? logs.find(l => l.id === searchParams.id) : logs[0];
 
   // Map medication → ISO of its last "taken" dose (from the fetched logs). Used
@@ -186,8 +188,8 @@ export default async function MedicationsLog({
       {activeMeds.length > 0 && (
         <section className="rounded-2xl bg-gradient-to-br from-lavender-50 to-white border border-lavender-200 shadow-card p-4">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-bold text-ink-strong">Active prescriptions</div>
-            <span className="text-xs text-ink-muted">every drug shown with its schedule</span>
+            <div className="text-sm font-bold text-ink-strong">{t('trackers.meds_active_rx')}</div>
+            <span className="text-xs text-ink-muted">{t('trackers.meds_active_sub')}</span>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {activeMeds.map(m => {
@@ -211,13 +213,13 @@ export default async function MedicationsLog({
                         <span className="font-semibold text-ink-strong truncate">{m.name}{m.dosage ? ` · ${m.dosage}` : ''}</span>
                         {overdue && (
                           <span className="text-[9px] font-bold uppercase tracking-wider rounded-full bg-coral-500 text-white px-1.5 py-0.5">
-                            due
+                            {t('trackers.meds_due_pill')}
                           </span>
                         )}
                       </div>
                       <div className={`text-xs truncate ${overdue ? 'text-coral-800/90 font-medium' : 'text-ink-muted'}`}>
-                        every {m.frequency_hours ?? '—'}h · {m.route}
-                        {m.prescribed_by ? ` · Rx by ${m.prescribed_by}` : ''}
+                        {t('trackers.meds_every_h', { h: m.frequency_hours ?? '—', route: m.route })}
+                        {m.prescribed_by ? ` · ${t('trackers.meds_rx_by', { name: m.prescribed_by })}` : ''}
                       </div>
                     </div>
                   </Link>
@@ -225,7 +227,7 @@ export default async function MedicationsLog({
                     className={`rounded-full text-white text-[11px] px-2.5 py-1 whitespace-nowrap font-semibold ${
                       overdue ? 'bg-coral-600 hover:bg-coral-700' : 'bg-lavender-500 hover:bg-lavender-600'
                     }`}>
-                    Log
+                    {t('trackers.meds_log_btn')}
                   </Link>
                 </div>
               );
@@ -236,17 +238,22 @@ export default async function MedicationsLog({
 
       <div className="flex items-center gap-3 flex-wrap">
         <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
-        <LogTypeFilter label="Status"
-          options={[{ key: 'taken', label: 'Taken' }, { key: 'missed', label: 'Missed' }, { key: 'skipped', label: 'Skipped' }]}
+        <LogTypeFilter label={t('trackers.filter_status')}
+          options={[
+            { key: 'taken',   label: t('trackers.meds_status_taken') },
+            { key: 'missed',  label: t('trackers.meds_status_missed') },
+            { key: 'skipped', label: t('trackers.meds_status_skipped') },
+          ]}
           activeKeys={activeStatuses}
           baseHref={`/babies/${params.babyId}/medications`}
-          extraParams={{ range: range.key }} />
+          extraParams={{ range: range.key }}
+          allLabel={t('trackers.filter_all')} />
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
         <div className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
           {groups.length === 0 && (
-            <div className="p-10 text-center text-sm text-ink-muted">No doses logged in this window.</div>
+            <div className="p-10 text-center text-sm text-ink-muted">{t('trackers.meds_no_in_window')}</div>
           )}
           {groups.map(g => (
             <section key={g.k}>
@@ -270,7 +277,7 @@ export default async function MedicationsLog({
                         </span>
                         <div className="min-w-0">
                           <div className="font-semibold text-ink-strong truncate">
-                            {med?.name ?? 'Medication'}{r.actual_dosage ? <span className="text-ink-muted font-normal"> · {r.actual_dosage}</span> : null}
+                            {med?.name ?? t('trackers.meds_record_label')}{r.actual_dosage ? <span className="text-ink-muted font-normal"> · {r.actual_dosage}</span> : null}
                           </div>
                           <div className="text-xs text-ink-muted truncate">
                             {med?.route ?? ''}{r.notes ? ` · ${r.notes}` : ''}
@@ -278,7 +285,7 @@ export default async function MedicationsLog({
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${meta.chip}`}>
-                            <meta.icon className="h-3 w-3" /> {meta.label}
+                            <meta.icon className="h-3 w-3" /> {t(`trackers.meds_status_${r.status}`)}
                           </span>
                           <ArrowRight className="h-4 w-4 text-ink-muted" />
                         </div>
@@ -294,19 +301,19 @@ export default async function MedicationsLog({
         <div className="space-y-4 lg:sticky lg:top-4 self-start">
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-ink-strong">Dose details</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.meds_dose_details')}</h3>
               {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/medications/log/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                    <Edit3 className="h-3 w-3" /> Edit
+                    <Edit3 className="h-3 w-3" /> {t('trackers.edit_btn')}
                   </Link>
                   <LogRowDelete table="medication_logs" id={selected.id} />
                 </div>
               )}
             </div>
             {!selected ? (
-              <div className="p-8 text-center text-sm text-ink-muted">Pick a dose from the list.</div>
+              <div className="p-8 text-center text-sm text-ink-muted">{t('trackers.meds_pick_to_see')}</div>
             ) : (() => {
               const med = medById.get(selected.medication_id);
               const meta = STATUS_META[selected.status];
@@ -317,38 +324,38 @@ export default async function MedicationsLog({
                       <Pill className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-ink-strong">{med?.name ?? 'Medication'}</div>
+                      <div className="font-bold text-ink-strong">{med?.name ?? t('trackers.meds_record_label')}</div>
                       <div className="text-xs text-ink-muted flex items-center gap-1">
                         <Clock className="h-3 w-3" /> {fmtDateTime(selected.medication_time)}
                       </div>
                     </div>
                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${meta.chip}`}>
-                      <meta.icon className="h-3 w-3" /> {meta.label}
+                      <meta.icon className="h-3 w-3" /> {t(`trackers.meds_status_${selected.status}`)}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {selected.actual_dosage && (
                       <div className="rounded-xl bg-lavender-50 border border-lavender-100 px-3 py-2">
-                        <div className="text-[10px] uppercase tracking-wider text-lavender-700 font-semibold">Actual dosage</div>
+                        <div className="text-[10px] uppercase tracking-wider text-lavender-700 font-semibold">{t('trackers.meds_actual_dosage')}</div>
                         <div className="text-base font-bold text-ink-strong leading-tight">{selected.actual_dosage}</div>
                       </div>
                     )}
                     {med?.dosage && (
                       <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
-                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Prescribed</div>
+                        <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.meds_prescribed')}</div>
                         <div className="text-base font-bold text-ink-strong leading-tight">{med.dosage}</div>
                       </div>
                     )}
                     {med?.prescribed_by && (
                       <div className="rounded-xl bg-lavender-50 border border-lavender-100 px-3 py-2 col-span-2">
-                        <div className="text-[10px] uppercase tracking-wider text-lavender-700 font-semibold">Prescribed by</div>
+                        <div className="text-[10px] uppercase tracking-wider text-lavender-700 font-semibold">{t('trackers.meds_prescribed_by')}</div>
                         <div className="text-sm font-bold text-ink-strong leading-tight">{med.prescribed_by}</div>
                       </div>
                     )}
                   </div>
                   {selected.notes && (
                     <div>
-                      <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Notes</div>
+                      <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.notes_label')}</div>
                       <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                     </div>
                   )}
@@ -375,45 +382,47 @@ export default async function MedicationsLog({
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-ink-strong">
                 {todayDueTotal === 0
-                  ? 'No doses scheduled today'
+                  ? t('trackers.meds_no_due_today')
                   : todayPending > 0
-                    ? `${todayPending} dose${todayPending === 1 ? '' : 's'} still to log`
+                    ? (todayPending === 1
+                        ? t('trackers.meds_pending', { n: todayPending })
+                        : t('trackers.meds_pending_plural', { n: todayPending }))
                     : adherence != null && adherence >= 90
-                      ? 'Great adherence'
+                      ? t('trackers.meds_great_adherence')
                       : adherence != null && adherence >= 70
-                        ? 'On track'
-                        : 'Needs attention'}
+                        ? t('trackers.meds_on_track')
+                        : t('trackers.meds_needs_attention')}
               </div>
               <div className="text-xs text-ink-muted">
                 {todayDueTotal === 0
-                  ? 'All active medications are "as-needed" or have no frequency set.'
-                  : `${todayTaken}/${todayDueTotal} scheduled doses taken today · ${adherence ?? 0}% adherence.`}
+                  ? t('trackers.meds_all_asneeded')
+                  : t('trackers.meds_progress_msg', { taken: todayTaken, total: todayDueTotal, pct: adherence ?? 0 })}
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-ink-strong">Summary · {range.label}</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.summary_label', { range: range.label })}</h3>
               {todayDueTotal > 0 && (
                 <span className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
-                  {todayLogged} / {todayDueTotal} today
+                  {t('trackers.meds_today_count', { logged: todayLogged, total: todayDueTotal })}
                 </span>
               )}
             </div>
             <ul className="space-y-2 text-sm">
-              <AdhRow icon={CheckCircle2}    tint="mint"     label="Taken"      value={rangeTaken} />
-              <AdhRow icon={AlertTriangle}   tint="coral"    label="Missed"     value={rangeMissed} />
-              <AdhRow icon={XCircle}         tint="peach"    label="Skipped"    value={rangeSkipped} />
-              <AdhRow icon={Pill}            tint="lavender" label="Due today"  value={todayDueTotal} />
+              <AdhRow icon={CheckCircle2}    tint="mint"     label={t('trackers.meds_summary_taken')}   value={rangeTaken} />
+              <AdhRow icon={AlertTriangle}   tint="coral"    label={t('trackers.meds_summary_missed')}  value={rangeMissed} />
+              <AdhRow icon={XCircle}         tint="peach"    label={t('trackers.meds_summary_skipped')} value={rangeSkipped} />
+              <AdhRow icon={Pill}            tint="lavender" label={t('trackers.meds_summary_due')}     value={todayDueTotal} />
               {todayPending > 0 && (
-                <AdhRow icon={AlertTriangle} tint="coral"    label="Still to log today" value={todayPending} />
+                <AdhRow icon={AlertTriangle} tint="coral"    label={t('trackers.meds_summary_pending')} value={todayPending} />
               )}
             </ul>
             {todayDueTotal > 0 && (
               <div className="mt-3">
                 <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-ink-muted font-semibold mb-1">
-                  <span>Progress</span>
+                  <span>{t('trackers.meds_progress_label')}</span>
                   <span>{adherence ?? 0}%</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">

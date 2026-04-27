@@ -36,12 +36,14 @@ type Row = {
   created_at: string;
 };
 
-function groupHeading(iso: string): string {
+type TFn = (k: string, vars?: Record<string, string | number>) => string;
+
+function groupHeading(iso: string, t: TFn): string {
   const today = todayLocalDate();
   const y = yesterdayLocalDate();
   const k = localDayKey(iso);
-  if (k === today) return `Today, ${fmtDate(iso)}`;
-  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  if (k === today) return `${t('trackers.today_grp')}, ${fmtDate(iso)}`;
+  if (k === y)     return `${t('trackers.yesterday_grp')}, ${fmtDate(iso)}`;
   return fmtDate(iso);
 }
 
@@ -144,7 +146,7 @@ export default async function MeasurementsLog({
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }
-  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.measured_at), list }));
+  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.measured_at, t), list }));
   const selected = searchParams.id ? rows.find(r => r.id === searchParams.id) : rows[0];
 
   return (
@@ -170,15 +172,16 @@ export default async function MeasurementsLog({
 
       <div className="flex items-center gap-3 flex-wrap">
         <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
-        <LogTypeFilter label="Includes"
+        <LogTypeFilter label={t('trackers.filter_includes')}
           options={[
-            { key: 'weight', label: 'Weight' },
-            { key: 'height', label: 'Height' },
-            { key: 'head',   label: 'Head' },
+            { key: 'weight', label: t('trackers.meas_filter_weight') },
+            { key: 'height', label: t('trackers.meas_filter_height') },
+            { key: 'head',   label: t('trackers.meas_filter_head') },
           ]}
           activeKeys={activeKinds}
           baseHref={`/babies/${params.babyId}/measurements`}
-          extraParams={{ range: range.key }} />
+          extraParams={{ range: range.key }}
+          allLabel={t('trackers.filter_all')} />
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
@@ -197,7 +200,7 @@ export default async function MeasurementsLog({
                   const bits = [
                     r.weight_kg != null ? fmtKg(r.weight_kg) : null,
                     r.height_cm != null ? fmtCm(r.height_cm) : null,
-                    r.head_circ_cm != null ? `head ${fmtCm(r.head_circ_cm)}` : null,
+                    r.head_circ_cm != null ? `${t('trackers.meas_head_label')} ${fmtCm(r.head_circ_cm)}` : null,
                   ].filter(Boolean).join(' · ');
                   return (
                     <li key={r.id}>
@@ -210,7 +213,7 @@ export default async function MeasurementsLog({
                           <Scale className="h-5 w-5" />
                         </span>
                         <div className="min-w-0">
-                          <div className="font-semibold text-ink-strong truncate">{bits || 'measurement'}</div>
+                          <div className="font-semibold text-ink-strong truncate">{bits || t('trackers.meas_record_label')}</div>
                           {r.notes && <div className="text-xs text-ink-muted truncate">{r.notes}</div>}
                         </div>
                         <div className="flex items-center gap-2">
@@ -228,19 +231,19 @@ export default async function MeasurementsLog({
         <div className="space-y-4 lg:sticky lg:top-4 self-start">
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-ink-strong">Measurement details</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.meas_measurement_details')}</h3>
               {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/measurements/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                    <Edit3 className="h-3 w-3" /> Edit
+                    <Edit3 className="h-3 w-3" /> {t('trackers.edit_btn')}
                   </Link>
                   <LogRowDelete table="measurements" id={selected.id} />
                 </div>
               )}
             </div>
             {!selected ? (
-              <div className="p-8 text-center text-sm text-ink-muted">Pick a measurement from the list.</div>
+              <div className="p-8 text-center text-sm text-ink-muted">{t('trackers.meas_pick_to_see')}</div>
             ) : (
               <div className="p-5 space-y-4">
                 <div className="flex items-center gap-3">
@@ -248,7 +251,7 @@ export default async function MeasurementsLog({
                     <Scale className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-ink-strong">Measurement</div>
+                    <div className="font-bold text-ink-strong">{t('trackers.meas_record_label')}</div>
                     <div className="text-xs text-ink-muted flex items-center gap-1">
                       <Clock className="h-3 w-3" /> {fmtDateTime(selected.measured_at)}
                     </div>
@@ -256,18 +259,18 @@ export default async function MeasurementsLog({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {selected.weight_kg != null && (
-                    <MStat icon={Scale}      tint="brand"    label="Weight" value={fmtKg(selected.weight_kg)} />
+                    <MStat icon={Scale}      tint="brand"    label={t('trackers.meas_weight_label')} value={fmtKg(selected.weight_kg)} />
                   )}
                   {selected.height_cm != null && (
-                    <MStat icon={Ruler}      tint="mint"     label="Height" value={fmtCm(selected.height_cm)} />
+                    <MStat icon={Ruler}      tint="mint"     label={t('trackers.meas_height_label')} value={fmtCm(selected.height_cm)} />
                   )}
                   {selected.head_circ_cm != null && (
-                    <MStat icon={CircleDot}  tint="lavender" label="Head circ" value={fmtCm(selected.head_circ_cm)} />
+                    <MStat icon={CircleDot}  tint="lavender" label={t('trackers.meas_head_label')} value={fmtCm(selected.head_circ_cm)} />
                   )}
                 </div>
                 {selected.notes && (
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Notes</div>
+                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.notes_label')}</div>
                     <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                   </div>
                 )}
@@ -282,34 +285,38 @@ export default async function MeasurementsLog({
               <Sparkles className="h-4 w-4" />
             </span>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-mint-900">Growth so far</div>
+              <div className="text-sm font-bold text-mint-900">{t('trackers.meas_growth_so_far')}</div>
               <div className="text-xs text-mint-900/90">
                 {dWeight == null && dHeight == null
-                  ? 'Log a measurement and set birth stats to see growth deltas.'
-                  : `${dWeight != null ? `+${dWeight.toFixed(2)} kg` : '—'}${dWeight != null && dHeight != null ? ' · ' : ''}${dHeight != null ? `+${dHeight.toFixed(1)} cm` : ''} since birth`}
+                  ? t('trackers.meas_growth_empty')
+                  : dWeight != null && dHeight != null
+                    ? t('trackers.meas_growth_since_birth_wh', { w: dWeight.toFixed(2), h: dHeight.toFixed(1) })
+                    : dWeight != null
+                      ? t('trackers.meas_growth_since_birth_w', { w: dWeight.toFixed(2) })
+                      : t('trackers.meas_growth_since_birth_h', { h: (dHeight as number).toFixed(1) })}
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-ink-strong">Growth trend</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.meas_growth_trend')}</h3>
               <TrendingUp className="h-4 w-4 text-ink-muted" />
             </div>
-            <TrendRow label="Weight"
+            <TrendRow label={t('trackers.meas_weight_label')}
               latest={latestWeight != null ? fmtKg(latestWeight) : '—'}
               source={latestWeightRow?.measured_at ?? null}
-              spark={weightSpark} color="#B9A7D8" />
+              spark={weightSpark} color="#B9A7D8" t={t} />
             <div className="h-3" />
-            <TrendRow label="Height"
+            <TrendRow label={t('trackers.meas_height_label')}
               latest={latestHeight != null ? fmtCm(latestHeight) : '—'}
               source={latestHeightRow?.measured_at ?? null}
-              spark={heightSpark} color="#7FC8A9" />
+              spark={heightSpark} color="#7FC8A9" t={t} />
             <div className="h-3" />
-            <TrendRow label="Head circ"
+            <TrendRow label={t('trackers.meas_head_label')}
               latest={latestHead != null ? fmtCm(latestHead) : '—'}
               source={latestHeadRow?.measured_at ?? null}
-              spark={headSpark} color="#F4A6A6" />
+              spark={headSpark} color="#F4A6A6" t={t} />
           </section>
         </div>
       </div>
@@ -350,10 +357,11 @@ function MStat({ icon: Icon, tint, label, value }: {
   );
 }
 
-function TrendRow({ label, latest, source, spark, color }: {
+function TrendRow({ label, latest, source, spark, color, t }: {
   label: string; latest: string;
   source: string | null;
   spark: number[]; color: string;
+  t: TFn;
 }) {
   return (
     <div>
@@ -362,7 +370,7 @@ function TrendRow({ label, latest, source, spark, color }: {
         <div className="text-sm font-bold text-ink-strong">{latest}</div>
       </div>
       {source && (
-        <div className="text-[10px] text-ink-muted mt-0.5">from {fmtDateTime(source)}</div>
+        <div className="text-[10px] text-ink-muted mt-0.5">{t('trackers.meas_from_when', { when: fmtDateTime(source) })}</div>
       )}
       <div className="mt-1">
         <Sparkline data={spark.length ? spark : [0]} color={color} width={280} height={36} strokeWidth={2} />

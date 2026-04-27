@@ -31,12 +31,14 @@ type Row = {
   created_at: string;
 };
 
-function groupHeading(iso: string): string {
+type TFn = (k: string, vars?: Record<string, string | number>) => string;
+
+function groupHeading(iso: string, t: TFn): string {
   const today = todayLocalDate();
   const y = yesterdayLocalDate();
   const k = localDayKey(iso);
-  if (k === today) return `Today, ${fmtDate(iso)}`;
-  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  if (k === today) return `${t('trackers.today_grp')}, ${fmtDate(iso)}`;
+  if (k === y)     return `${t('trackers.yesterday_grp')}, ${fmtDate(iso)}`;
   return fmtDate(iso);
 }
 
@@ -68,7 +70,7 @@ export default async function ActivitiesList({
     buckets.get(k)!.push(r);
   }
   const groups = Array.from(buckets.entries()).map(([k, list]) => ({
-    k, heading: groupHeading(list[0]!.started_at), list,
+    k, heading: groupHeading(list[0]!.started_at, t), list,
   }));
 
   const selected = searchParams.id ? rows.find(r => r.id === searchParams.id) : rows[0];
@@ -170,7 +172,7 @@ export default async function ActivitiesList({
 
             {!selected ? (
               <div className="p-8 text-center text-sm text-ink-muted">
-                Pick an item from the list to see details.
+                {t('trackers.pick_to_see')}
               </div>
             ) : (
               <div className="p-5 space-y-4">

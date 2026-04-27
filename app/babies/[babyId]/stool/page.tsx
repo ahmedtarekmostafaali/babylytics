@@ -36,12 +36,12 @@ type Row = {
   created_at: string;
 };
 
-function groupHeading(iso: string): string {
+function groupHeading(iso: string, t: (k: string, vars?: Record<string, string | number>) => string): string {
   const today = todayLocalDate();
   const y = yesterdayLocalDate();
   const k = localDayKey(iso);
-  if (k === today) return `Today, ${fmtDate(iso)}`;
-  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  if (k === today) return `${t('trackers.today_grp')}, ${fmtDate(iso)}`;
+  if (k === y)     return `${t('trackers.yesterday_grp')}, ${fmtDate(iso)}`;
   return fmtDate(iso);
 }
 
@@ -95,7 +95,7 @@ export default async function StoolLog({
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }
-  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.stool_time), list }));
+  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.stool_time, t), list }));
   const selected = searchParams.id ? rows.find(r => r.id === searchParams.id) : rows[0];
 
   return (
@@ -121,11 +121,16 @@ export default async function StoolLog({
 
       <div className="flex items-center gap-3 flex-wrap">
         <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
-        <LogTypeFilter label="Size"
-          options={[{ key: 'small', label: 'Small' }, { key: 'medium', label: 'Medium' }, { key: 'large', label: 'Large' }]}
+        <LogTypeFilter label={t('trackers.filter_size')}
+          options={[
+            { key: 'small',  label: t('trackers.stool_filter_small') },
+            { key: 'medium', label: t('trackers.stool_filter_medium') },
+            { key: 'large',  label: t('trackers.stool_filter_large') },
+          ]}
           activeKeys={activeSizes}
           baseHref={`/babies/${params.babyId}/stool`}
-          extraParams={{ range: range.key }} />
+          extraParams={{ range: range.key }}
+          allLabel={t('trackers.filter_all')} />
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
@@ -155,11 +160,14 @@ export default async function StoolLog({
                           <Droplet className="h-5 w-5" />
                         </span>
                         <div className="min-w-0">
-                          <div className="font-semibold text-ink-strong truncate capitalize">{cat} stool{r.has_diaper_rash ? ' · 🌡️ rash' : ''}</div>
+                          <div className="font-semibold text-ink-strong truncate">
+                            {t('trackers.stool_n_label', { label: t(`trackers.stool_filter_${cat}`) })}
+                            {r.has_diaper_rash ? ` · 🌡️ ${t('forms.stool_diaper_rash')}` : ''}
+                          </div>
                           {line && <div className="text-xs text-ink-muted truncate">{line}</div>}
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize whitespace-nowrap ${chip}`}>{cat}</span>
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${chip}`}>{t(`trackers.stool_filter_${cat}`)}</span>
                           <ArrowRight className="h-4 w-4 text-ink-muted" />
                         </div>
                       </Link>
@@ -174,19 +182,19 @@ export default async function StoolLog({
         <div className="space-y-4 lg:sticky lg:top-4 self-start">
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-ink-strong">Stool Details</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.stool_details')}</h3>
               {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/stool/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                    <Edit3 className="h-3 w-3" /> Edit
+                    <Edit3 className="h-3 w-3" /> {t('trackers.edit_btn')}
                   </Link>
                   <LogRowDelete table="stool_logs" id={selected.id} />
                 </div>
               )}
             </div>
             {!selected ? (
-              <div className="p-8 text-center text-sm text-ink-muted">Pick an entry from the list.</div>
+              <div className="p-8 text-center text-sm text-ink-muted">{t('trackers.pick_to_see')}</div>
             ) : (
               <div className="p-5 space-y-4">
                 <div className="flex items-center gap-3">
@@ -194,7 +202,9 @@ export default async function StoolLog({
                     <Droplet className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-ink-strong capitalize">{selected.quantity_category ?? 'stool'} stool</div>
+                    <div className="font-bold text-ink-strong">
+                      {t('trackers.stool_n_label', { label: selected.quantity_category ? t(`trackers.stool_filter_${selected.quantity_category}`) : t('trackers.stool_label') })}
+                    </div>
                     <div className="text-xs text-ink-muted flex items-center gap-1">
                       <Clock className="h-3 w-3" /> {fmtDateTime(selected.stool_time)}
                     </div>
@@ -202,21 +212,21 @@ export default async function StoolLog({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {selected.color && (
-                    <Stat label="Color" value={selected.color} tint="mint" />
+                    <Stat label={t('trackers.stool_color_label')} value={selected.color} tint="mint" />
                   )}
                   {selected.consistency && (
-                    <Stat label="Consistency" value={selected.consistency} tint="brand" />
+                    <Stat label={t('trackers.stool_consistency_label')} value={selected.consistency} tint="brand" />
                   )}
                   {selected.quantity_ml != null && (
-                    <Stat label="Volume" value={fmtMl(selected.quantity_ml)} tint="lavender" />
+                    <Stat label={t('trackers.stool_volume_label')} value={fmtMl(selected.quantity_ml)} tint="lavender" />
                   )}
                   {selected.has_diaper_rash && (
-                    <Stat label="Diaper rash" value="Yes" tint="coral" />
+                    <Stat label={t('forms.stool_diaper_rash')} value={t('common.yes')} tint="coral" />
                   )}
                 </div>
                 {selected.notes && (
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Notes</div>
+                    <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.notes_label')}</div>
                     <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                   </div>
                 )}
@@ -231,24 +241,24 @@ export default async function StoolLog({
               <Sparkles className="h-4 w-4" />
             </span>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-peach-900">Insight</div>
+              <div className="text-sm font-bold text-peach-900">{t('trackers.insight_kw')}</div>
               <div className="text-xs text-peach-900/90">
                 {todays.length === 0
-                  ? `No diaper changes in this window.`
-                  : `You've logged ${todays.length} diaper${todays.length === 1 ? '' : 's'} in ${range.label.toLowerCase()}.`}
-                {todayRash > 0 && ` ${todayRash} with rash noted.`}
+                  ? t('trackers.stool_insight_none')
+                  : todays.length === 1
+                    ? t('trackers.stool_insight_n', { n: todays.length })
+                    : t('trackers.stool_insight_n_plural', { n: todays.length })}
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
-            <h3 className="text-sm font-bold text-ink-strong mb-3">Summary · {range.label}</h3>
+            <h3 className="text-sm font-bold text-ink-strong mb-3">{t('trackers.summary_label', { range: range.label })}</h3>
             <ul className="space-y-2 text-sm">
-              <SumRow label="Total diapers" value={todays.length} tint="mint" />
-              <SumRow label="Small" value={todaySmall} tint="mint" />
-              <SumRow label="Medium" value={todayMedium} tint="brand" />
-              <SumRow label="Large" value={todayLarge} tint="lavender" />
-              {todayRash > 0 && <SumRow label="With rash" value={todayRash} tint="coral" />}
+              <SumRow label={t('trackers.stool_summary_total')} value={todays.length} tint="mint" />
+              <SumRow label={t('trackers.stool_summary_small')} value={todaySmall} tint="mint" />
+              <SumRow label={t('trackers.stool_summary_medium')} value={todayMedium} tint="brand" />
+              <SumRow label={t('trackers.stool_summary_large')} value={todayLarge} tint="lavender" />
             </ul>
           </section>
         </div>

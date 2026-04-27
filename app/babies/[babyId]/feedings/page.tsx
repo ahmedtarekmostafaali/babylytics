@@ -37,28 +37,28 @@ type Row = {
   created_at: string;
 };
 
-const ICON_FOR: Record<Row['milk_type'], { icon: React.ComponentType<{ className?: string }>; tint: string; label: string; dotBg: string; chipTint: string }> = {
-  breast:  { icon: BabyIcon, tint: 'bg-coral-100 text-coral-600',    label: 'Breastfeeding', dotBg: 'bg-coral-500',    chipTint: 'bg-coral-50 text-coral-700' },
-  formula: { icon: Milk,     tint: 'bg-brand-100 text-brand-600',    label: 'Bottle · Formula', dotBg: 'bg-brand-500', chipTint: 'bg-brand-50 text-brand-700' },
-  mixed:   { icon: Milk,     tint: 'bg-peach-100 text-peach-600',    label: 'Mixed',          dotBg: 'bg-peach-500',  chipTint: 'bg-peach-50 text-peach-700' },
-  solid:   { icon: Cookie,   tint: 'bg-mint-100 text-mint-600',      label: 'Solid',          dotBg: 'bg-mint-500',   chipTint: 'bg-mint-50 text-mint-700' },
-  other:   { icon: Milk,     tint: 'bg-lavender-100 text-lavender-600', label: 'Other',       dotBg: 'bg-lavender-500', chipTint: 'bg-lavender-50 text-lavender-700' },
+const ICON_FOR: Record<Row['milk_type'], { icon: React.ComponentType<{ className?: string }>; tint: string; dotBg: string; chipTint: string }> = {
+  breast:  { icon: BabyIcon, tint: 'bg-coral-100 text-coral-600',    dotBg: 'bg-coral-500',    chipTint: 'bg-coral-50 text-coral-700' },
+  formula: { icon: Milk,     tint: 'bg-brand-100 text-brand-600',    dotBg: 'bg-brand-500',    chipTint: 'bg-brand-50 text-brand-700' },
+  mixed:   { icon: Milk,     tint: 'bg-peach-100 text-peach-600',    dotBg: 'bg-peach-500',    chipTint: 'bg-peach-50 text-peach-700' },
+  solid:   { icon: Cookie,   tint: 'bg-mint-100 text-mint-600',      dotBg: 'bg-mint-500',     chipTint: 'bg-mint-50 text-mint-700' },
+  other:   { icon: Milk,     tint: 'bg-lavender-100 text-lavender-600', dotBg: 'bg-lavender-500', chipTint: 'bg-lavender-50 text-lavender-700' },
 };
 
-function groupHeading(iso: string): string {
+function groupHeading(iso: string, t: (k: string, vars?: Record<string, string | number>) => string): string {
   const today = todayLocalDate();
   const y = yesterdayLocalDate();
   const k = localDayKey(iso);
-  if (k === today) return `Today, ${fmtDate(iso)}`;
-  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  if (k === today) return `${t('trackers.today_grp')}, ${fmtDate(iso)}`;
+  if (k === y)     return `${t('trackers.yesterday_grp')}, ${fmtDate(iso)}`;
   return fmtDate(iso);
 }
 
-function breastBits(notes: string | null, durationMin: number | null): string {
+function breastBits(notes: string | null, durationMin: number | null, t: (k: string, vars?: Record<string, string | number>) => string): string {
   // The FeedingForm stores breast minutes as "Left X min · Right Y min" in notes
   if (notes && /left|right/i.test(notes)) return notes.split('\n')[0]!;
-  if (durationMin) return `${durationMin} min session`;
-  return 'breastfeeding';
+  if (durationMin) return t('trackers.feed_min_session', { n: durationMin });
+  return t('trackers.feed_label_breast');
 }
 
 /** Parse "Left 12 min · Right 8 min" → { left: 12, right: 8 }. */
@@ -116,7 +116,7 @@ export default async function FeedingsLog({
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }
-  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.feeding_time), list }));
+  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.feeding_time, t), list }));
 
   // Selection (detail panel)
   const selected = searchParams.id ? rows.find(r => r.id === searchParams.id) : rows[0];
@@ -144,11 +144,12 @@ export default async function FeedingsLog({
 
       <div className="flex items-center gap-3 flex-wrap">
         <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
-        <LogTypeFilter label="Type"
-          options={MILK_TYPES.map(t => ({ key: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+        <LogTypeFilter label={t('trackers.filter_type')}
+          options={MILK_TYPES.map(mt => ({ key: mt, label: t(`trackers.feeding_filter_${mt === 'formula' ? 'formula' : mt}`) }))}
           activeKeys={activeTypes}
           baseHref={`/babies/${params.babyId}/feedings`}
-          extraParams={{ range: range.key }} />
+          extraParams={{ range: range.key }}
+          allLabel={t('trackers.filter_all')} />
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
@@ -170,16 +171,14 @@ export default async function FeedingsLog({
                   const style = ICON_FOR[r.milk_type];
                   const active = selected?.id === r.id;
                   const breast = r.milk_type === 'breast' ? parseBreast(r.notes) : null;
-                  const title = r.milk_type === 'breast'
-                    ? 'Breastfeeding'
-                    : r.milk_type === 'formula' ? 'Bottle · Formula'
-                    : r.milk_type === 'solid' ? 'Solid'
-                    : r.milk_type === 'mixed' ? 'Mixed' : 'Other';
+                  const title = t(`trackers.feed_label_${r.milk_type}`);
                   const line = r.milk_type === 'breast' && breast
-                    ? [breast.left != null ? `Left ${breast.left} min` : null, breast.right != null ? `Right ${breast.right} min` : null].filter(Boolean).join('  ·  ') || breastBits(r.notes, r.duration_min)
-                    : r.notes || (r.milk_type === 'formula' ? 'Similac Advance' : '');
+                    ? [breast.left != null ? t('trackers.feed_left_n_min', { n: breast.left }) : null,
+                       breast.right != null ? t('trackers.feed_right_n_min', { n: breast.right }) : null]
+                      .filter(Boolean).join('  ·  ') || breastBits(r.notes, r.duration_min, t)
+                    : (r.notes || '');
                   const amount = r.duration_min
-                    ? `${r.duration_min} min`
+                    ? `${r.duration_min} ${t('trackers.feed_min_unit')}`
                     : r.quantity_ml
                       ? fmtMl(r.quantity_ml)
                       : '—';
@@ -217,7 +216,7 @@ export default async function FeedingsLog({
 
           {rows.length >= 500 && (
             <div className="px-5 py-3 text-center border-t border-slate-100 bg-slate-50/60">
-              <span className="text-xs text-brand-700 font-semibold">Showing most recent 500 entries. Narrow the range to see more.</span>
+              <span className="text-xs text-brand-700 font-semibold">{t('trackers.feed_show_500_warn')}</span>
             </div>
           )}
         </div>
@@ -227,12 +226,12 @@ export default async function FeedingsLog({
           {/* Detail card */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-ink-strong">Feeding Details</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.feeding_details')}</h3>
               {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/feedings/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                    <Edit3 className="h-3 w-3" /> Edit
+                    <Edit3 className="h-3 w-3" /> {t('trackers.edit_btn')}
                   </Link>
                   <LogRowDelete table="feedings" id={selected.id} />
                 </div>
@@ -241,19 +240,16 @@ export default async function FeedingsLog({
 
             {!selected ? (
               <div className="p-8 text-center text-sm text-ink-muted">
-                Pick a feed from the list to see details.
+                {t('trackers.feed_pick_to_see')}
               </div>
             ) : (
               <div className="p-5 space-y-4">
                 {(() => {
                   const style = ICON_FOR[selected.milk_type];
                   const breast = selected.milk_type === 'breast' ? parseBreast(selected.notes) : null;
-                  const title = selected.milk_type === 'breast' ? 'Breastfeeding'
-                    : selected.milk_type === 'formula' ? 'Bottle · Formula'
-                    : selected.milk_type === 'solid' ? 'Solid'
-                    : selected.milk_type === 'mixed' ? 'Mixed' : 'Other';
+                  const title = t(`trackers.feed_label_${selected.milk_type}`);
                   const headChip = selected.duration_min
-                    ? `${selected.duration_min} min`
+                    ? `${selected.duration_min} ${t('trackers.feed_min_unit')}`
                     : selected.quantity_ml ? fmtMl(selected.quantity_ml) : '';
                   return (
                     <>
@@ -277,12 +273,12 @@ export default async function FeedingsLog({
                       {selected.milk_type === 'breast' && breast && (
                         <div className="grid grid-cols-2 gap-2">
                           <div className="rounded-xl bg-coral-50 border border-coral-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-coral-700 font-semibold">Left breast</div>
-                            <div className="text-xl font-bold text-ink-strong leading-tight">{breast.left ?? '—'}<span className="text-xs text-ink-muted ml-1 font-normal">min</span></div>
+                            <div className="text-[10px] uppercase tracking-wider text-coral-700 font-semibold">{t('trackers.feed_left_breast_label')}</div>
+                            <div className="text-xl font-bold text-ink-strong leading-tight">{breast.left ?? '—'}<span className="text-xs text-ink-muted ml-1 font-normal">{t('trackers.feed_min_unit')}</span></div>
                           </div>
                           <div className="rounded-xl bg-coral-50 border border-coral-100 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wider text-coral-700 font-semibold">Right breast</div>
-                            <div className="text-xl font-bold text-ink-strong leading-tight">{breast.right ?? '—'}<span className="text-xs text-ink-muted ml-1 font-normal">min</span></div>
+                            <div className="text-[10px] uppercase tracking-wider text-coral-700 font-semibold">{t('trackers.feed_right_breast_label')}</div>
+                            <div className="text-xl font-bold text-ink-strong leading-tight">{breast.right ?? '—'}<span className="text-xs text-ink-muted ml-1 font-normal">{t('trackers.feed_min_unit')}</span></div>
                           </div>
                         </div>
                       )}
@@ -291,14 +287,14 @@ export default async function FeedingsLog({
                         <div className="grid grid-cols-2 gap-2">
                           {selected.quantity_ml != null && (
                             <div className="rounded-xl bg-brand-50 border border-brand-100 px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-wider text-brand-700 font-semibold">Volume</div>
+                              <div className="text-[10px] uppercase tracking-wider text-brand-700 font-semibold">{t('trackers.feeding_volume_label')}</div>
                               <div className="text-xl font-bold text-ink-strong leading-tight">{fmtMl(selected.quantity_ml)}</div>
                             </div>
                           )}
                           {selected.kcal != null && (
                             <div className="rounded-xl bg-peach-50 border border-peach-100 px-3 py-2">
-                              <div className="text-[10px] uppercase tracking-wider text-peach-700 font-semibold">Energy</div>
-                              <div className="text-xl font-bold text-ink-strong leading-tight">{selected.kcal}<span className="text-xs text-ink-muted ml-1 font-normal">kcal</span></div>
+                              <div className="text-[10px] uppercase tracking-wider text-peach-700 font-semibold">{t('trackers.feed_energy_label')}</div>
+                              <div className="text-xl font-bold text-ink-strong leading-tight">{selected.kcal}<span className="text-xs text-ink-muted ml-1 font-normal">{t('trackers.feeding_kcal_label')}</span></div>
                             </div>
                           )}
                         </div>
@@ -306,7 +302,7 @@ export default async function FeedingsLog({
 
                       {selected.notes && (
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Notes</div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.notes_label')}</div>
                           <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                         </div>
                       )}
@@ -326,15 +322,17 @@ export default async function FeedingsLog({
               <Sparkles className="h-4 w-4" />
             </span>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-peach-900">Insight</div>
+              <div className="text-sm font-bold text-peach-900">{t('trackers.insight_kw')}</div>
               <div className="text-xs text-peach-900/90">
                 {summaryBreasts.length === 0
-                  ? `No breastfeeding logged in ${range.label.toLowerCase()}.`
-                  : `Great job! You've breastfed ${summaryBreasts.length} time${summaryBreasts.length === 1 ? '' : 's'} in ${range.label.toLowerCase()}.`}
+                  ? t('trackers.feed_insight_breast_none_range', { range: range.label.toLowerCase() })
+                  : summaryBreasts.length === 1
+                    ? t('trackers.feed_insight_breast_great', { n: summaryBreasts.length, range: range.label.toLowerCase() })
+                    : t('trackers.feed_insight_breast_great_plural', { n: summaryBreasts.length, range: range.label.toLowerCase() })}
               </div>
               <Link href={`/babies/${params.babyId}`}
                 className="mt-1 inline-flex items-center gap-1 text-xs text-peach-800 font-semibold hover:underline">
-                View insights <ArrowRight className="h-3 w-3" />
+                {t('trackers.feed_insight_view')} <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
           </section>
@@ -342,16 +340,16 @@ export default async function FeedingsLog({
           {/* Summary */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-ink-strong">Summary · {range.label}</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.summary_label', { range: range.label })}</h3>
             </div>
             <ul className="space-y-2 text-sm">
-              <SummaryRow icon={Milk}     tint="lavender" label="Total feedings" value={rows.length} />
-              <SummaryRow icon={Milk}     tint="mint"     label="Total volume"   value={fmtMl(summaryTotalVolume)} />
-              <SummaryRow icon={BabyIcon} tint="coral"    label="Breastfeeding time" value={`${summaryBreastMin} min`} />
+              <SummaryRow icon={Milk}     tint="lavender" label={t('trackers.feed_summary_total')} value={rows.length} />
+              <SummaryRow icon={Milk}     tint="mint"     label={t('trackers.feed_summary_volume')} value={fmtMl(summaryTotalVolume)} />
+              <SummaryRow icon={BabyIcon} tint="coral"    label={t('trackers.feed_summary_breasts')} value={`${summaryBreastMin} ${t('trackers.feed_min_unit')}`} />
             </ul>
           </section>
 
-          <LastNDaysHint />
+          <LastNDaysHint t={t} />
         </div>
       </div>
       <Comments babyId={params.babyId} target="babies" targetId={params.babyId}
@@ -384,12 +382,12 @@ function SummaryRow({ icon: Icon, tint, label, value }: {
   );
 }
 
-function LastNDaysHint() {
+function LastNDaysHint({ t }: { t: (k: string, vars?: Record<string, string | number>) => string }) {
   // Helpful tiny reminder explaining that Today summary is local TZ.
   const n = lastNDaysWindow(7);
   return (
     <p className="text-[10px] text-ink-muted px-2">
-      Today bucket uses Africa/Cairo time. Last 7-day window: {new Date(n.start).toLocaleDateString()} — now.
+      {t('trackers.feed_tz_hint', { start: new Date(n.start).toLocaleDateString() })}
     </p>
   );
 }

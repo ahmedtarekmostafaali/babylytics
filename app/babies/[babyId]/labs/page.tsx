@@ -45,12 +45,14 @@ type Panel = {
   created_at: string;
 };
 
-function groupHeading(iso: string): string {
+type TFn = (k: string, vars?: Record<string, string | number>) => string;
+
+function groupHeading(iso: string, t: TFn): string {
   const today = todayLocalDate();
   const y = yesterdayLocalDate();
   const k = localDayKey(iso);
-  if (k === today) return `Today, ${fmtDate(iso)}`;
-  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  if (k === today) return `${t('trackers.today_grp')}, ${fmtDate(iso)}`;
+  if (k === y)     return `${t('trackers.yesterday_grp')}, ${fmtDate(iso)}`;
   return fmtDate(iso);
 }
 
@@ -89,7 +91,7 @@ export default async function LabsList({
     buckets.get(k)!.push(r);
   }
   const groups = Array.from(buckets.entries()).map(([k, list]) => ({
-    k, heading: groupHeading(list[0]!.result_at), list,
+    k, heading: groupHeading(list[0]!.result_at, t), list,
   }));
 
   const selected = searchParams.id ? rows.find(r => r.id === searchParams.id) : rows[0];
@@ -195,7 +197,7 @@ export default async function LabsList({
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/medical-profile/labs/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                    <Edit3 className="h-3 w-3" /> Edit
+                    <Edit3 className="h-3 w-3" /> {t('trackers.edit_btn')}
                   </Link>
                   <LogRowDelete table="lab_panels" id={selected.id} />
                 </div>
@@ -204,7 +206,7 @@ export default async function LabsList({
 
             {!selected ? (
               <div className="p-8 text-center text-sm text-ink-muted">
-                Pick an item from the list to see details.
+                {t('trackers.pick_to_see')}
               </div>
             ) : (
               <div className="p-5 space-y-4">

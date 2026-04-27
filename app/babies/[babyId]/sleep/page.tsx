@@ -35,20 +35,22 @@ type Row = {
   created_at: string;
 };
 
+type TFn = (k: string, vars?: Record<string, string | number>) => string;
+
 const LOC_ICON = { crib: BabyIcon, bed: Bed, car: Car, stroller: Home, arms: Armchair, other: HelpCircle } as const;
-const QUALITY_META: Record<NonNullable<Row['quality']>, { icon: React.ComponentType<{ className?: string }>; chip: string; label: string }> = {
-  sound:      { icon: Smile,      chip: 'bg-mint-100 text-mint-700',     label: 'Sound' },
-  restless:   { icon: Meh,        chip: 'bg-peach-100 text-peach-700',   label: 'Restless' },
-  woke_often: { icon: Frown,      chip: 'bg-coral-100 text-coral-700',   label: 'Woke often' },
-  unknown:    { icon: HelpCircle, chip: 'bg-slate-100 text-ink',         label: 'Unknown' },
+const QUALITY_META: Record<NonNullable<Row['quality']>, { icon: React.ComponentType<{ className?: string }>; chip: string }> = {
+  sound:      { icon: Smile,      chip: 'bg-mint-100 text-mint-700' },
+  restless:   { icon: Meh,        chip: 'bg-peach-100 text-peach-700' },
+  woke_often: { icon: Frown,      chip: 'bg-coral-100 text-coral-700' },
+  unknown:    { icon: HelpCircle, chip: 'bg-slate-100 text-ink' },
 };
 
-function groupHeading(iso: string): string {
+function groupHeading(iso: string, t: TFn): string {
   const today = todayLocalDate();
   const y = yesterdayLocalDate();
   const k = localDayKey(iso);
-  if (k === today) return `Today, ${fmtDate(iso)}`;
-  if (k === y)     return `Yesterday, ${fmtDate(iso)}`;
+  if (k === today) return `${t('trackers.today_grp')}, ${fmtDate(iso)}`;
+  if (k === y)     return `${t('trackers.yesterday_grp')}, ${fmtDate(iso)}`;
   return fmtDate(iso);
 }
 
@@ -131,7 +133,7 @@ export default async function SleepLog({
     if (!buckets.has(k)) buckets.set(k, []);
     buckets.get(k)!.push(r);
   }
-  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.start_at), list }));
+  const groups = Array.from(buckets.entries()).map(([k, list]) => ({ k, heading: groupHeading(list[0]!.start_at, t), list }));
   const selected = searchParams.id ? rows.find(r => r.id === searchParams.id) : rows[0];
 
   return (
@@ -161,28 +163,29 @@ export default async function SleepLog({
             <Moon className="h-5 w-5" />
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold text-lavender-900">Sleeping now</div>
-            <div className="text-xs text-lavender-900/80">Started at {fmtTime(running.start_at)}</div>
+            <div className="text-sm font-bold text-lavender-900">{t('trackers.sleep_now_title')}</div>
+            <div className="text-xs text-lavender-900/80">{t('trackers.sleep_now_started', { time: fmtTime(running.start_at) })}</div>
           </div>
           <Link href={`/babies/${params.babyId}/sleep/${running.id}`}
             className="rounded-full bg-lavender-500 text-white text-xs font-semibold px-3 py-1.5 hover:bg-lavender-600">
-            Open
+            {t('trackers.sleep_now_open')}
           </Link>
         </div>
       )}
 
       <div className="flex items-center gap-3 flex-wrap">
         <LogRangeTabs current={range.key === 'custom' ? 'custom' : (range.key as '24h'|'7d'|'30d'|'90d')} />
-        <LogTypeFilter label="Quality"
+        <LogTypeFilter label={t('trackers.sleep_filter_quality')}
           options={[
-            { key: 'sound',      label: 'Sound' },
-            { key: 'restless',   label: 'Restless' },
-            { key: 'woke_often', label: 'Woke often' },
-            { key: 'unknown',    label: 'Unknown' },
+            { key: 'sound',      label: t('trackers.sleep_quality_sound') },
+            { key: 'restless',   label: t('trackers.sleep_quality_restless') },
+            { key: 'woke_often', label: t('trackers.sleep_quality_woke_often') },
+            { key: 'unknown',    label: t('trackers.sleep_quality_unknown') },
           ]}
           activeKeys={activeQualities}
           baseHref={`/babies/${params.babyId}/sleep`}
-          extraParams={{ range: range.key }} />
+          extraParams={{ range: range.key }}
+          allLabel={t('trackers.filter_all')} />
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(320px,1.1fr)] gap-6">
@@ -213,16 +216,16 @@ export default async function SleepLog({
                         <div className="min-w-0">
                           <div className="font-semibold text-ink-strong truncate">
                             {fmtDur(r.duration_min)}
-                            {r.end_at == null && <span className="text-[10px] font-semibold uppercase tracking-wider text-lavender-700 bg-lavender-200 rounded-full px-2 py-0.5 ml-2">live</span>}
+                            {r.end_at == null && <span className="text-[10px] font-semibold uppercase tracking-wider text-lavender-700 bg-lavender-200 rounded-full px-2 py-0.5 ml-2">{t('trackers.sleep_live_pill')}</span>}
                           </div>
-                          <div className="text-xs text-ink-muted truncate capitalize">
-                            {r.location}{r.end_at ? ` · ended ${fmtTime(r.end_at)}` : ''}
+                          <div className="text-xs text-ink-muted truncate">
+                            {t(`trackers.sleep_loc_${r.location}`)}{r.end_at ? ` · ${t('trackers.sleep_ended_at', { time: fmtTime(r.end_at) })}` : ''}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {qm && (
+                          {qm && r.quality && (
                             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap ${qm.chip}`}>
-                              <qm.icon className="h-3 w-3" /> {qm.label}
+                              <qm.icon className="h-3 w-3" /> {t(`trackers.sleep_quality_${r.quality}`)}
                             </span>
                           )}
                           <ArrowRight className="h-4 w-4 text-ink-muted" />
@@ -239,19 +242,19 @@ export default async function SleepLog({
         <div className="space-y-4 lg:sticky lg:top-4 self-start">
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card">
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-ink-strong">Sleep details</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.sleep_session_details')}</h3>
               {selected && perms.canWriteLogs && (
                 <div className="flex items-center gap-1.5">
                   <Link href={`/babies/${params.babyId}/sleep/${selected.id}`}
                     className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold px-3 py-1">
-                    <Edit3 className="h-3 w-3" /> Edit
+                    <Edit3 className="h-3 w-3" /> {t('trackers.edit_btn')}
                   </Link>
                   <LogRowDelete table="sleep_logs" id={selected.id} />
                 </div>
               )}
             </div>
             {!selected ? (
-              <div className="p-8 text-center text-sm text-ink-muted">Pick a session from the list.</div>
+              <div className="p-8 text-center text-sm text-ink-muted">{t('trackers.sleep_pick_to_see')}</div>
             ) : (() => {
               const LocIcon = LOC_ICON[selected.location] ?? HelpCircle;
               const qm = selected.quality ? QUALITY_META[selected.quality] : null;
@@ -268,25 +271,25 @@ export default async function SleepLog({
                         {selected.end_at && ` → ${fmtTime(selected.end_at)}`}
                       </div>
                     </div>
-                    {qm && (
+                    {qm && selected.quality && (
                       <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${qm.chip}`}>
-                        <qm.icon className="h-3 w-3" /> {qm.label}
+                        <qm.icon className="h-3 w-3" /> {t(`trackers.sleep_quality_${selected.quality}`)}
                       </span>
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-xl bg-lavender-50 border border-lavender-100 px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-wider text-lavender-700 font-semibold">Location</div>
-                      <div className="text-base font-bold text-ink-strong capitalize">{selected.location}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-lavender-700 font-semibold">{t('trackers.sleep_location_label')}</div>
+                      <div className="text-base font-bold text-ink-strong">{t(`trackers.sleep_loc_${selected.location}`)}</div>
                     </div>
                     <div className="rounded-xl bg-brand-50 border border-brand-100 px-3 py-2">
-                      <div className="text-[10px] uppercase tracking-wider text-brand-700 font-semibold">Duration</div>
+                      <div className="text-[10px] uppercase tracking-wider text-brand-700 font-semibold">{t('trackers.sleep_duration_label')}</div>
                       <div className="text-base font-bold text-ink-strong">{fmtDur(selected.duration_min)}</div>
                     </div>
                   </div>
                   {selected.notes && (
                     <div>
-                      <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">Notes</div>
+                      <div className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">{t('trackers.notes_label')}</div>
                       <p className="text-sm text-ink mt-0.5 whitespace-pre-wrap">{selected.notes}</p>
                     </div>
                   )}
@@ -302,25 +305,27 @@ export default async function SleepLog({
               <Sparkles className="h-4 w-4" />
             </span>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-lavender-900">Today so far</div>
+              <div className="text-sm font-bold text-lavender-900">{t('trackers.sleep_today_so_far')}</div>
               <div className="text-xs text-lavender-900/90">
                 {todayTotalMin === 0
-                  ? 'No sleep logged today yet.'
-                  : `${fmtDur(todayTotalMin)} across ${todays.length} session${todays.length === 1 ? '' : 's'}.`}
+                  ? t('trackers.sleep_no_today')
+                  : todays.length === 1
+                    ? t('trackers.sleep_today_summary', { dur: fmtDur(todayTotalMin), n: todays.length })
+                    : t('trackers.sleep_today_summary_plural', { dur: fmtDur(todayTotalMin), n: todays.length })}
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-ink-strong">Last 7 days</h3>
-              <span className="text-xs text-ink-muted">hours / day</span>
+              <h3 className="text-sm font-bold text-ink-strong">{t('trackers.sleep_last_7d')}</h3>
+              <span className="text-xs text-ink-muted">{t('trackers.sleep_hours_day')}</span>
             </div>
             <Sparkline data={sparkHours.length ? sparkHours : [0]} color="#B9A7D8" width={280} height={48} strokeWidth={2.5} />
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <MiniStat label="Today" value={fmtDur(todayTotalMin)} />
-              <MiniStat label="Sessions" value={todays.length} />
-              <MiniStat label="Avg 7d" value={fmtDur(Math.round(sparkHours.reduce((a,b)=>a+b,0) * 60 / 7))} />
+              <MiniStat label={t('trackers.sleep_sum_today')} value={fmtDur(todayTotalMin)} />
+              <MiniStat label={t('trackers.sleep_sum_sessions')} value={todays.length} />
+              <MiniStat label={t('trackers.sleep_sum_avg7')} value={fmtDur(Math.round(sparkHours.reduce((a,b)=>a+b,0) * 60 / 7))} />
             </div>
           </section>
         </div>
