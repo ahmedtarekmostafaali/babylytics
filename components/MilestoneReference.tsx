@@ -90,6 +90,11 @@ export function MilestoneReferenceCard({
             const v = t(k);
             return v === k ? m.label : v;
           })();
+          const localisedHint = (() => {
+            const k = `milestones_ref.hint_${m.id}`;
+            const v = t(k);
+            return v === k ? m.hint : v;
+          })();
 
           return (
             <li key={m.id} className="rounded-xl bg-white/70 border border-lavender-100 px-3 py-2">
@@ -101,8 +106,8 @@ export function MilestoneReferenceCard({
 
               <div className="mt-1.5 flex items-center gap-2 text-[11px]">
                 <Tick label={`${m.min_months}m`} sub={t('growth.min')} />
-                <Tick label={`${m.avg_months}m`} sub="avg" highlight />
-                <Tick label={`${m.max_months}m`} sub="max" />
+                <Tick label={`${m.avg_months}m`} sub={t('milestones_ref.avg')} highlight />
+                <Tick label={`${m.max_months}m`} sub={t('milestones_ref.max')} />
                 {occurredMonths != null && (
                   <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-lavender-100 text-lavender-800 text-[11px] font-bold px-2 py-0.5">
                     {t('milestones_ref.logged_at', { months: occurredMonths.toFixed(1) })}
@@ -110,7 +115,7 @@ export function MilestoneReferenceCard({
                 )}
               </div>
 
-              <p className="text-[11px] text-ink-muted mt-1.5 leading-snug">{m.hint}</p>
+              <p className="text-[11px] text-ink-muted mt-1.5 leading-snug">{localisedHint}</p>
             </li>
           );
         })}

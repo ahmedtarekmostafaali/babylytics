@@ -185,16 +185,21 @@ export function whoMinFor(ageDays: number, sex: Sex): WhoMinimum {
 // regressions show up. Used to surface "spurt incoming" copy.
 // ---------------------------------------------------------------------------
 
-const SPURT_WINDOWS: { label: string; from_days: number; to_days: number; sub: string }[] = [
-  { label: '7–10 days',  from_days: 6,   to_days: 12,   sub: 'first cluster — feed on demand'  },
-  { label: '2–3 weeks',  from_days: 13,  to_days: 24,   sub: 'expect more frequent feeds'      },
-  { label: '4–6 weeks',  from_days: 25,  to_days: 47,   sub: 'fussier evenings are normal'     },
-  { label: '3 months',   from_days: 75,  to_days: 105,  sub: 'sleep regression possible'        },
-  { label: '4 months',   from_days: 106, to_days: 135,  sub: 'sleep + feeds shift, rolls start' },
-  { label: '6 months',   from_days: 165, to_days: 200,  sub: 'starting solids window'           },
-  { label: '8–9 months', from_days: 230, to_days: 280,  sub: 'separation anxiety, crawling'     },
-  { label: '12 months',  from_days: 350, to_days: 380,  sub: 'walking, weaning shift'           },
-  { label: '18 months',  from_days: 530, to_days: 560,  sub: 'language burst, big-feels phase'  },
+// Optional minimal translator interface — accepts dotted keys and var maps.
+// We deliberately keep this loose so consumers can pass the i18n `t` without
+// us having to import the i18n module at runtime.
+type TLite = (key: string, vars?: Record<string, string | number>) => string;
+
+const SPURT_WINDOWS: { id: string; label: string; from_days: number; to_days: number; sub: string }[] = [
+  { id: '7d',  label: '7–10 days',  from_days: 6,   to_days: 12,   sub: 'first cluster — feed on demand'  },
+  { id: '2w',  label: '2–3 weeks',  from_days: 13,  to_days: 24,   sub: 'expect more frequent feeds'      },
+  { id: '4w',  label: '4–6 weeks',  from_days: 25,  to_days: 47,   sub: 'fussier evenings are normal'     },
+  { id: '3m',  label: '3 months',   from_days: 75,  to_days: 105,  sub: 'sleep regression possible'        },
+  { id: '4m',  label: '4 months',   from_days: 106, to_days: 135,  sub: 'sleep + feeds shift, rolls start' },
+  { id: '6m',  label: '6 months',   from_days: 165, to_days: 200,  sub: 'starting solids window'           },
+  { id: '8m',  label: '8–9 months', from_days: 230, to_days: 280,  sub: 'separation anxiety, crawling'     },
+  { id: '12m', label: '12 months',  from_days: 350, to_days: 380,  sub: 'walking, weaning shift'           },
+  { id: '18m', label: '18 months',  from_days: 530, to_days: 560,  sub: 'language burst, big-feels phase'  },
 ];
 
 export type SpurtState = {
@@ -206,11 +211,14 @@ export type SpurtState = {
 };
 
 /** Where is the baby relative to the closest known spurt window? */
-export function spurtStateFor(ageDays: number): SpurtState {
+export function spurtStateFor(ageDays: number, t?: TLite): SpurtState {
+  const labelFor = (id: string, fallback: string) => t ? t(`spurts.label_${id}`) : fallback;
+  const subFor   = (id: string, fallback: string) => t ? t(`spurts.sub_${id}`)   : fallback;
+
   // First, find any window the baby is currently inside.
   for (const w of SPURT_WINDOWS) {
     if (ageDays >= w.from_days && ageDays <= w.to_days) {
-      return { state: 'in', label: w.label, sub: w.sub };
+      return { state: 'in', label: labelFor(w.id, w.label), sub: subFor(w.id, w.sub) };
     }
   }
   // Find the next upcoming window.
@@ -218,17 +226,23 @@ export function spurtStateFor(ageDays: number): SpurtState {
   if (next) {
     const daysUntil = next.from_days - ageDays;
     if (daysUntil <= 14) {
-      return { state: 'soon', label: next.label, sub: next.sub, days_until: daysUntil };
+      return { state: 'soon', label: labelFor(next.id, next.label), sub: subFor(next.id, next.sub), days_until: daysUntil };
     }
     // Look at the previous one to give context too.
     const prev = [...SPURT_WINDOWS].reverse().find(w => w.to_days < ageDays);
     if (prev) {
-      return { state: 'after', label: next.label, sub: `next: ${next.sub}`, days_until: daysUntil, days_since: ageDays - prev.to_days };
+      const nextSub = subFor(next.id, next.sub);
+      const composedSub = t ? t('spurts.next_prefix', { sub: nextSub }) : `next: ${nextSub}`;
+      return { state: 'after', label: labelFor(next.id, next.label), sub: composedSub, days_until: daysUntil, days_since: ageDays - prev.to_days };
     }
-    return { state: 'far', label: next.label, sub: next.sub, days_until: daysUntil };
+    return { state: 'far', label: labelFor(next.id, next.label), sub: subFor(next.id, next.sub), days_until: daysUntil };
   }
   // Past the last known window.
-  return { state: 'far', label: 'No more typical spurts on the chart', sub: 'Growth slows and stabilizes after toddlerhood.' };
+  return {
+    state: 'far',
+    label: t ? t('spurts.past_label') : 'No more typical spurts on the chart',
+    sub:   t ? t('spurts.past_sub')   : 'Growth slows and stabilizes after toddlerhood.',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -243,72 +257,77 @@ export type Milestone = {
   watch_for: string;
 };
 
-const MILESTONES: { from_days: number; to_days: number; m: Milestone }[] = [
-  { from_days: 0,   to_days: 30,  m: {
+const MILESTONES: { id: string; from_days: number; to_days: number; m: Milestone }[] = [
+  { id: '0_1', from_days: 0,   to_days: 30,  m: {
     age_label: '0–1 month',
     headline:  'Eye contact and reflexive grasp.',
     watch_for: 'Lifts head briefly during tummy time, startles to loud sounds.',
   } },
-  { from_days: 31,  to_days: 60,  m: {
+  { id: '1_2', from_days: 31,  to_days: 60,  m: {
     age_label: '1–2 months',
     headline:  'Social smiles begin and cooing starts.',
     watch_for: 'Tracks faces side-to-side, holds head steady briefly when upright.',
   } },
-  { from_days: 61,  to_days: 90,  m: {
+  { id: '2_3', from_days: 61,  to_days: 90,  m: {
     age_label: '2–3 months',
     headline:  'Strong head control during tummy time.',
     watch_for: 'Reaches for toys, brings hands to mouth, laughs out loud.',
   } },
-  { from_days: 91,  to_days: 121, m: {
+  { id: '3_4', from_days: 91,  to_days: 121, m: {
     age_label: '3–4 months',
     headline:  'First rolls (back to side) and rich babbling.',
     watch_for: 'Pushes up on forearms, watches your face carefully.',
   } },
-  { from_days: 122, to_days: 152, m: {
+  { id: '4_5', from_days: 122, to_days: 152, m: {
     age_label: '4–5 months',
     headline:  'Sits with support, grabs and shakes toys.',
     watch_for: 'Rolls both ways, brings feet to mouth, blows raspberries.',
   } },
-  { from_days: 153, to_days: 183, m: {
+  { id: '5_6', from_days: 153, to_days: 183, m: {
     age_label: '5–6 months',
     headline:  'Sits briefly unsupported, ready for first solids.',
     watch_for: 'Transfers objects between hands, mimics expressions.',
   } },
-  { from_days: 184, to_days: 244, m: {
+  { id: '6_8', from_days: 184, to_days: 244, m: {
     age_label: '6–8 months',
     headline:  'Sits well unsupported and may start crawling.',
     watch_for: 'Says "ba/da/ma" sounds, responds to own name, looks for dropped toys.',
   } },
-  { from_days: 245, to_days: 305, m: {
+  { id: '8_10', from_days: 245, to_days: 305, m: {
     age_label: '8–10 months',
     headline:  'Crawls, pulls to stand, pincer grasp emerges.',
     watch_for: 'Waves bye-bye, plays peek-a-boo, separation anxiety peaks.',
   } },
-  { from_days: 306, to_days: 365, m: {
+  { id: '10_12', from_days: 306, to_days: 365, m: {
     age_label: '10–12 months',
     headline:  'Cruising furniture, first words, first steps.',
     watch_for: 'Says one or two words with meaning, points at things, drinks from a cup.',
   } },
-  { from_days: 366, to_days: 547, m: {
+  { id: '12_18', from_days: 366, to_days: 547, m: {
     age_label: '12–18 months',
     headline:  'Walks well, vocabulary explodes (10–20 words).',
     watch_for: 'Stacks blocks, follows simple commands, scribbles with a crayon.',
   } },
-  { from_days: 548, to_days: 730, m: {
+  { id: '18_24', from_days: 548, to_days: 730, m: {
     age_label: '18–24 months',
     headline:  'Runs, climbs, two-word combos, ~50 words.',
     watch_for: 'Helps undress, kicks a ball, names familiar objects.',
   } },
-  { from_days: 731, to_days: 100000, m: {
+  { id: '2_plus', from_days: 731, to_days: 100000, m: {
     age_label: '2 years +',
     headline:  'Toddler talk: full sentences, big imagination.',
     watch_for: 'Sorts shapes/colors, uses fork & spoon, follows two-step instructions.',
   } },
 ];
 
-export function milestoneFor(ageDays: number): Milestone {
-  const found = MILESTONES.find(b => ageDays >= b.from_days && ageDays <= b.to_days);
-  return found?.m ?? MILESTONES[0]!.m;
+export function milestoneFor(ageDays: number, t?: TLite): Milestone {
+  const found = MILESTONES.find(b => ageDays >= b.from_days && ageDays <= b.to_days) ?? MILESTONES[0]!;
+  if (!t) return found.m;
+  return {
+    age_label: t(`milestones.age_${found.id}`),
+    headline:  t(`milestones.headline_${found.id}`),
+    watch_for: t(`milestones.watch_${found.id}`),
+  };
 }
 
 // ---------------------------------------------------------------------------

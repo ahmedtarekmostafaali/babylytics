@@ -38,8 +38,8 @@ export function GrowthInsights({ babyId, babyName, ageDays, sex, weightKg, heigh
   const wMin   = compareToMin(weightKg, min.weight_kg_min);
   const hCmp   = compareToMedian(heightCm, median.length_cm_median);
   const hMin   = compareToMin(heightCm, min.length_cm_min);
-  const spurt  = spurtStateFor(ageDays);
-  const milestone = milestoneFor(ageDays);
+  const spurt  = spurtStateFor(ageDays, t);
+  const milestone = milestoneFor(ageDays, t);
 
   // First name only in headlines so the strip stays compact.
   const first = babyName.split(/\s+/)[0] ?? babyName;
