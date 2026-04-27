@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Label, Select } from '@/components/ui/Input';
 import type { FileKind } from '@/lib/types';
+import { useT } from '@/lib/i18n/client';
 
 const BUCKET = 'medical-files';
 
@@ -47,6 +48,7 @@ function randomToken() {
 
 export function UploadForm({ babyId }: { babyId: string }) {
   const router = useRouter();
+  const t = useT();
   const [kind, setKind]     = useState<FileKind>('daily_note');
   const [handwritten, setHandwritten] = useState<boolean>(true);
   const [busy, setBusy] = useState(false);
@@ -63,12 +65,12 @@ export function UploadForm({ babyId }: { babyId: string }) {
     e.preventDefault();
     setErr(null); setMsg(null);
     const file = fileRef.current?.files?.[0];
-    if (!file) { setErr('Pick a file first.'); return; }
+    if (!file) { setErr(t('forms.up_pick_file')); return; }
     setBusy(true);
 
     const supabase = createClient();
     const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) { setBusy(false); setErr('Not signed in.'); return; }
+    if (!auth.user) { setBusy(false); setErr(t('forms.up_not_signed_in')); return; }
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '_');
     const storagePath = `babies/${babyId}/${KIND_DIR[kind]}/${randomToken()}_${safeName}`;
@@ -92,10 +94,10 @@ export function UploadForm({ babyId }: { babyId: string }) {
       is_handwritten: handwritten,
       uploaded_by: auth.user.id,
     }).select('id').single();
-    if (ins.error || !ins.data) { setBusy(false); setErr(ins.error?.message ?? 'db insert failed'); return; }
+    if (ins.error || !ins.data) { setBusy(false); setErr(ins.error?.message ?? t('forms.up_db_failed')); return; }
 
     const fileId = ins.data.id as string;
-    setMsg('Uploaded. Running OCR…');
+    setMsg(t('forms.up_running_ocr'));
 
     // 3. Kick off OCR (non-blocking for the user, but we wait so we can route to review).
     //    OCR is only auto-run on daily_note / prescription / report. Stool images skip.
@@ -106,7 +108,7 @@ export function UploadForm({ babyId }: { babyId: string }) {
       });
       if (ocrErr) {
         // Upload succeeded; OCR failed. Surface message but still land on file page.
-        setMsg('Uploaded. OCR failed — you can still enter values manually.');
+        setMsg(t('forms.up_ocr_failed'));
       } else if (ocr && typeof ocr === 'object' && 'extracted_id' in ocr) {
         extractedId = (ocr as { extracted_id: string }).extracted_id;
       }
@@ -124,17 +126,17 @@ export function UploadForm({ babyId }: { babyId: string }) {
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
       <div>
-        <Label htmlFor="k">File type</Label>
+        <Label htmlFor="k">{t('forms.up_file_type')}</Label>
         <Select id="k" value={kind} onChange={e => onKindChange(e.target.value as FileKind)}>
-          <option value="daily_note">Daily handwritten note</option>
-          <option value="prescription">Prescription</option>
-          <option value="report">Medical report</option>
-          <option value="stool_image">Stool image</option>
-          <option value="other">Other</option>
+          <option value="daily_note">{t('forms.up_kind_daily')}</option>
+          <option value="prescription">{t('forms.up_kind_rx')}</option>
+          <option value="report">{t('forms.up_kind_report')}</option>
+          <option value="stool_image">{t('forms.up_kind_stool')}</option>
+          <option value="other">{t('forms.up_kind_other')}</option>
         </Select>
       </div>
       <div>
-        <Label htmlFor="f">File (image or PDF, up to 10 MB)</Label>
+        <Label htmlFor="f">{t('forms.up_file_label')}</Label>
         <input
           id="f"
           ref={fileRef}
@@ -146,13 +148,13 @@ export function UploadForm({ babyId }: { babyId: string }) {
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={handwritten} onChange={e => setHandwritten(e.target.checked)} />
-        Handwritten (helps the OCR model pick the right mode)
+        {t('forms.up_handwritten')}
       </label>
       {err && <p className="text-sm text-red-600">{err}</p>}
       {msg && <p className="text-sm text-emerald-700">{msg}</p>}
-      <Button type="submit" disabled={busy}>{busy ? 'Uploading…' : 'Upload and run OCR'}</Button>
+      <Button type="submit" disabled={busy}>{busy ? t('forms.up_uploading') : t('forms.up_submit')}</Button>
       <p className="text-xs text-slate-500">
-        OCR never writes to your logs directly — you will land on a review screen to confirm or edit the extracted values.
+        {t('forms.up_help')}
       </p>
     </form>
   );

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ConfidenceBadge } from '@/components/ConfidenceBadge';
 import { isoToLocalInput, localInputToIso, nowLocalInput } from '@/lib/dates';
 import type { StructuredOcr, MilkType, StoolSize } from '@/lib/types';
+import { useT } from '@/lib/i18n/client';
 
 // ---- Row types used only in this client form ------------------------------
 type FeedingRow = { feeding_time: string; quantity_ml: string; milk_type: MilkType; notes: string };
@@ -75,6 +76,7 @@ export function OcrReview({
   babyId: string;
 }) {
   const router = useRouter();
+  const t = useT();
 
   const initial = extracted.structured_data ?? {};
 
@@ -254,7 +256,7 @@ export function OcrReview({
       newMedsToInsert.length === 0
     ) {
       setSaving(false);
-      setErr('Nothing to save — add at least one row, or discard the extraction.');
+      setErr(t('ocr.nothing_to_save'));
       return;
     }
 
@@ -284,7 +286,7 @@ export function OcrReview({
         .select('id,name');
       if (medErr) {
         setSaving(false);
-        setErr(`Could not create medication: ${medErr.message}`);
+        setErr(t('ocr.could_not_create_med', { message: medErr.message }));
         return;
       }
       createdMeds = (inserted ?? []) as { id: string; name: string }[];
@@ -326,7 +328,7 @@ export function OcrReview({
   }
 
   async function onDiscard() {
-    if (!window.confirm('Discard this extraction? Nothing will be saved to your logs. The original file is kept.')) return;
+    if (!window.confirm(t('ocr.discard_confirm'))) return;
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase
@@ -344,10 +346,10 @@ export function OcrReview({
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>OCR extraction</CardTitle>
+          <CardTitle>{t('ocr.title')}</CardTitle>
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <span>{extracted.provider}{extracted.model ? ` · ${extracted.model}` : ''}</span>
-            {extracted.is_handwritten ? <span className="rounded bg-slate-100 px-1.5 py-0.5">handwritten</span> : null}
+            {extracted.is_handwritten ? <span className="rounded bg-slate-100 px-1.5 py-0.5">{t('ocr.handwritten')}</span> : null}
             {extracted.detected_language ? <span className="rounded bg-slate-100 px-1.5 py-0.5">{extracted.detected_language}</span> : null}
             <ConfidenceBadge score={extracted.confidence_score} />
           </div>
@@ -355,26 +357,26 @@ export function OcrReview({
         <CardContent className="text-sm">
           {extracted.flag_low_confidence && (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-3 mb-3 text-amber-900">
-              Low OCR confidence — please check every value before confirming.
+              {t('ocr.low_conf')}
             </div>
           )}
           {extracted.status === 'confirmed' && (
             <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 mb-3 text-emerald-900">
-              This extraction was already confirmed. You can still edit the individual log rows from the dashboard.
+              {t('ocr.already_confirmed')}
             </div>
           )}
           <div className="grid gap-4 md:grid-cols-2">
             {previewUrl && (
               <div>
-                <div className="text-xs text-slate-500 mb-1">Source file</div>
+                <div className="text-xs text-slate-500 mb-1">{t('ocr.source_file')}</div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={previewUrl} alt="" className="max-h-[60vh] rounded-md border border-slate-200" />
               </div>
             )}
             <div>
-              <div className="text-xs text-slate-500 mb-1">Raw transcript</div>
+              <div className="text-xs text-slate-500 mb-1">{t('ocr.raw_transcript')}</div>
               <pre className="whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50 p-3 text-xs max-h-[60vh] overflow-auto">
-{extracted.raw_text ?? '(no transcript)'}
+{extracted.raw_text ?? t('ocr.no_transcript')}
               </pre>
             </div>
           </div>
@@ -382,92 +384,92 @@ export function OcrReview({
       </Card>
 
       {/* Feedings */}
-      <Section title={`Feedings (${feedings.length})`} onAdd={readOnly ? undefined : addFeeding}>
-        {feedings.length === 0 && <Empty>No feedings detected. Add one if needed.</Empty>}
+      <Section title={t('ocr.sec_feedings', { n: String(feedings.length) })} addLabel={t('ocr.add_row')} onAdd={readOnly ? undefined : addFeeding}>
+        {feedings.length === 0 && <Empty>{t('ocr.empty_feedings')}</Empty>}
         {feedings.map((f, i) => (
           <div key={i} className="grid gap-3 md:grid-cols-5 items-end border-b border-slate-100 pb-3">
             <div className="md:col-span-2">
-              <Label htmlFor={`ft${i}`}>When</Label>
+              <Label htmlFor={`ft${i}`}>{t('ocr.lbl_when')}</Label>
               <Input id={`ft${i}`} type="datetime-local" disabled={readOnly} value={f.feeding_time} onChange={e => setFeedings(r => patch(r, i, { feeding_time: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`fm${i}`}>Type</Label>
+              <Label htmlFor={`fm${i}`}>{t('ocr.lbl_type')}</Label>
               <Select id={`fm${i}`} disabled={readOnly} value={f.milk_type} onChange={e => setFeedings(r => patch(r, i, { milk_type: e.target.value as MilkType }))}>
                 <option value="formula">formula</option><option value="breast">breast</option>
                 <option value="mixed">mixed</option><option value="solid">solid</option><option value="other">other</option>
               </Select>
             </div>
             <div>
-              <Label htmlFor={`fq${i}`}>ml</Label>
+              <Label htmlFor={`fq${i}`}>{t('ocr.lbl_ml')}</Label>
               <Input id={`fq${i}`} type="number" step="1" min={0} max={2000} disabled={readOnly} value={f.quantity_ml} onChange={e => setFeedings(r => patch(r, i, { quantity_ml: e.target.value }))} />
             </div>
             <div className="flex justify-end">
-              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setFeedings(r => r.filter((_, j) => j !== i))}>remove</Button>}
+              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setFeedings(r => r.filter((_, j) => j !== i))}>{t('ocr.remove')}</Button>}
             </div>
             <div className="md:col-span-5">
-              <Input placeholder="notes" disabled={readOnly} value={f.notes} onChange={e => setFeedings(r => patch(r, i, { notes: e.target.value }))} />
+              <Input placeholder={t('ocr.lbl_notes_ph')} disabled={readOnly} value={f.notes} onChange={e => setFeedings(r => patch(r, i, { notes: e.target.value }))} />
             </div>
           </div>
         ))}
       </Section>
 
       {/* Stools */}
-      <Section title={`Stools (${stools.length})`} onAdd={readOnly ? undefined : addStool}>
-        {stools.length === 0 && <Empty>No stool events detected. Add one if needed.</Empty>}
+      <Section title={t('ocr.sec_stools', { n: String(stools.length) })} addLabel={t('ocr.add_row')} onAdd={readOnly ? undefined : addStool}>
+        {stools.length === 0 && <Empty>{t('ocr.empty_stools')}</Empty>}
         {stools.map((s, i) => (
           <div key={i} className="grid gap-3 md:grid-cols-6 items-end border-b border-slate-100 pb-3">
             <div className="md:col-span-2">
-              <Label htmlFor={`st${i}`}>When</Label>
+              <Label htmlFor={`st${i}`}>{t('ocr.lbl_when')}</Label>
               <Input id={`st${i}`} type="datetime-local" disabled={readOnly} value={s.stool_time} onChange={e => setStools(r => patch(r, i, { stool_time: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`sc${i}`}>Size</Label>
+              <Label htmlFor={`sc${i}`}>{t('ocr.lbl_size')}</Label>
               <Select id={`sc${i}`} disabled={readOnly} value={s.quantity_category} onChange={e => setStools(r => patch(r, i, { quantity_category: (e.target.value || '') as StoolSize | '' }))}>
                 <option value="">—</option><option value="small">small</option><option value="medium">medium</option><option value="large">large</option>
               </Select>
             </div>
             <div>
-              <Label htmlFor={`sq${i}`}>ml</Label>
+              <Label htmlFor={`sq${i}`}>{t('ocr.lbl_ml')}</Label>
               <Input id={`sq${i}`} type="number" step="1" min={0} max={1000} disabled={readOnly} value={s.quantity_ml} onChange={e => setStools(r => patch(r, i, { quantity_ml: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`scol${i}`}>Color</Label>
+              <Label htmlFor={`scol${i}`}>{t('ocr.lbl_color')}</Label>
               <Input id={`scol${i}`} disabled={readOnly} value={s.color} onChange={e => setStools(r => patch(r, i, { color: e.target.value }))} />
             </div>
             <div className="flex justify-end">
-              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setStools(r => r.filter((_, j) => j !== i))}>remove</Button>}
+              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setStools(r => r.filter((_, j) => j !== i))}>{t('ocr.remove')}</Button>}
             </div>
             <div className="md:col-span-6">
-              <Input placeholder="consistency / notes" disabled={readOnly} value={s.notes} onChange={e => setStools(r => patch(r, i, { notes: e.target.value }))} />
+              <Input placeholder={t('ocr.lbl_consistency_ph')} disabled={readOnly} value={s.notes} onChange={e => setStools(r => patch(r, i, { notes: e.target.value }))} />
             </div>
           </div>
         ))}
       </Section>
 
       {/* Measurements */}
-      <Section title={`Measurements (${measurements.length})`} onAdd={readOnly ? undefined : addMeasurement}>
-        {measurements.length === 0 && <Empty>No measurements detected. Add one if needed.</Empty>}
+      <Section title={t('ocr.sec_measurements', { n: String(measurements.length) })} addLabel={t('ocr.add_row')} onAdd={readOnly ? undefined : addMeasurement}>
+        {measurements.length === 0 && <Empty>{t('ocr.empty_measurements')}</Empty>}
         {measurements.map((m, i) => (
           <div key={i} className="grid gap-3 md:grid-cols-5 items-end border-b border-slate-100 pb-3">
             <div className="md:col-span-2">
-              <Label htmlFor={`mt${i}`}>When</Label>
+              <Label htmlFor={`mt${i}`}>{t('ocr.lbl_when')}</Label>
               <Input id={`mt${i}`} type="datetime-local" disabled={readOnly} value={m.measured_at} onChange={e => setMeasurements(r => patch(r, i, { measured_at: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`mw${i}`}>kg</Label>
+              <Label htmlFor={`mw${i}`}>{t('ocr.lbl_kg')}</Label>
               <Input id={`mw${i}`} type="number" step="0.001" min={0} max={40} disabled={readOnly} value={m.weight_kg} onChange={e => setMeasurements(r => patch(r, i, { weight_kg: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`mh${i}`}>cm</Label>
+              <Label htmlFor={`mh${i}`}>{t('ocr.lbl_cm')}</Label>
               <Input id={`mh${i}`} type="number" step="0.1" min={0} max={200} disabled={readOnly} value={m.height_cm} onChange={e => setMeasurements(r => patch(r, i, { height_cm: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`mhc${i}`}>head cm</Label>
+              <Label htmlFor={`mhc${i}`}>{t('ocr.lbl_head_cm')}</Label>
               <Input id={`mhc${i}`} type="number" step="0.1" min={0} max={80} disabled={readOnly} value={m.head_circ_cm} onChange={e => setMeasurements(r => patch(r, i, { head_circ_cm: e.target.value }))} />
             </div>
             <div className="md:col-span-5 flex items-end gap-3">
-              <Input placeholder="notes" disabled={readOnly} value={m.notes} onChange={e => setMeasurements(r => patch(r, i, { notes: e.target.value }))} />
-              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setMeasurements(r => r.filter((_, j) => j !== i))}>remove</Button>}
+              <Input placeholder={t('ocr.lbl_notes_ph')} disabled={readOnly} value={m.notes} onChange={e => setMeasurements(r => patch(r, i, { notes: e.target.value }))} />
+              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setMeasurements(r => r.filter((_, j) => j !== i))}>{t('ocr.remove')}</Button>}
             </div>
           </div>
         ))}
@@ -475,22 +477,22 @@ export function OcrReview({
 
       {/* Medications detected on a prescription. These create rows in the
           `medications` table on confirm — not just dose logs. */}
-      <Section title={`New medications from prescription (${newMeds.length})`} onAdd={readOnly ? undefined : addNewMed}>
-        {newMeds.length === 0 && <Empty>No medications detected. Add one if this scan is a prescription.</Empty>}
+      <Section title={t('ocr.sec_new_meds', { n: String(newMeds.length) })} addLabel={t('ocr.add_row')} onAdd={readOnly ? undefined : addNewMed}>
+        {newMeds.length === 0 && <Empty>{t('ocr.empty_new_meds')}</Empty>}
         {newMeds.map((m, i) => (
           <div key={i} className="grid gap-3 md:grid-cols-6 items-end border-b border-slate-100 pb-3">
             <div className="md:col-span-2">
-              <Label htmlFor={`nm${i}`}>Medication name</Label>
+              <Label htmlFor={`nm${i}`}>{t('ocr.lbl_med_name')}</Label>
               <Input id={`nm${i}`} disabled={readOnly} value={m.name} placeholder="e.g. Amoxicillin"
                 onChange={e => setNewMeds(r => patch(r, i, { name: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`nd${i}`}>Dosage</Label>
+              <Label htmlFor={`nd${i}`}>{t('ocr.lbl_dosage')}</Label>
               <Input id={`nd${i}`} disabled={readOnly} value={m.dosage} placeholder="5 ml"
                 onChange={e => setNewMeds(r => patch(r, i, { dosage: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`nr${i}`}>Route</Label>
+              <Label htmlFor={`nr${i}`}>{t('ocr.lbl_route')}</Label>
               <Select id={`nr${i}`} disabled={readOnly} value={m.route}
                 onChange={e => setNewMeds(r => patch(r, i, { route: e.target.value as NewMedRow['route'] }))}>
                 <option value="oral">oral</option>
@@ -503,71 +505,71 @@ export function OcrReview({
               </Select>
             </div>
             <div>
-              <Label htmlFor={`nf${i}`}>Every (hours)</Label>
+              <Label htmlFor={`nf${i}`}>{t('ocr.lbl_every_h')}</Label>
               <Input id={`nf${i}`} type="number" min={0.25} max={168} step={0.25} disabled={readOnly}
                 value={m.frequency_hours} placeholder="8"
                 onChange={e => setNewMeds(r => patch(r, i, { frequency_hours: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`nt${i}`}>Total doses</Label>
+              <Label htmlFor={`nt${i}`}>{t('ocr.lbl_total_doses')}</Label>
               <Input id={`nt${i}`} type="number" min={0} step={1} disabled={readOnly}
                 value={m.total_doses} placeholder="21"
                 onChange={e => setNewMeds(r => patch(r, i, { total_doses: e.target.value }))} />
             </div>
             <div className="md:col-span-3">
-              <Label htmlFor={`ns${i}`}>Starts</Label>
+              <Label htmlFor={`ns${i}`}>{t('ocr.lbl_starts')}</Label>
               <Input id={`ns${i}`} type="datetime-local" disabled={readOnly} value={m.starts_at}
                 onChange={e => setNewMeds(r => patch(r, i, { starts_at: e.target.value }))} />
             </div>
             <div className="md:col-span-3">
-              <Label htmlFor={`ne${i}`}>Ends (optional)</Label>
+              <Label htmlFor={`ne${i}`}>{t('ocr.lbl_ends_opt')}</Label>
               <Input id={`ne${i}`} type="datetime-local" disabled={readOnly} value={m.ends_at}
                 onChange={e => setNewMeds(r => patch(r, i, { ends_at: e.target.value }))} />
             </div>
             <div className="md:col-span-3">
-              <Label htmlFor={`np${i}`}>Prescribed by</Label>
+              <Label htmlFor={`np${i}`}>{t('ocr.lbl_prescribed_by')}</Label>
               <Input id={`np${i}`} disabled={readOnly} value={m.prescribed_by} placeholder="Dr. ……"
                 onChange={e => setNewMeds(r => patch(r, i, { prescribed_by: e.target.value }))} />
             </div>
             <div className="md:col-span-3">
-              <Label htmlFor={`nn${i}`}>Notes</Label>
+              <Label htmlFor={`nn${i}`}>{t('ocr.lbl_notes')}</Label>
               <Input id={`nn${i}`} disabled={readOnly} value={m.notes}
                 onChange={e => setNewMeds(r => patch(r, i, { notes: e.target.value }))} />
             </div>
             <div className="md:col-span-6 flex justify-end">
-              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setNewMeds(r => r.filter((_, j) => j !== i))}>remove</Button>}
+              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setNewMeds(r => r.filter((_, j) => j !== i))}>{t('ocr.remove')}</Button>}
             </div>
           </div>
         ))}
       </Section>
 
       {/* Medication logs */}
-      <Section title={`Medication doses (${medLogs.length})`} onAdd={readOnly ? undefined : addMedLog}>
-        {medLogs.length === 0 && <Empty>No doses detected. Add one if needed.</Empty>}
+      <Section title={t('ocr.sec_med_doses', { n: String(medLogs.length) })} addLabel={t('ocr.add_row')} onAdd={readOnly ? undefined : addMedLog}>
+        {medLogs.length === 0 && <Empty>{t('ocr.empty_med_doses')}</Empty>}
         {meds.length === 0 && medLogs.length > 0 && (
-          <p className="text-xs text-amber-700">No medications are set up for this baby yet. Add one in Medications before confirming, or the rows will fail to save.</p>
+          <p className="text-xs text-amber-700">{t('ocr.no_meds_warn')}</p>
         )}
         {medLogs.map((l, i) => (
           <div key={i} className="grid gap-3 md:grid-cols-5 items-end border-b border-slate-100 pb-3">
             <div className="md:col-span-2">
-              <Label htmlFor={`lm${i}`}>Medication</Label>
+              <Label htmlFor={`lm${i}`}>{t('ocr.lbl_medication')}</Label>
               <Select id={`lm${i}`} disabled={readOnly} value={l.medication_id} onChange={e => setMedLogs(r => patch(r, i, { medication_id: e.target.value }))}>
                 <option value="">—</option>
                 {meds.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </Select>
             </div>
             <div>
-              <Label htmlFor={`lt${i}`}>When</Label>
+              <Label htmlFor={`lt${i}`}>{t('ocr.lbl_when')}</Label>
               <Input id={`lt${i}`} type="datetime-local" disabled={readOnly} value={l.medication_time} onChange={e => setMedLogs(r => patch(r, i, { medication_time: e.target.value }))} />
             </div>
             <div>
-              <Label htmlFor={`ls${i}`}>Status</Label>
+              <Label htmlFor={`ls${i}`}>{t('ocr.lbl_status')}</Label>
               <Select id={`ls${i}`} disabled={readOnly} value={l.status} onChange={e => setMedLogs(r => patch(r, i, { status: e.target.value as 'taken' }))}>
                 <option value="taken">taken</option><option value="missed">missed</option><option value="skipped">skipped</option>
               </Select>
             </div>
             <div className="flex justify-end">
-              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setMedLogs(r => r.filter((_, j) => j !== i))}>remove</Button>}
+              {!readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setMedLogs(r => r.filter((_, j) => j !== i))}>{t('ocr.remove')}</Button>}
             </div>
           </div>
         ))}
@@ -577,9 +579,9 @@ export function OcrReview({
       {ultrasounds.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Ultrasound{ultrasounds.length === 1 ? '' : 's'} ({ultrasounds.length})</CardTitle>
+            <CardTitle>{ultrasounds.length === 1 ? t('ocr.sec_ultrasound_one', { n: '1' }) : t('ocr.sec_ultrasounds', { n: String(ultrasounds.length) })}</CardTitle>
             <span className="text-[11px] uppercase tracking-wider text-lavender-700 bg-lavender-50 px-2 py-0.5 rounded-full">
-              saved separately
+              {t('ocr.us_saved_separately')}
             </span>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -587,35 +589,35 @@ export function OcrReview({
               <div key={i} className="rounded-xl border border-lavender-200 bg-lavender-50/30 p-4 space-y-3">
                 <div className="grid gap-3 md:grid-cols-3">
                   <div>
-                    <Label htmlFor={`us-at-${i}`}>Scan time</Label>
+                    <Label htmlFor={`us-at-${i}`}>{t('ocr.lbl_scan_time')}</Label>
                     <Input id={`us-at-${i}`} type="datetime-local" disabled={readOnly}
                       value={u.scanned_at}
                       onChange={e => setUltrasounds(r => patch(r, i, { scanned_at: e.target.value }))} />
                   </div>
                   <div>
-                    <Label>GA weeks</Label>
+                    <Label>{t('ocr.lbl_ga_weeks')}</Label>
                     <Input type="number" min={0} max={45} disabled={readOnly}
                       value={u.gestational_week}
                       onChange={e => setUltrasounds(r => patch(r, i, { gestational_week: e.target.value }))} />
                   </div>
                   <div>
-                    <Label>GA days</Label>
+                    <Label>{t('ocr.lbl_ga_days')}</Label>
                     <Input type="number" min={0} max={6} disabled={readOnly}
                       value={u.gestational_day}
                       onChange={e => setUltrasounds(r => patch(r, i, { gestational_day: e.target.value }))} />
                   </div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
-                  <div><Label>BPD (mm)</Label><Input type="number" step="0.1" disabled={readOnly} value={u.bpd_mm} onChange={e => setUltrasounds(r => patch(r, i, { bpd_mm: e.target.value }))} /></div>
-                  <div><Label>HC (mm)</Label> <Input type="number" step="0.1" disabled={readOnly} value={u.hc_mm}  onChange={e => setUltrasounds(r => patch(r, i, { hc_mm:  e.target.value }))} /></div>
-                  <div><Label>AC (mm)</Label> <Input type="number" step="0.1" disabled={readOnly} value={u.ac_mm}  onChange={e => setUltrasounds(r => patch(r, i, { ac_mm:  e.target.value }))} /></div>
-                  <div><Label>FL (mm)</Label> <Input type="number" step="0.1" disabled={readOnly} value={u.fl_mm}  onChange={e => setUltrasounds(r => patch(r, i, { fl_mm:  e.target.value }))} /></div>
-                  <div><Label>EFW (g)</Label> <Input type="number" step="1"   disabled={readOnly} value={u.efw_g}  onChange={e => setUltrasounds(r => patch(r, i, { efw_g:  e.target.value }))} /></div>
-                  <div><Label>FHR (bpm)</Label><Input type="number" min={50} max={250} disabled={readOnly} value={u.fhr_bpm} onChange={e => setUltrasounds(r => patch(r, i, { fhr_bpm: e.target.value }))} /></div>
+                  <div><Label>{t('ocr.lbl_bpd')}</Label><Input type="number" step="0.1" disabled={readOnly} value={u.bpd_mm} onChange={e => setUltrasounds(r => patch(r, i, { bpd_mm: e.target.value }))} /></div>
+                  <div><Label>{t('ocr.lbl_hc')}</Label> <Input type="number" step="0.1" disabled={readOnly} value={u.hc_mm}  onChange={e => setUltrasounds(r => patch(r, i, { hc_mm:  e.target.value }))} /></div>
+                  <div><Label>{t('ocr.lbl_ac')}</Label> <Input type="number" step="0.1" disabled={readOnly} value={u.ac_mm}  onChange={e => setUltrasounds(r => patch(r, i, { ac_mm:  e.target.value }))} /></div>
+                  <div><Label>{t('ocr.lbl_fl')}</Label> <Input type="number" step="0.1" disabled={readOnly} value={u.fl_mm}  onChange={e => setUltrasounds(r => patch(r, i, { fl_mm:  e.target.value }))} /></div>
+                  <div><Label>{t('ocr.lbl_efw')}</Label> <Input type="number" step="1"   disabled={readOnly} value={u.efw_g}  onChange={e => setUltrasounds(r => patch(r, i, { efw_g:  e.target.value }))} /></div>
+                  <div><Label>{t('ocr.lbl_fhr')}</Label><Input type="number" min={50} max={250} disabled={readOnly} value={u.fhr_bpm} onChange={e => setUltrasounds(r => patch(r, i, { fhr_bpm: e.target.value }))} /></div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="md:col-span-1">
-                    <Label>Sex predicted</Label>
+                    <Label>{t('ocr.lbl_sex')}</Label>
                     <Select disabled={readOnly} value={u.sex_predicted}
                       onChange={e => setUltrasounds(r => patch(r, i, { sex_predicted: (e.target.value || '') as UsRow['sex_predicted'] }))}>
                       <option value="">—</option>
@@ -624,22 +626,22 @@ export function OcrReview({
                       <option value="undetermined">undetermined</option>
                     </Select>
                   </div>
-                  <div><Label>Placenta</Label><Input disabled={readOnly} value={u.placenta_position} onChange={e => setUltrasounds(r => patch(r, i, { placenta_position: e.target.value }))} /></div>
-                  <div><Label>Amniotic fluid</Label><Input disabled={readOnly} value={u.amniotic_fluid} onChange={e => setUltrasounds(r => patch(r, i, { amniotic_fluid: e.target.value }))} /></div>
+                  <div><Label>{t('ocr.lbl_placenta')}</Label><Input disabled={readOnly} value={u.placenta_position} onChange={e => setUltrasounds(r => patch(r, i, { placenta_position: e.target.value }))} /></div>
+                  <div><Label>{t('ocr.lbl_amniotic')}</Label><Input disabled={readOnly} value={u.amniotic_fluid} onChange={e => setUltrasounds(r => patch(r, i, { amniotic_fluid: e.target.value }))} /></div>
                 </div>
                 <div>
-                  <Label>Anomalies</Label>
+                  <Label>{t('ocr.lbl_anomalies')}</Label>
                   <Textarea rows={2} disabled={readOnly} value={u.anomalies} onChange={e => setUltrasounds(r => patch(r, i, { anomalies: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>Summary</Label>
+                  <Label>{t('ocr.lbl_summary')}</Label>
                   <Textarea rows={2} disabled={readOnly} value={u.summary} onChange={e => setUltrasounds(r => patch(r, i, { summary: e.target.value }))} />
                 </div>
                 <div className="flex items-center justify-end gap-2">
                   {!readOnly && (
                     <Button type="button" variant="ghost" size="sm"
                       onClick={() => setUltrasounds(r => r.filter((_, j) => j !== i))}>
-                      remove
+                      {t('ocr.remove')}
                     </Button>
                   )}
                 </div>
@@ -677,11 +679,11 @@ export function OcrReview({
                   const payload = rows.map(r => ({ ...r, created_by: userId }));
                   const { error } = await supabase.from('ultrasounds').insert(payload);
                   setSavingUs(false);
-                  if (error) { setUsMsg(`Error: ${error.message}`); return; }
-                  setUsMsg(`Saved ${rows.length} ultrasound${rows.length === 1 ? '' : 's'} ✓`);
+                  if (error) { setUsMsg(t('ocr.us_save_error', { message: error.message })); return; }
+                  setUsMsg(t('ocr.us_saved_count', { n: String(rows.length) }));
                   setTimeout(() => router.push(`/babies/${babyId}/prenatal/ultrasounds`), 800);
                 }}>
-                  {savingUs ? 'Saving…' : `Save ultrasound${ultrasounds.length === 1 ? '' : 's'}`}
+                  {savingUs ? t('forms.saving') : (ultrasounds.length === 1 ? t('ocr.us_save_one') : t('ocr.us_save'))}
                 </Button>
               </div>
             )}
@@ -693,9 +695,9 @@ export function OcrReview({
       {labPanels.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Lab panel{labPanels.length === 1 ? '' : 's'} ({labPanels.length})</CardTitle>
+            <CardTitle>{labPanels.length === 1 ? t('ocr.sec_lab_panel_one', { n: '1' }) : t('ocr.sec_lab_panels', { n: String(labPanels.length) })}</CardTitle>
             <span className="text-[11px] uppercase tracking-wider text-peach-700 bg-peach-50 px-2 py-0.5 rounded-full">
-              saved separately
+              {t('ocr.us_saved_separately')}
             </span>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -703,48 +705,48 @@ export function OcrReview({
               <div key={pi} className="rounded-xl border border-peach-200 bg-peach-50/30 p-4 space-y-3">
                 <div className="grid gap-3 md:grid-cols-3">
                   <div>
-                    <Label>Type</Label>
+                    <Label>{t('ocr.lab_lbl_type')}</Label>
                     <Select disabled={readOnly} value={p.panel_kind}
                       onChange={e => setLabPanels(rs => patch(rs, pi, { panel_kind: e.target.value as LabPanelRow['panel_kind'] }))}>
-                      <option value="blood">Blood</option>
-                      <option value="urine">Urine</option>
-                      <option value="stool">Stool</option>
-                      <option value="culture">Culture</option>
-                      <option value="imaging">Imaging</option>
-                      <option value="genetic">Genetic</option>
-                      <option value="other">Other</option>
+                      <option value="blood">{t('forms.lab_panel_kind_blood')}</option>
+                      <option value="urine">{t('forms.lab_panel_kind_urine')}</option>
+                      <option value="stool">{t('forms.lab_panel_kind_stool')}</option>
+                      <option value="culture">{t('forms.lab_panel_kind_culture')}</option>
+                      <option value="imaging">{t('forms.lab_panel_kind_imaging')}</option>
+                      <option value="genetic">{t('forms.lab_panel_kind_genetic')}</option>
+                      <option value="other">{t('forms.lab_panel_kind_other')}</option>
                     </Select>
                   </div>
                   <div className="md:col-span-2">
-                    <Label>Panel name</Label>
+                    <Label>{t('ocr.lab_lbl_panel_name')}</Label>
                     <Input disabled={readOnly} value={p.panel_name}
                       onChange={e => setLabPanels(rs => patch(rs, pi, { panel_name: e.target.value }))}
                       placeholder="CBC with differential" />
                   </div>
                   <div>
-                    <Label>Sample taken</Label>
+                    <Label>{t('ocr.lab_lbl_sample')}</Label>
                     <Input type="datetime-local" disabled={readOnly} value={p.sample_at}
                       onChange={e => setLabPanels(rs => patch(rs, pi, { sample_at: e.target.value }))} />
                   </div>
                   <div>
-                    <Label>Result issued</Label>
+                    <Label>{t('ocr.lab_lbl_result')}</Label>
                     <Input type="datetime-local" disabled={readOnly} value={p.result_at}
                       onChange={e => setLabPanels(rs => patch(rs, pi, { result_at: e.target.value }))} />
                   </div>
                   <div>
-                    <Label>Lab</Label>
+                    <Label>{t('ocr.lab_lbl_lab')}</Label>
                     <Input disabled={readOnly} value={p.lab_name}
                       onChange={e => setLabPanels(rs => patch(rs, pi, { lab_name: e.target.value }))} />
                   </div>
                   <div className="md:col-span-3">
-                    <Label>One-line summary</Label>
+                    <Label>{t('ocr.lab_lbl_summary')}</Label>
                     <Input disabled={readOnly} value={p.summary}
                       onChange={e => setLabPanels(rs => patch(rs, pi, { summary: e.target.value }))} />
                   </div>
                   <label className="md:col-span-3 inline-flex items-center gap-2 text-sm">
                     <input type="checkbox" disabled={readOnly} checked={p.abnormal}
                       onChange={e => setLabPanels(rs => patch(rs, pi, { abnormal: e.target.checked }))} />
-                    Flag panel as abnormal
+                    {t('ocr.lab_flag_abnormal')}
                   </label>
                 </div>
 
@@ -754,11 +756,11 @@ export function OcrReview({
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-left text-[10px] uppercase tracking-wider text-ink-muted border-b border-slate-100">
-                          <th className="px-2 py-1.5">Test</th>
-                          <th className="px-2 py-1.5">Value</th>
-                          <th className="px-2 py-1.5">Unit</th>
-                          <th className="px-2 py-1.5">Reference</th>
-                          <th className="px-2 py-1.5">Flag</th>
+                          <th className="px-2 py-1.5">{t('ocr.lab_th_test')}</th>
+                          <th className="px-2 py-1.5">{t('ocr.lab_th_value')}</th>
+                          <th className="px-2 py-1.5">{t('ocr.lab_th_unit')}</th>
+                          <th className="px-2 py-1.5">{t('ocr.lab_th_ref')}</th>
+                          <th className="px-2 py-1.5">{t('ocr.lab_th_flag')}</th>
                           <th></th>
                         </tr>
                       </thead>
@@ -795,13 +797,13 @@ export function OcrReview({
                   {!readOnly && p.items.length === 0 && (
                     <Button type="button" variant="ghost" size="sm"
                       onClick={() => setLabPanels(rs => addItem(rs, pi))}>
-                      + add row
+                      {t('ocr.lab_add_row')}
                     </Button>
                   )}
                   {!readOnly && (
                     <Button type="button" variant="ghost" size="sm"
                       onClick={() => setLabPanels(rs => rs.filter((_, j) => j !== pi))}>
-                      remove panel
+                      {t('ocr.lab_remove_panel')}
                     </Button>
                   )}
                 </div>
@@ -832,7 +834,7 @@ export function OcrReview({
                       file_id: extracted.file_id,
                       created_by: userId,
                     }).select('id').single();
-                    if (pErr || !panelRow) { setLabMsg(`Error: ${pErr?.message ?? 'failed'}`); break; }
+                    if (pErr || !panelRow) { setLabMsg(t('ocr.us_save_error', { message: pErr?.message ?? 'failed' })); break; }
                     const itemRows = p.items
                       .filter(i => i.test_name.trim())
                       .map(i => ({
@@ -846,17 +848,17 @@ export function OcrReview({
                       }));
                     if (itemRows.length > 0) {
                       const { error: iErr } = await supabase.from('lab_panel_items').insert(itemRows);
-                      if (iErr) { setLabMsg(`Saved panel but rows failed: ${iErr.message}`); break; }
+                      if (iErr) { setLabMsg(t('ocr.lab_save_failed', { message: iErr.message })); break; }
                     }
                     saved += 1;
                   }
                   setSavingLab(false);
                   if (saved > 0) {
-                    setLabMsg(`Saved ${saved} lab panel${saved === 1 ? '' : 's'} ✓`);
+                    setLabMsg(t('ocr.lab_saved_count', { n: String(saved) }));
                     setTimeout(() => router.push(`/babies/${babyId}/labs`), 800);
                   }
                 }}>
-                  {savingLab ? 'Saving…' : `Save lab panel${labPanels.length === 1 ? '' : 's'}`}
+                  {savingLab ? t('forms.saving') : (labPanels.length === 1 ? t('ocr.lab_save_one') : t('ocr.lab_save'))}
                 </Button>
               </div>
             )}
@@ -867,9 +869,9 @@ export function OcrReview({
       {/* Lab requests pulled from a prescription / referral */}
       {labRequests.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>Lab tests ordered by this document</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('ocr.sec_lab_requests')}</CardTitle></CardHeader>
           <CardContent className="text-sm space-y-2">
-            <p className="text-xs text-ink-muted">When the results come back, add a new lab panel — these are just a heads-up.</p>
+            <p className="text-xs text-ink-muted">{t('ocr.lab_requests_help')}</p>
             <ul className="flex flex-wrap gap-1.5">
               {labRequests.map((req, i) => (
                 <li key={i} className="inline-flex items-center rounded-full bg-peach-100 text-peach-700 px-3 py-1 text-xs font-semibold">{req}</li>
@@ -880,7 +882,7 @@ export function OcrReview({
       )}
 
       <Card>
-        <CardHeader><CardTitle>Free-text notes (not saved to logs)</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t('ocr.sec_free_notes')}</CardTitle></CardHeader>
         <CardContent><Textarea rows={3} disabled={readOnly} value={freeNotes} onChange={e => setFreeNotes(e.target.value)} /></CardContent>
       </Card>
 
@@ -888,11 +890,11 @@ export function OcrReview({
 
       <div className="flex items-center justify-between gap-3 sticky bottom-0 bg-slate-50 py-3 border-t border-slate-200">
         <div className="text-xs text-slate-500">
-          Nothing is written to your logs until you confirm. All fields stay editable after.
+          {t('ocr.footer_help')}
         </div>
         <div className="flex gap-2">
-          {!readOnly && <Button variant="secondary" onClick={onDiscard} disabled={saving}>Discard</Button>}
-          {!readOnly && <Button onClick={onConfirm} disabled={saving || !hasAny}>{saving ? 'Saving…' : 'Confirm & save to logs'}</Button>}
+          {!readOnly && <Button variant="secondary" onClick={onDiscard} disabled={saving}>{t('ocr.discard_btn')}</Button>}
+          {!readOnly && <Button onClick={onConfirm} disabled={saving || !hasAny}>{saving ? t('forms.saving') : t('ocr.confirm_btn')}</Button>}
         </div>
       </div>
     </div>
@@ -925,12 +927,12 @@ function removeItem(panels: LabPanelRow[], pi: number, ii: number): LabPanelRow[
   } : p);
 }
 
-function Section({ title, onAdd, children }: { title: string; onAdd?: () => void; children: React.ReactNode }) {
+function Section({ title, addLabel, onAdd, children }: { title: string; addLabel?: string; onAdd?: () => void; children: React.ReactNode }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{title}</CardTitle>
-        {onAdd && <Button type="button" variant="secondary" size="sm" onClick={onAdd}>+ add row</Button>}
+        {onAdd && <Button type="button" variant="secondary" size="sm" onClick={onAdd}>{addLabel ?? '+ add row'}</Button>}
       </CardHeader>
       <CardContent className="space-y-3">{children}</CardContent>
     </Card>
