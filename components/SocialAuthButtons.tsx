@@ -23,6 +23,17 @@ import { useT } from '@/lib/i18n/client';
 
 type Provider = 'google' | 'apple' | 'facebook';
 
+// Per-provider activation flag. Flip to `true` once the provider has
+// been enabled in Supabase Authentication → Providers (with valid
+// OAuth credentials) and the redirect URLs whitelisted in
+// Authentication → URL Configuration. Until then the button renders
+// with a "Coming soon" pill and is non-interactive.
+const PROVIDER_ENABLED: Record<Provider, boolean> = {
+  google:   false,
+  apple:    false,
+  facebook: false,
+};
+
 export function SocialAuthButtons({ mode = 'login' }: { mode?: 'login' | 'register' }) {
   const t = useT();
   const next = useSearchParams().get('next') ?? '/dashboard';
@@ -30,6 +41,7 @@ export function SocialAuthButtons({ mode = 'login' }: { mode?: 'login' | 'regist
   const [err, setErr] = useState<string | null>(null);
 
   async function signInWith(provider: Provider) {
+    if (!PROVIDER_ENABLED[provider]) return;
     setErr(null); setLoading(provider);
     const supabase = createClient();
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
@@ -48,23 +60,36 @@ export function SocialAuthButtons({ mode = 'login' }: { mode?: 'login' | 'regist
 
   return (
     <div className="space-y-2.5">
-      <button type="button" onClick={() => signInWith('google')} disabled={loading !== null}
-        className="w-full h-12 inline-flex items-center justify-center gap-3 rounded-2xl bg-white border border-slate-200 text-ink font-semibold shadow-sm hover:bg-slate-50 disabled:opacity-60">
-        {loading === 'google' ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleGlyph />}
-        {mode === 'register' ? t('auth.social_register_google') : t('auth.social_login_google')}
-      </button>
-
-      <button type="button" onClick={() => signInWith('apple')} disabled={loading !== null}
-        className="w-full h-12 inline-flex items-center justify-center gap-3 rounded-2xl bg-black text-white font-semibold shadow-sm hover:bg-neutral-800 disabled:opacity-60">
-        {loading === 'apple' ? <Loader2 className="h-4 w-4 animate-spin" /> : <AppleGlyph />}
-        {mode === 'register' ? t('auth.social_register_apple') : t('auth.social_login_apple')}
-      </button>
-
-      <button type="button" onClick={() => signInWith('facebook')} disabled={loading !== null}
-        className="w-full h-12 inline-flex items-center justify-center gap-3 rounded-2xl bg-[#1877F2] hover:bg-[#0E60D8] text-white font-semibold shadow-sm disabled:opacity-60">
-        {loading === 'facebook' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FacebookGlyph />}
-        {mode === 'register' ? t('auth.social_register_facebook') : t('auth.social_login_facebook')}
-      </button>
+      <SocialButton provider="google"
+        active={PROVIDER_ENABLED.google}
+        loading={loading === 'google'}
+        disabled={loading !== null}
+        onClick={() => signInWith('google')}
+        label={mode === 'register' ? t('auth.social_register_google') : t('auth.social_login_google')}
+        comingSoonLabel={t('auth.social_coming_soon')}
+        glyph={<GoogleGlyph />}
+        styleClasses="bg-white border border-slate-200 text-ink hover:bg-slate-50"
+      />
+      <SocialButton provider="apple"
+        active={PROVIDER_ENABLED.apple}
+        loading={loading === 'apple'}
+        disabled={loading !== null}
+        onClick={() => signInWith('apple')}
+        label={mode === 'register' ? t('auth.social_register_apple') : t('auth.social_login_apple')}
+        comingSoonLabel={t('auth.social_coming_soon')}
+        glyph={<AppleGlyph />}
+        styleClasses="bg-black text-white hover:bg-neutral-800"
+      />
+      <SocialButton provider="facebook"
+        active={PROVIDER_ENABLED.facebook}
+        loading={loading === 'facebook'}
+        disabled={loading !== null}
+        onClick={() => signInWith('facebook')}
+        label={mode === 'register' ? t('auth.social_register_facebook') : t('auth.social_login_facebook')}
+        comingSoonLabel={t('auth.social_coming_soon')}
+        glyph={<FacebookGlyph />}
+        styleClasses="bg-[#1877F2] text-white hover:bg-[#0E60D8]"
+      />
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
 
@@ -75,6 +100,44 @@ export function SocialAuthButtons({ mode = 'login' }: { mode?: 'login' | 'regist
         <span className="flex-1 h-px bg-slate-200" />
       </div>
     </div>
+  );
+}
+
+function SocialButton({
+  active, loading, disabled, onClick, label, comingSoonLabel, glyph, styleClasses,
+}: {
+  provider: Provider;
+  active: boolean;
+  loading: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  label: string;
+  comingSoonLabel: string;
+  glyph: React.ReactNode;
+  styleClasses: string;
+}) {
+  // When the provider isn't enabled in Supabase yet we render the
+  // button non-interactive with a small "Coming soon" pill on the
+  // right. Visual style is preserved (full color + glyph) so users
+  // see what's on the way and can recognise the providers.
+  const inactive = !active;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || inactive}
+      aria-disabled={inactive}
+      title={inactive ? comingSoonLabel : undefined}
+      className={`relative w-full h-12 inline-flex items-center justify-center gap-3 rounded-2xl font-semibold shadow-sm ${styleClasses} ${inactive ? 'opacity-70 cursor-not-allowed' : ''} ${disabled && !inactive ? 'opacity-60' : ''}`}
+    >
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : glyph}
+      <span>{label}</span>
+      {inactive && (
+        <span className="ms-2 inline-flex items-center rounded-full bg-white/95 text-ink-strong text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-slate-200">
+          {comingSoonLabel}
+        </span>
+      )}
+    </button>
   );
 }
 

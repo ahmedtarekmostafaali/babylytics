@@ -2373,6 +2373,7 @@ export const ar: Messages = {
     social_register_apple:    'إنشاء حساب عبر Apple',
     social_register_facebook: 'إنشاء حساب عبر Facebook',
     social_divider:           'أو بالبريد',
+    social_coming_soon:       'قريبًا',
 
     login_welcome:           'مرحبًا بعودتك',
     login_subtitle:          'سعيدون برؤيتك مرة أخرى.',

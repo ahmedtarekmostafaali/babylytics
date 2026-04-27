@@ -2414,6 +2414,7 @@ export const en = {
     social_register_apple:    'Sign up with Apple',
     social_register_facebook: 'Sign up with Facebook',
     social_divider:           'or with email',
+    social_coming_soon:       'Coming soon',
 
     login_welcome:           'Welcome back',
     login_subtitle:          'Hello, glad to see you again.',
