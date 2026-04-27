@@ -245,6 +245,7 @@ export function Sidebar() {
                   open={isCatOpen('preg_vital')} onToggle={() => toggleCat('preg_vital')}>
                   <NavItem href={`/babies/${currentBabyId}/prenatal/kicks`}        icon={Activity}    label="Kick counter"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/kicks`) ?? false} collapsed={collapsed} tint="coral" />
                   <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}    label="Maternal vitals" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />
+                  <NavItem href={`/babies/${currentBabyId}/prenatal/symptoms`}     icon={HeartPulse}  label={t('nav.symptoms')} active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/symptoms`) ?? false} collapsed={collapsed} tint="lavender" />
                 </NavCategory>
 
                 <NavCategory id="preg_records" label={t('nav.cat_records')} icon={FileText} collapsed={collapsed}

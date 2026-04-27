@@ -45,6 +45,7 @@ export const ar: Messages = {
     doctors: 'الأطباء',
     preferences: 'التفضيلات',
     updates: 'الجديد',
+    symptoms: 'الأعراض',
   },
 
   common: {
@@ -1014,6 +1015,32 @@ export const ar: Messages = {
     nb_born_dob_help:      'الوقت الدقيق مهم لحسابات اليوم الأول من الرضاعة.',
     nb_born_factor_help:   'الافتراضي 150. عدّله بناءً على نصيحة طبيب الأطفال.',
     nb_born_create:        'إنشاء طفل',
+
+    // Maternal symptom form
+    symp_kind_title:       'بماذا تشعرين؟',
+    symp_sev_title:        'ما مدى الشدة؟ (1 = خفيفة، 5 = شديدة)',
+    symp_log_cta:          'تسجيل العَرَض',
+    symp_del_confirm:      'حذف هذا السجل؟',
+    symp_err_time:         'اختاري وقتًا صحيحًا.',
+    symp_notes_placeholder:'أضيفي تفاصيل — متى بدأ، ما الذي ساعد، المحفزات، إلخ.',
+    symp_nausea:           'غثيان',
+    symp_vomiting:         'قيء',
+    symp_dizziness:        'دوخة',
+    symp_headache:         'صداع',
+    symp_swelling:         'تورم',
+    symp_contractions:     'تقلصات',
+    symp_fatigue:          'إرهاق',
+    symp_heartburn:        'حرقة المعدة',
+    symp_back_pain:        'ألم الظهر',
+    symp_mood_swings:      'تقلبات مزاجية',
+    symp_cramping:         'مغص',
+    symp_breathlessness:   'ضيق تنفس',
+    symp_other:            'أخرى',
+    sev_1:                 'خفيفة — بالكاد تُلاحظ',
+    sev_2:                 'خفيفة–متوسطة — يمكن تحملها',
+    sev_3:                 'متوسطة — تعطل يومك',
+    sev_4:                 'شديدة — صعب الأداء',
+    sev_5:                 'شديدة جدًا — اتصلي بطبيبك',
   },
 
   // ── Pregnancy dashboard ─────────────────────────────────────────
@@ -1071,8 +1098,29 @@ export const ar: Messages = {
     qa_us:                 'تسجيل سونار',
     qa_kicks:              'عداد الركلات',
     qa_vitals:             'العلامات الحيوية للأم',
+    qa_symptoms:           'تسجيل عَرَض',
     qa_meds:               'أدوية الحمل',
     qa_profile:            'الملف الطبي',
+
+    // Daily size + ultrasound overlay card
+    daily_size_eyebrow:    'اليوم، طفلك بحجم …',
+    daily_size_today_pre:  'تقريبًا بحجم ',
+    daily_size_today_post: '',
+    daily_size_us_label:   'من السونار بتاريخ {date}',
+    daily_size_pct_of_avg: '{n}٪ من المتوسط',
+
+    // What-to-expect rollups
+    month_eyebrow:         'الشهر {n} · الأسابيع {w1}–{w2}',
+    tri_eyebrow:           'الثلث {n} · الأسابيع {w1}–{w2}',
+    expect_mom:            'للأم',
+    expect_baby:           'للطفل',
+    expect_todos:          'مهام',
+
+    // Recent symptoms strip
+    recent_symptoms:       'الأعراض الأخيرة',
+    last_7d:               'آخر 7 أيام · {n}',
+    view_all:              'عرض الكل',
+    no_symptoms:           'لم تُسجَّل أعراض في الأسبوع الماضي. 🌿',
   },
 
   // ── Medical profile aggregate page ──────────────────────────────
@@ -1338,6 +1386,21 @@ export const ar: Messages = {
     common_edit:           'تعديل',
     common_pick:           'اختر عنصرًا من القائمة لرؤية التفاصيل.',
     common_logged_on:      'تم التسجيل',
+  },
+
+  // ── Maternal symptoms tracker ───────────────────────────────────
+  symptoms: {
+    title:           'أعراض الأم',
+    subtitle:        'سجلي ما تشعرين به — غثيان، دوخة، تورم، تقلصات وأكثر — على مقياس شدة من 1 إلى 5.',
+    add:             'تسجيل عَرَض',
+    none:            'لا توجد أعراض في هذه الفترة. ✨',
+    details:         'تفاصيل العَرَض',
+    severity_label:  'الشدة',
+    back_label:      'الأعراض',
+    eyebrow_add:     'إضافة',
+    eyebrow_edit:    'تعديل',
+    add_title:       'عَرَض الأم',
+    edit_title:      'عَرَض الأم',
   },
 
   // ── Bulk delete dialog ──────────────────────────────────────────

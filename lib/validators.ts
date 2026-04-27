@@ -295,6 +295,17 @@ export const FetalMovementSchema = z.object({
   notes:         z.string().max(2000).nullable().optional(),
 });
 
+export const MaternalSymptomSchema = z.object({
+  logged_at: z.string().min(1),
+  kind: z.enum([
+    'nausea','vomiting','dizziness','headache','swelling',
+    'contractions','fatigue','heartburn','back_pain',
+    'mood_swings','cramping','breathlessness','other',
+  ]),
+  severity: z.coerce.number().int().min(1).max(5),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
 export const MarkAsBornSchema = z.object({
   dob:              z.string().min(1),
   birth_weight_kg:  z.coerce.number().min(0).max(10).nullable().optional(),

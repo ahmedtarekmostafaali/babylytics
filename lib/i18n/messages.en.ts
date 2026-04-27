@@ -47,6 +47,7 @@ export const en = {
     doctors: 'Doctors',
     preferences: 'Preferences',
     updates: "What's new",
+    symptoms: 'Symptoms',
   },
 
   // ── Common buttons / words ──────────────────────────────────────
@@ -1054,6 +1055,32 @@ export const en = {
     nb_born_dob_help:      'Exact time matters for first-day feeding math.',
     nb_born_factor_help:   "Default 150. Adjust on your pediatrician's advice.",
     nb_born_create:        'Create baby',
+
+    // Maternal symptom form
+    symp_kind_title:       'What are you feeling?',
+    symp_sev_title:        'How severe is it? (1 = mild, 5 = severe)',
+    symp_log_cta:          'Log symptom',
+    symp_del_confirm:      'Delete this symptom log?',
+    symp_err_time:         'Pick a valid time.',
+    symp_notes_placeholder:'Add any details — when it started, what helped, triggers, etc.',
+    symp_nausea:           'Nausea',
+    symp_vomiting:         'Vomiting',
+    symp_dizziness:        'Dizziness',
+    symp_headache:         'Headache',
+    symp_swelling:         'Swelling',
+    symp_contractions:     'Contractions',
+    symp_fatigue:          'Fatigue',
+    symp_heartburn:        'Heartburn',
+    symp_back_pain:        'Back pain',
+    symp_mood_swings:      'Mood swings',
+    symp_cramping:         'Cramping',
+    symp_breathlessness:   'Breathlessness',
+    symp_other:            'Other',
+    sev_1:                 'Mild — barely noticeable',
+    sev_2:                 'Mild–moderate — manageable',
+    sev_3:                 'Moderate — disrupting your day',
+    sev_4:                 'Severe — hard to function',
+    sev_5:                 'Very severe — call your provider',
   },
 
   // ── Pregnancy dashboard ─────────────────────────────────────────
@@ -1111,8 +1138,29 @@ export const en = {
     qa_us:                 'Log ultrasound',
     qa_kicks:              'Kick counter',
     qa_vitals:             'Maternal vitals',
+    qa_symptoms:           'Log symptom',
     qa_meds:               'Pregnancy meds',
     qa_profile:            'Medical profile',
+
+    // Daily size + ultrasound overlay card
+    daily_size_eyebrow:    'Today, baby is the size of …',
+    daily_size_today_pre:  'About the size of ',
+    daily_size_today_post: '',
+    daily_size_us_label:   'From your scan on {date}',
+    daily_size_pct_of_avg: '{n}% of avg',
+
+    // What-to-expect rollups
+    month_eyebrow:         'Month {n} · Weeks {w1}–{w2}',
+    tri_eyebrow:           'Trimester {n} · Weeks {w1}–{w2}',
+    expect_mom:            'For mom',
+    expect_baby:           'For baby',
+    expect_todos:          'To-dos',
+
+    // Recent symptoms strip
+    recent_symptoms:       'Recent symptoms',
+    last_7d:               'Last 7d · {n}',
+    view_all:              'View all',
+    no_symptoms:           'No symptoms logged in the last week. 🌿',
   },
 
   // ── Medical profile aggregate page ──────────────────────────────
@@ -1378,6 +1426,21 @@ export const en = {
     common_edit:           'Edit',
     common_pick:           'Pick an item from the list to see details.',
     common_logged_on:      'Logged on',
+  },
+
+  // ── Maternal symptoms tracker ───────────────────────────────────
+  symptoms: {
+    title:           'Maternal symptoms',
+    subtitle:        'Log how you feel — nausea, dizziness, swelling, contractions and more — on a 1–5 severity scale.',
+    add:             'Log symptom',
+    none:            'No symptoms in this window. ✨',
+    details:         'Symptom details',
+    severity_label:  'Severity',
+    back_label:      'Symptoms',
+    eyebrow_add:     'Add',
+    eyebrow_edit:    'Edit',
+    add_title:       'Maternal symptom',
+    edit_title:      'Maternal symptom',
   },
 
   // ── Bulk delete dialog ──────────────────────────────────────────

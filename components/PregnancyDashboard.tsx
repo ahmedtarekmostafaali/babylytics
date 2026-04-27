@@ -5,14 +5,22 @@ import { NotificationsBell } from '@/components/NotificationsBell';
 import {
   Stethoscope, ScanLine, Activity, HeartPulse, CalendarClock, Plus,
   Sparkles, ArrowRight, Pill, Heart, Apple, BookOpen, SlidersHorizontal,
+  Baby as BabyIcon, CalendarDays, ChevronRight,
 } from 'lucide-react';
 import {
   fmtGestationalAge, eddDistanceDays, gestationalAge, trimester, bpCategory,
 } from '@/lib/lifecycle';
-import { weekInsight, gainStatus } from '@/lib/pregnancy_weeks';
-import { fmtDate } from '@/lib/dates';
+import { weekInsight, gainStatus, dailySize, monthExpectations, trimesterOverview } from '@/lib/pregnancy_weeks';
+import { fmtDate, fmtRelative } from '@/lib/dates';
 import { fmtKg } from '@/lib/units';
 import { tFor, type Lang } from '@/lib/i18n';
+
+const SYMPTOM_EMOJI: Record<string, string> = {
+  nausea: '🤢', vomiting: '🤮', dizziness: '😵‍💫', headache: '🤕',
+  swelling: '🦶', contractions: '💥', fatigue: '😴', heartburn: '🔥',
+  back_pain: '🩹', mood_swings: '🎭', cramping: '⚡', breathlessness: '🫁',
+  other: '✏️',
+};
 
 type Summary = {
   edd: string | null;
@@ -32,6 +40,7 @@ type Summary = {
 export function PregnancyDashboard({
   babyId, babyName, avatarUrl, edd, lmp, summary, latestUltrasound, nextAppointment, canEdit,
   prePregnancyWeightKg, prePregnancyHeightCm, hiddenWidgets, lang = 'en',
+  recentSymptoms = [],
 }: {
   babyId: string;
   babyName: string;
@@ -39,13 +48,14 @@ export function PregnancyDashboard({
   edd: string | null;
   lmp: string | null;
   summary: Summary;
-  latestUltrasound: { id: string; scanned_at: string; gestational_week: number | null; summary: string | null } | null;
+  latestUltrasound: { id: string; scanned_at: string; gestational_week: number | null; summary: string | null; efw_g: number | null } | null;
   nextAppointment: { scheduled_at: string; doctor_name: string | null; purpose: string | null } | null;
   canEdit: boolean;
   prePregnancyWeightKg: number | null;
   prePregnancyHeightCm: number | null;
   hiddenWidgets?: string[];
   lang?: Lang;
+  recentSymptoms?: { id: string; logged_at: string; kind: string; severity: number }[];
 }) {
   const t = tFor(lang);
   const hidden = new Set(hiddenWidgets ?? []);
@@ -64,6 +74,14 @@ export function PregnancyDashboard({
     prePregnancyHeightCm,
     ga?.weeks ?? null,
   );
+  const today = ga ? dailySize(ga.total_days) : null;
+  const monthExp = ga ? monthExpectations(ga.weeks) : null;
+  const triExp = tri ? trimesterOverview(tri) : null;
+  const efw = latestUltrasound?.efw_g ?? null;
+  // % of "expected" weight for today — gives a quick on-track read.
+  const efwPct = today && efw && today.weight_g > 0
+    ? Math.round((efw / today.weight_g) * 100)
+    : null;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
@@ -104,6 +122,60 @@ export function PregnancyDashboard({
           </div>
         )}
       </div>
+
+      {/* Daily size card — interpolated length/weight + ultrasound EFW overlay */}
+      {today && show('daily_size') && (
+        <div className="relative overflow-hidden rounded-3xl border border-coral-200 bg-gradient-to-br from-coral-50 via-white to-mint-50 p-5 shadow-card">
+          <div className="absolute -top-8 -right-8 h-36 w-36 rounded-full bg-coral-200/40 blur-2xl pointer-events-none" />
+          <div className="relative flex items-center gap-5 flex-wrap">
+            <div className="text-7xl leading-none select-none">{today.emoji}</div>
+            <div className="flex-1 min-w-[200px]">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-coral-700">
+                {t('pregd.daily_size_eyebrow')}
+              </div>
+              <div className="mt-1 text-xl sm:text-2xl font-bold text-ink-strong leading-tight">
+                {t('pregd.daily_size_today_pre')}{today.size}{t('pregd.daily_size_today_post')}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 font-semibold text-mint-700 border border-mint-200">
+                  <BabyIcon className="h-3 w-3" /> {today.length_cm.toFixed(1)} cm
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 font-semibold text-coral-700 border border-coral-200">
+                  ≈ {today.weight_g >= 1000
+                    ? `${(today.weight_g / 1000).toFixed(2)} kg`
+                    : `${today.weight_g} g`}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-ink-muted border border-slate-200">
+                  {ga ? `${ga.weeks}w ${ga.days}d` : ''}
+                </span>
+              </div>
+              {efw != null && (
+                <div className="mt-3 rounded-xl bg-white/80 border border-slate-200 px-3 py-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-ink-muted">
+                        {t('pregd.daily_size_us_label', { date: latestUltrasound?.scanned_at ? fmtDate(latestUltrasound.scanned_at) : '' })}
+                      </div>
+                      <div className="font-bold text-ink-strong text-sm">
+                        {efw >= 1000 ? `${(efw / 1000).toFixed(2)} kg` : `${Math.round(efw)} g`}
+                      </div>
+                    </div>
+                    {efwPct != null && (
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        efwPct >= 90 && efwPct <= 110 ? 'bg-mint-100 text-mint-700'
+                        : efwPct < 90                  ? 'bg-peach-100 text-peach-700'
+                        :                                'bg-coral-100 text-coral-700'
+                      }`}>
+                        {t('pregd.daily_size_pct_of_avg', { n: efwPct })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI grid */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
@@ -199,6 +271,98 @@ export function PregnancyDashboard({
         </div>
       )}
 
+      {/* What-to-expect: monthly + trimester rollups */}
+      {((monthExp && show('month_expect')) || (triExp && show('tri_overview'))) && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {monthExp && show('month_expect') && (
+            <div className="rounded-2xl border border-peach-200 bg-gradient-to-br from-peach-50 via-white to-coral-50 p-5">
+              <div className="flex items-center gap-2">
+                <span className="h-7 w-7 rounded-lg grid place-items-center bg-peach-100 text-peach-700">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                </span>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-peach-700">
+                  {t('pregd.month_eyebrow', { n: monthExp.month, w1: monthExp.weeks[0], w2: monthExp.weeks[1] })}
+                </div>
+              </div>
+              <ExpectGroups t={t}
+                mom={monthExp.mom} baby={monthExp.baby} todos={monthExp.todos} />
+            </div>
+          )}
+
+          {triExp && show('tri_overview') && (
+            <div className="rounded-2xl border border-lavender-200 bg-gradient-to-br from-lavender-50 via-white to-brand-50 p-5">
+              <div className="flex items-center gap-2">
+                <span className="h-7 w-7 rounded-lg grid place-items-center bg-lavender-100 text-lavender-700">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </span>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-lavender-700">
+                  {t('pregd.tri_eyebrow', { n: triExp.trimester, w1: triExp.weeks[0], w2: triExp.weeks[1] })}
+                </div>
+              </div>
+              <p className="mt-2 text-sm text-ink-strong font-medium">{triExp.headline}</p>
+              <ExpectGroups t={t}
+                mom={triExp.mom} baby={triExp.baby} todos={triExp.todos} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recent maternal symptoms strip */}
+      {show('recent_symptoms') && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="h-7 w-7 rounded-lg grid place-items-center bg-lavender-100 text-lavender-700">
+                <HeartPulse className="h-3.5 w-3.5" />
+              </span>
+              <h3 className="text-sm font-bold text-ink-strong">{t('pregd.recent_symptoms')}</h3>
+              {recentSymptoms.length > 0 && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-lavender-700 bg-lavender-50 px-1.5 py-0.5 rounded-full">
+                  {t('pregd.last_7d', { n: recentSymptoms.length })}
+                </span>
+              )}
+            </div>
+            <Link href={`/babies/${babyId}/prenatal/symptoms`}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-lavender-700 hover:text-lavender-800">
+              {t('pregd.view_all')} <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+          {recentSymptoms.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-ink-muted">{t('pregd.no_symptoms')}</p>
+              {canEdit && (
+                <Link href={`/babies/${babyId}/prenatal/symptoms/new`}
+                  className="mt-3 inline-flex items-center gap-1 rounded-full bg-lavender-500 hover:bg-lavender-600 text-white text-xs font-semibold px-3 py-1.5">
+                  <Plus className="h-3.5 w-3.5" /> {t('symptoms.add')}
+                </Link>
+              )}
+            </div>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {recentSymptoms.slice(0, 6).map(s => (
+                <li key={s.id}>
+                  <Link href={`/babies/${babyId}/prenatal/symptoms?id=${s.id}`}
+                    className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 px-3 py-2 transition">
+                    <span className="text-2xl leading-none shrink-0">{SYMPTOM_EMOJI[s.kind] ?? '✏️'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-ink-strong truncate capitalize">
+                        {t(`forms.symp_${s.kind}`) || s.kind.replace(/_/g, ' ')}
+                      </div>
+                      <div className="text-[11px] text-ink-muted">{fmtRelative(s.logged_at)}</div>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      s.severity >= 4 ? 'bg-coral-100 text-coral-700'
+                      : s.severity === 3 ? 'bg-peach-100 text-peach-700'
+                      : 'bg-mint-100 text-mint-700'
+                    }`}>{s.severity}/5</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* Kick + counts row */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
         {show('kicks_card') && <Link href={`/babies/${babyId}/prenatal/kicks`}
@@ -274,6 +438,7 @@ export function PregnancyDashboard({
         <QuickLink href={`/babies/${babyId}/prenatal/ultrasounds/new`} icon={ScanLine}   label={t('pregd.qa_us')}      tint="brand" />
         <QuickLink href={`/babies/${babyId}/prenatal/kicks`}           icon={Activity}   label={t('pregd.qa_kicks')}   tint="coral" />
         <QuickLink href={`/babies/${babyId}/prenatal/maternal-vitals`} icon={Heart}      label={t('pregd.qa_vitals')}  tint="peach" />
+        <QuickLink href={`/babies/${babyId}/prenatal/symptoms/new`}    icon={HeartPulse} label={t('pregd.qa_symptoms')} tint="lavender" />
         <QuickLink href={`/babies/${babyId}/medications`}              icon={Pill}       label={t('pregd.qa_meds')}    tint="mint" />
         <QuickLink href={`/babies/${babyId}/medical-profile`}          icon={Sparkles}   label={t('pregd.qa_profile')} tint="lavender" />
       </div>}
@@ -369,6 +534,48 @@ function EmptyHint({ icon: Icon, text, ctaHref, ctaLabel }: {
         className="mt-3 inline-flex items-center gap-1 rounded-full bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold px-3 py-1.5">
         <Plus className="h-3.5 w-3.5" /> {ctaLabel}
       </Link>
+    </div>
+  );
+}
+
+function ExpectGroups({
+  t, mom, baby, todos,
+}: {
+  t: ReturnType<typeof tFor>;
+  mom: string[]; baby: string[]; todos: string[];
+}) {
+  return (
+    <div className="mt-3 space-y-3 text-sm">
+      {mom.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-coral-700">{t('pregd.expect_mom')}</div>
+          <ul className="mt-1 space-y-1">
+            {mom.map((m, i) => (
+              <li key={i} className="flex gap-2 text-ink"><span className="text-coral-500 select-none">•</span>{m}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {baby.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-brand-700">{t('pregd.expect_baby')}</div>
+          <ul className="mt-1 space-y-1">
+            {baby.map((m, i) => (
+              <li key={i} className="flex gap-2 text-ink"><span className="text-brand-500 select-none">•</span>{m}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {todos.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-mint-700">{t('pregd.expect_todos')}</div>
+          <ul className="mt-1 space-y-1">
+            {todos.map((m, i) => (
+              <li key={i} className="flex gap-2 text-ink"><span className="text-mint-500 select-none">•</span>{m}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
