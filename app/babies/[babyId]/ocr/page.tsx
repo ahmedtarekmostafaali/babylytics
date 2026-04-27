@@ -12,17 +12,19 @@ import {
   FileText, FolderArchive, Sparkles, CheckCircle2, ArrowRight, Lightbulb,
   Image as ImageIcon, Milk, Droplet, Scale, Pill,
 } from 'lucide-react';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor, type TFunc } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Smart Scan' };
 
 type Tab = 'inbox' | 'review' | 'confirmed' | 'archive';
 
-const TABS: { key: Tab; label: string; tint: string }[] = [
-  { key: 'inbox',     label: 'OCR Inbox',     tint: 'text-lavender-700 border-lavender-500' },
-  { key: 'review',    label: 'Needs Review',  tint: 'text-coral-700    border-coral-500' },
-  { key: 'confirmed', label: 'Confirmed',     tint: 'text-mint-700     border-mint-500' },
-  { key: 'archive',   label: 'Archive',       tint: 'text-brand-700    border-brand-500' },
+const TAB_META: { key: Tab; tkey: string; tint: string }[] = [
+  { key: 'inbox',     tkey: 'ocr_list.tab_inbox',     tint: 'text-lavender-700 border-lavender-500' },
+  { key: 'review',    tkey: 'ocr_list.tab_review',    tint: 'text-coral-700    border-coral-500' },
+  { key: 'confirmed', tkey: 'ocr_list.tab_confirmed', tint: 'text-mint-700     border-mint-500' },
+  { key: 'archive',   tkey: 'ocr_list.tab_archive',   tint: 'text-brand-700    border-brand-500' },
 ];
 
 type FileRow = {
@@ -61,13 +63,13 @@ function niceName(path: string) {
   return base.replace(/^[a-z0-9]{6,}_/, '');
 }
 
-function friendlyKind(k: string) {
+function friendlyKind(k: string, t: TFunc) {
   const map: Record<string, string> = {
-    daily_note: 'Handwritten note',
-    prescription: 'Prescription',
-    report: 'Medical report',
-    stool_image: 'Stool image',
-    other: 'Document',
+    daily_note:   t('ocr_list.kind_daily_note'),
+    prescription: t('ocr_list.kind_prescription'),
+    report:       t('ocr_list.kind_report'),
+    stool_image:  t('ocr_list.kind_stool_image'),
+    other:        t('ocr_list.kind_other'),
   };
   return map[k] ?? k;
 }
@@ -83,6 +85,8 @@ export default async function SmartScan({
   const tab: Tab = (searchParams.tab ?? 'inbox') as Tab;
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
 
   // Fetch everything in parallel for counts + each tab's list.
   const [{ data: files }, { data: extractions }] = await Promise.all([
@@ -151,13 +155,13 @@ export default async function SmartScan({
   return (
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Smart Scan" eyebrowTint="lavender"
-        title={<>Smart Scan &amp; OCR Inbox</>}
-        subtitle="Upload, extract and manage baby care notes with AI."
+        eyebrow={t('ocr_list.eyebrow')} eyebrowTint="lavender"
+        title={<>{t('ocr_list.title')}</>}
+        subtitle={t('ocr_list.subtitle')}
         right={
           <Link href="#"
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-            <Sparkles className="h-4 w-4 text-lavender-600" /> How it works
+            <Sparkles className="h-4 w-4 text-lavender-600" /> {t('ocr_list.how_it_works')}
           </Link>
         } />
 
@@ -171,7 +175,7 @@ export default async function SmartScan({
       )}
       {!perms.canUpload && (
         <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm text-ink-muted">
-          Uploads are restricted to owners and parents. Ask a parent to add new files.
+          {t('ocr_list.no_uploads_perm')}
         </div>
       )}
 
@@ -179,11 +183,11 @@ export default async function SmartScan({
       <div className="flex flex-wrap items-center gap-2 pb-1">
         <Link href={`/babies/${params.babyId}/ocr?tab=inbox`}
           className="inline-flex items-center gap-1 rounded-full bg-lavender-100 text-lavender-700 hover:bg-lavender-200 text-xs font-semibold px-3 py-1.5">
-          <FileText className="h-3.5 w-3.5" /> Go to OCR Inbox <ArrowRight className="h-3 w-3" />
+          <FileText className="h-3.5 w-3.5" /> {t('ocr_list.go_inbox')} <ArrowRight className="h-3 w-3" />
         </Link>
         <Link href={`/babies/${params.babyId}/ocr?tab=archive`}
           className="inline-flex items-center gap-1 rounded-full bg-mint-100 text-mint-700 hover:bg-mint-200 text-xs font-semibold px-3 py-1.5">
-          <FolderArchive className="h-3.5 w-3.5" /> Go to Archive <ArrowRight className="h-3 w-3" />
+          <FolderArchive className="h-3.5 w-3.5" /> {t('ocr_list.go_archive')} <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
 
@@ -191,33 +195,33 @@ export default async function SmartScan({
       <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
         {/* Tab bar */}
         <div className="flex items-center gap-1 px-2 border-b border-slate-100 overflow-x-auto">
-          {TABS.map(t => {
-            const active = tab === t.key;
+          {TAB_META.map(meta => {
+            const active = tab === meta.key;
             return (
-              <Link key={t.key}
-                href={`/babies/${params.babyId}/ocr?tab=${t.key}`}
-                className={`inline-flex items-center gap-1.5 px-3 py-3 text-sm whitespace-nowrap border-b-2 ${active ? t.tint : 'border-transparent text-ink-muted hover:text-ink'}`}>
-                {t.label}
+              <Link key={meta.key}
+                href={`/babies/${params.babyId}/ocr?tab=${meta.key}`}
+                className={`inline-flex items-center gap-1.5 px-3 py-3 text-sm whitespace-nowrap border-b-2 ${active ? meta.tint : 'border-transparent text-ink-muted hover:text-ink'}`}>
+                {t(meta.tkey)}
                 <span className={`rounded-full text-[10px] font-bold px-1.5 py-0.5 ${active ? 'bg-ink text-white' : 'bg-slate-100 text-ink-muted'}`}>
-                  {counts[t.key]}
+                  {counts[meta.key]}
                 </span>
               </Link>
             );
           })}
           <div className="flex-1" />
           <div className="hidden md:flex items-center gap-2 pr-3 text-xs text-ink-muted">
-            <span>Sort by:</span>
-            <span className="rounded-full border border-slate-200 px-3 py-1 bg-white font-semibold text-ink-strong">Newest</span>
+            <span>{t('ocr_list.sort_by')}</span>
+            <span className="rounded-full border border-slate-200 px-3 py-1 bg-white font-semibold text-ink-strong">{t('ocr_list.sort_newest')}</span>
           </div>
         </div>
 
         {list.length > 0 && (
           <div className="px-5 py-3 bg-slate-50/60 border-b border-slate-100 text-xs text-ink-muted flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-coral-500" />
-            {tab === 'review' ? 'OCR extractions waiting for your review and confirmation.'
-              : tab === 'confirmed' ? 'These extractions have been reviewed and saved to logs.'
-              : tab === 'archive' ? 'Uploaded files without OCR — kept for your reference.'
-              : 'All files that have been scanned with OCR.'}
+            {tab === 'review' ? t('ocr_list.banner_review')
+              : tab === 'confirmed' ? t('ocr_list.banner_confirmed')
+              : tab === 'archive' ? t('ocr_list.banner_archive')
+              : t('ocr_list.banner_inbox')}
           </div>
         )}
 
@@ -229,21 +233,21 @@ export default async function SmartScan({
                 <div className="h-14 w-14 rounded-2xl mx-auto bg-slate-100 text-ink-muted grid place-items-center">
                   <FileText className="h-6 w-6" />
                 </div>
-                <div className="mt-3 font-semibold text-ink-strong">Nothing here yet</div>
-                <p className="mt-1 text-xs">Upload a file using the cards above.</p>
+                <div className="mt-3 font-semibold text-ink-strong">{t('ocr_list.empty_h')}</div>
+                <p className="mt-1 text-xs">{t('ocr_list.empty_p')}</p>
               </li>
             )}
             {list.map(f => {
               const ext = latestExtByFile.get(f.id);
               const active = selectedId === f.id;
               const status = ext
-                ? (ext.status === 'confirmed' ? { label: 'Confirmed',   tint: 'bg-mint-100 text-mint-700' }
-                  : ext.flag_low_confidence   ? { label: 'Low confidence', tint: 'bg-peach-100 text-peach-700' }
-                  : ext.status === 'extracted'? { label: 'Needs review', tint: 'bg-lavender-100 text-lavender-700' }
+                ? (ext.status === 'confirmed' ? { label: t('ocr_list.status_confirmed'),   tint: 'bg-mint-100 text-mint-700' }
+                  : ext.flag_low_confidence   ? { label: t('ocr_list.status_low_conf'),    tint: 'bg-peach-100 text-peach-700' }
+                  : ext.status === 'extracted'? { label: t('ocr_list.status_needs_review'), tint: 'bg-lavender-100 text-lavender-700' }
                   : { label: ext.status, tint: 'bg-slate-100 text-ink-muted' })
                 : (tab === 'archive'
-                  ? { label: 'Archive', tint: 'bg-slate-100 text-ink-muted' }
-                  : { label: 'Not scanned', tint: 'bg-peach-100 text-peach-700' });
+                  ? { label: t('ocr_list.status_archive'), tint: 'bg-slate-100 text-ink-muted' }
+                  : { label: t('ocr_list.status_not_scanned'), tint: 'bg-peach-100 text-peach-700' });
               return (
                 <li key={f.id} className={`flex items-center gap-1 px-2 transition ${active ? 'bg-lavender-50/60' : ''}`}>
                   <Link href={`/babies/${params.babyId}/ocr?tab=${tab}&file=${f.id}`}
@@ -253,10 +257,10 @@ export default async function SmartScan({
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-ink-strong truncate">
-                        {friendlyKind(f.kind)}
+                        {friendlyKind(f.kind, t)}
                       </div>
                       <div className="text-xs text-ink-muted truncate">
-                        Uploaded {fmtRelative(f.uploaded_at)} · {fmtBytes(f.size_bytes)}
+                        {t('ocr_list.uploaded_rel', { when: fmtRelative(f.uploaded_at), size: fmtBytes(f.size_bytes) })}
                       </div>
                     </div>
                     <span className={`rounded-full text-[10px] font-semibold px-2 py-0.5 whitespace-nowrap ${status.tint}`}>
@@ -284,7 +288,7 @@ export default async function SmartScan({
                   <div className="h-14 w-14 rounded-2xl mx-auto bg-white border border-slate-200 grid place-items-center">
                     <FileText className="h-6 w-6 text-ink-muted" />
                   </div>
-                  <p className="mt-3 text-sm">Pick a file to see extracted data.</p>
+                  <p className="mt-3 text-sm">{t('ocr_list.pick_file')}</p>
                 </div>
               </div>
             ) : (
@@ -294,6 +298,7 @@ export default async function SmartScan({
                 ext={selectedExt}
                 previewUrl={previewUrl}
                 canUpload={perms.canUpload}
+                t={t}
               />
             )}
           </div>
@@ -306,14 +311,14 @@ export default async function SmartScan({
           <Lightbulb className="h-4 w-4 text-peach-600" />
         </span>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-ink-strong">Tips for better OCR</div>
+          <div className="text-sm font-semibold text-ink-strong">{t('ocr_list.tips_h')}</div>
           <p className="text-xs text-ink-muted mt-0.5">
-            Use clear, well-lit photos. Avoid shadows and handwriting that&apos;s too small.
+            {t('ocr_list.tips_p')}
           </p>
         </div>
         <Link href="#"
           className="rounded-full border border-peach-200 bg-white hover:bg-peach-50 text-peach-700 text-xs font-semibold px-3 py-1.5 shadow-sm">
-          View tips
+          {t('ocr_list.view_tips')}
         </Link>
       </div>
     </PageShell>
@@ -325,17 +330,19 @@ export default async function SmartScan({
 /* ──────────────────────────────────────────────────────────────────── */
 
 function DetailPanel({
-  babyId, file, ext, previewUrl, canUpload,
+  babyId, file, ext, previewUrl, canUpload, t,
 }: {
   babyId: string;
   file: FileRow;
   ext: ExtractedRow | null;
   previewUrl: string | null;
   canUpload: boolean;
+  t: TFunc;
 }) {
   const conf = ext?.confidence_score != null ? Math.round(Number(ext.confidence_score) * 100) : null;
 
-  type Extracted = { type: 'Feeding (Bottle)' | 'Feeding (Breast)' | 'Stool' | 'Measurement' | 'Medication'; time: string; details: string; confidence: number };
+  type ExtType = 'feeding_bottle' | 'feeding_breast' | 'stool' | 'measurement' | 'medication';
+  type Extracted = { type: ExtType; time: string; details: string; confidence: number };
   const rows: Extracted[] = [];
   const sd = ext?.structured_data;
   if (sd) {
@@ -344,25 +351,25 @@ function DetailPanel({
     (sd.feedings ?? []).forEach((f, i) => {
       const isBreast = f.milk_type === 'breast';
       rows.push({
-        type: isBreast ? 'Feeding (Breast)' : 'Feeding (Bottle)',
+        type: isBreast ? 'feeding_breast' : 'feeding_bottle',
         time: f.feeding_time ? fmtDateTime(f.feeding_time).split(' · ')[1] ?? '—' : '—',
         details: isBreast
-          ? (f.notes ?? 'breastfeeding')
+          ? (f.notes ?? t('ocr_list.breastfeeding'))
           : [f.quantity_ml ? `${f.quantity_ml} ml` : null, f.milk_type].filter(Boolean).join(' · '),
         confidence: jitter(i),
       });
     });
     (sd.stools ?? []).forEach((s, i) => {
       rows.push({
-        type: 'Stool',
+        type: 'stool',
         time: s.stool_time ? fmtDateTime(s.stool_time).split(' · ')[1] ?? '—' : '—',
-        details: [s.quantity_category, s.color, s.consistency].filter(Boolean).join(' · ') || 'stool',
+        details: [s.quantity_category, s.color, s.consistency].filter(Boolean).join(' · ') || t('ocr_list.stool_word'),
         confidence: jitter(i + 10),
       });
     });
     (sd.measurements ?? []).forEach((m, i) => {
       rows.push({
-        type: 'Measurement',
+        type: 'measurement',
         time: m.measured_at ? fmtDateTime(m.measured_at).split(' · ')[1] ?? '—' : '—',
         details: [m.weight_kg ? `${m.weight_kg} kg` : null, m.height_cm ? `${m.height_cm} cm` : null].filter(Boolean).join(' · '),
         confidence: jitter(i + 20),
@@ -370,7 +377,7 @@ function DetailPanel({
     });
     (sd.medication_logs ?? []).forEach((m, i) => {
       rows.push({
-        type: 'Medication',
+        type: 'medication',
         time: m.medication_time ? fmtDateTime(m.medication_time).split(' · ')[1] ?? '—' : '—',
         details: [m.status, m.notes].filter(Boolean).join(' · '),
         confidence: jitter(i + 30),
@@ -378,40 +385,47 @@ function DetailPanel({
     });
   }
 
-  const typeIcon: Record<Extracted['type'], React.ComponentType<{ className?: string }>> = {
-    'Feeding (Bottle)': Milk,
-    'Feeding (Breast)': Milk,
-    'Stool': Droplet,
-    'Measurement': Scale,
-    'Medication': Pill,
+  const typeIcon: Record<ExtType, React.ComponentType<{ className?: string }>> = {
+    feeding_bottle: Milk,
+    feeding_breast: Milk,
+    stool: Droplet,
+    measurement: Scale,
+    medication: Pill,
   };
-  const typeTint: Record<Extracted['type'], string> = {
-    'Feeding (Bottle)': 'bg-brand-100 text-brand-600',
-    'Feeding (Breast)': 'bg-coral-100 text-coral-600',
-    'Stool': 'bg-mint-100 text-mint-600',
-    'Measurement': 'bg-lavender-100 text-lavender-600',
-    'Medication': 'bg-peach-100 text-peach-600',
+  const typeTint: Record<ExtType, string> = {
+    feeding_bottle: 'bg-brand-100 text-brand-600',
+    feeding_breast: 'bg-coral-100 text-coral-600',
+    stool: 'bg-mint-100 text-mint-600',
+    measurement: 'bg-lavender-100 text-lavender-600',
+    medication: 'bg-peach-100 text-peach-600',
+  };
+  const typeLabel: Record<ExtType, string> = {
+    feeding_bottle: t('ocr_list.type_feeding_bottle'),
+    feeding_breast: t('ocr_list.type_feeding_breast'),
+    stool: t('ocr_list.type_stool'),
+    measurement: t('ocr_list.type_measurement'),
+    medication: t('ocr_list.type_medication'),
   };
 
   return (
     <div className="p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-bold text-ink-strong truncate">{friendlyKind(file.kind)}</div>
+          <div className="text-sm font-bold text-ink-strong truncate">{friendlyKind(file.kind, t)}</div>
           <div className="text-[11px] text-ink-muted">
-            Uploaded {fmtDateTime(file.uploaded_at)}
+            {t('ocr_list.uploaded_at', { when: fmtDateTime(file.uploaded_at) })}
           </div>
         </div>
         {ext ? (
           ext.status === 'confirmed'
-            ? <span className="rounded-full bg-mint-100 text-mint-700 text-[11px] font-semibold px-2.5 py-1 inline-flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Confirmed</span>
+            ? <span className="rounded-full bg-mint-100 text-mint-700 text-[11px] font-semibold px-2.5 py-1 inline-flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />{t('ocr_list.status_confirmed')}</span>
             : ext.flag_low_confidence
-              ? <span className="rounded-full bg-peach-100 text-peach-700 text-[11px] font-semibold px-2.5 py-1">Low confidence</span>
-              : <span className="rounded-full bg-lavender-100 text-lavender-700 text-[11px] font-semibold px-2.5 py-1">Needs review</span>
+              ? <span className="rounded-full bg-peach-100 text-peach-700 text-[11px] font-semibold px-2.5 py-1">{t('ocr_list.status_low_conf')}</span>
+              : <span className="rounded-full bg-lavender-100 text-lavender-700 text-[11px] font-semibold px-2.5 py-1">{t('ocr_list.status_needs_review')}</span>
         ) : (
           file.kind === 'other' || file.kind === 'stool_image'
-            ? <span className="rounded-full bg-slate-100 text-ink-muted text-[11px] font-semibold px-2.5 py-1">Archive</span>
-            : <span className="rounded-full bg-peach-100 text-peach-700 text-[11px] font-semibold px-2.5 py-1">Not scanned</span>
+            ? <span className="rounded-full bg-slate-100 text-ink-muted text-[11px] font-semibold px-2.5 py-1">{t('ocr_list.status_archive')}</span>
+            : <span className="rounded-full bg-peach-100 text-peach-700 text-[11px] font-semibold px-2.5 py-1">{t('ocr_list.status_not_scanned')}</span>
         )}
       </div>
 
@@ -433,7 +447,7 @@ function DetailPanel({
         <div>
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-bold text-ink-strong">
-              Extracted data <span className="text-[10px] text-ink-muted font-normal">(AI)</span>
+              {t('ocr_list.extracted_h')} <span className="text-[10px] text-ink-muted font-normal">{t('ocr_list.extracted_ai')}</span>
             </div>
             {conf != null && (
               <ConfidenceBadge score={conf / 100} />
@@ -441,7 +455,7 @@ function DetailPanel({
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
             <div className="grid grid-cols-[1.4fr_0.8fr_1.5fr_0.6fr] gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-ink-muted bg-slate-50 border-b border-slate-100">
-              <span>Type</span><span>Time</span><span>Details</span><span className="text-right">Conf.</span>
+              <span>{t('ocr_list.th_type')}</span><span>{t('ocr_list.th_time')}</span><span>{t('ocr_list.th_details')}</span><span className="text-right">{t('ocr_list.th_conf')}</span>
             </div>
             <ul className="divide-y divide-slate-100">
               {rows.map((r, i) => {
@@ -453,7 +467,7 @@ function DetailPanel({
                       <span className={`h-6 w-6 rounded-md grid place-items-center shrink-0 ${tint}`}>
                         <Icon className="h-3 w-3" />
                       </span>
-                      <span className="truncate">{r.type}</span>
+                      <span className="truncate">{typeLabel[r.type]}</span>
                     </span>
                     <span className="text-ink-muted">{r.time}</span>
                     <span className="text-ink truncate">{r.details}</span>
@@ -468,7 +482,7 @@ function DetailPanel({
 
       {ext && rows.length === 0 && (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-xs text-ink-muted">
-          OCR ran but did not extract any structured values. Open the review screen to see the raw text.
+          {t('ocr_list.no_structured')}
         </div>
       )}
 
@@ -477,19 +491,19 @@ function DetailPanel({
         {ext && ext.status !== 'confirmed' && (
           <Link href={`/babies/${babyId}/ocr/${ext.id}`}
             className="flex-1 h-10 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-ink-strong text-sm font-semibold grid place-items-center">
-            Review &amp; edit
+            {t('ocr_list.review_edit')}
           </Link>
         )}
         {ext && ext.status !== 'confirmed' && (
           <Link href={`/babies/${babyId}/ocr/${ext.id}`}
             className="flex-1 h-10 rounded-2xl bg-gradient-to-r from-lavender-500 to-brand-500 text-white text-sm font-semibold grid place-items-center">
-            Confirm &amp; save
+            {t('ocr_list.confirm_save')}
           </Link>
         )}
         {(!ext || ext.status === 'confirmed') && (
           <Link href={`/babies/${babyId}/files/${file.id}`}
             className="flex-1 h-10 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-ink-strong text-sm font-semibold grid place-items-center">
-            Open file
+            {t('ocr_list.open_file')}
           </Link>
         )}
       </div>
