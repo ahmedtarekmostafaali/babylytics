@@ -5,28 +5,30 @@ import { fmtKg } from '@/lib/units';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import { BabyAvatar } from '@/components/BabyAvatar';
 import { Bell, Plus, Heart, Sparkles, ArrowRight } from 'lucide-react';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor, type TFunc } from '@/lib/i18n';
 
 import type { Metadata } from 'next';
 export const metadata: Metadata = { title: 'Your babies' };
 export const dynamic = 'force-dynamic';
 
-function greetingFor(hour: number): string {
-  if (hour < 5)  return 'Good early morning';
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  if (hour < 22) return 'Good evening';
-  return 'Good night';
+function greetingFor(hour: number, t: TFunc): string {
+  if (hour < 5)  return t('dashboard.g_early');
+  if (hour < 12) return t('dashboard.g_morning');
+  if (hour < 17) return t('dashboard.g_afternoon');
+  if (hour < 22) return t('dashboard.g_evening');
+  return t('dashboard.g_night');
 }
 
 /** Map DB notification_kind values to user-friendly labels with correct casing. */
-function friendlyNotificationLabel(kind: string): string {
+function friendlyNotificationLabel(kind: string, t: TFunc): string {
   const map: Record<string, string> = {
-    medication_due:      'Medication due',
-    medication_missed:   'Medication missed',
-    low_ocr_confidence:  'Low OCR confidence',
-    file_ready:          'File ready',
-    feeding_alert:       'Feeding alert',
-    stool_alert:         'Stool alert',
+    medication_due:      t('dashboard.notif_med_due'),
+    medication_missed:   t('dashboard.notif_med_missed'),
+    low_ocr_confidence:  t('dashboard.notif_low_ocr'),
+    file_ready:          t('dashboard.notif_file_ready'),
+    feeding_alert:       t('dashboard.notif_feed_alert'),
+    stool_alert:         t('dashboard.notif_stool_alert'),
   };
   return map[kind] ?? kind.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -42,6 +44,8 @@ const PALETTES = [
 export default async function DashboardPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
 
   const [{ data: babies }, { data: unread }, { data: profile }] = await Promise.all([
     supabase.from('babies')
@@ -71,8 +75,8 @@ export default async function DashboardPage() {
     }));
   }
 
-  const name = profile?.display_name ?? user?.email?.split('@')[0] ?? 'there';
-  const greeting = greetingFor(new Date().getHours());
+  const name = profile?.display_name ?? user?.email?.split('@')[0] ?? t('dashboard.name_fallback');
+  const greeting = greetingFor(new Date().getHours(), t);
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-8 py-8 space-y-8">
@@ -98,18 +102,20 @@ export default async function DashboardPage() {
               <Sparkles className="h-3.5 w-3.5" /> {greeting}
             </div>
             <h1 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong leading-tight">
-              Hi {name} 👋
+              {t('dashboard.hi_name', { name })}
             </h1>
             <p className="mt-2 text-ink max-w-lg">
               {(babies ?? []).length === 0
-                ? 'Ready to start? Add your first baby to track feedings, stool, medications and growth.'
-                : `You have ${(babies ?? []).length} ${((babies ?? []).length === 1) ? 'baby' : 'babies'}. Pick one below.`}
+                ? t('dashboard.sub_none')
+                : (babies ?? []).length === 1
+                  ? t('dashboard.sub_one')
+                  : t('dashboard.sub_n', { n: (babies ?? []).length })}
             </p>
           </div>
           <Link href="/babies/new"
             className="inline-flex items-center gap-2 rounded-full bg-coral-500 hover:bg-coral-600 text-white font-semibold px-5 py-3 shadow-sm">
             <Plus className="h-4 w-4" />
-            Add baby
+            {t('dashboard.add_baby')}
           </Link>
         </div>
       </div>
@@ -118,7 +124,7 @@ export default async function DashboardPage() {
       {(babies ?? []).length > 0 ? (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Your babies</h2>
+            <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">{t('dashboard.your_babies')}</h2>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {babies?.map((b, i) => {
@@ -131,20 +137,20 @@ export default async function DashboardPage() {
                       <div className="flex items-start justify-between gap-3">
                         <BabyAvatar url={avatars[b.id]} size="lg" />
                         <span className={`rounded-full bg-white/80 ${p.text} text-[11px] font-semibold px-2 py-0.5`}>
-                          {ageInDays(b.dob)} days
+                          {t('dashboard.days_old', { n: ageInDays(b.dob) })}
                         </span>
                       </div>
                       <div className="mt-4">
                         <div className="text-xl font-bold text-ink-strong leading-tight">{b.name}</div>
                         <div className="mt-1 text-xs text-ink-muted">
                           {b.gender}
-                          {b.birth_weight_kg ? ` · birth ${fmtKg(Number(b.birth_weight_kg))}` : ''}
+                          {b.birth_weight_kg ? ` · ${t('dashboard.birth_short', { weight: fmtKg(Number(b.birth_weight_kg)) })}` : ''}
                         </div>
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                        <Stat label="Current" value={fmtKg(weights[b.id])} dot={p.dot} />
-                        <Stat label="Open" value={<span className="inline-flex items-center gap-1">dashboard <ArrowRight className="h-3 w-3" /></span>} dot={p.dot} />
+                        <Stat label={t('dashboard.stat_current')} value={fmtKg(weights[b.id])} dot={p.dot} />
+                        <Stat label={t('dashboard.stat_open')} value={<span className="inline-flex items-center gap-1">{t('dashboard.stat_dashboard')} <ArrowRight className="h-3 w-3" /></span>} dot={p.dot} />
                       </div>
                     </div>
                   </div>
@@ -158,11 +164,11 @@ export default async function DashboardPage() {
           <div className="mx-auto h-20 w-20 rounded-full bg-coral-100 text-coral-600 grid place-items-center">
             <Heart className="h-10 w-10" />
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-ink-strong">No babies yet</h3>
-          <p className="mt-1 text-sm text-ink-muted">Add your first baby to start tracking.</p>
+          <h3 className="mt-4 text-lg font-semibold text-ink-strong">{t('dashboard.none_h')}</h3>
+          <p className="mt-1 text-sm text-ink-muted">{t('dashboard.none_p')}</p>
           <Link href="/babies/new"
             className="mt-5 inline-flex items-center gap-2 rounded-full bg-coral-500 hover:bg-coral-600 text-white font-semibold px-5 py-2.5 shadow-sm">
-            <Plus className="h-4 w-4" /> Add your first baby
+            <Plus className="h-4 w-4" /> {t('dashboard.add_first')}
           </Link>
         </div>
       )}
@@ -172,7 +178,7 @@ export default async function DashboardPage() {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Bell className="h-4 w-4 text-coral-600" />
-            <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Unread notifications</h2>
+            <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider">{t('dashboard.unread')}</h2>
             <span className="text-[10px] font-bold uppercase tracking-wider text-coral-700 bg-coral-50 px-1.5 py-0.5 rounded-full">
               {unread.length}
             </span>
@@ -202,7 +208,7 @@ export default async function DashboardPage() {
                 <Link key={n.id} href={href}
                   className="flex items-center justify-between py-3 px-4 hover:bg-slate-50 transition group">
                   <div className="min-w-0">
-                    <div className="font-medium text-ink-strong">{friendlyNotificationLabel(n.kind)}</div>
+                    <div className="font-medium text-ink-strong">{friendlyNotificationLabel(n.kind, t)}</div>
                     {baby && <div className="text-[11px] text-ink-muted">{baby.name}</div>}
                   </div>
                   <span className="text-xs text-ink-muted shrink-0">{fmtDateTime(n.created_at)}</span>

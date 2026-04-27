@@ -6,6 +6,8 @@ import { SleepForm } from '@/components/forms/SleepForm';
 import { Card, CardContent } from '@/components/ui/Card';
 import { fmtDateTime } from '@/lib/dates';
 import { Moon } from 'lucide-react';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Log sleep' };
@@ -22,6 +24,8 @@ export default async function NewSleep({ params }: { params: { babyId: string } 
   await assertRole(params.babyId, { requireWrite: true });
   const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
   if (!baby) notFound();
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
 
   const { data: recent } = await supabase
     .from('sleep_logs')
@@ -34,16 +38,16 @@ export default async function NewSleep({ params }: { params: { babyId: string } 
       <div className="mb-6">
         <Link href={`/babies/${params.babyId}`}
           className="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1.5 text-sm text-ink hover:bg-slate-50 shadow-sm">
-          ← Back to dashboard
+          {t('new_pages.ns_back')}
         </Link>
       </div>
 
       <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
         <div>
           <h1 className="text-4xl font-bold tracking-tight text-ink-strong">
-            Log sleep <span role="img" aria-label="moon">🌙</span>
+            {t('new_pages.ns_title')}
           </h1>
-          <p className="mt-2 text-ink">Start a live timer, or log a session you already finished.</p>
+          <p className="mt-2 text-ink">{t('new_pages.ns_subtitle')}</p>
         </div>
       </div>
 
@@ -55,23 +59,23 @@ export default async function NewSleep({ params }: { params: { babyId: string } 
         <aside className="space-y-4">
           <Card>
             <CardContent className="py-4">
-              <div className="text-xs text-ink-muted uppercase tracking-wider mb-2">Typical daily sleep</div>
+              <div className="text-xs text-ink-muted uppercase tracking-wider mb-2">{t('new_pages.ns_typical')}</div>
               <ul className="text-sm space-y-1">
-                <li className="flex items-center justify-between"><span>0–3 months</span><span className="text-ink-muted">14–17h</span></li>
-                <li className="flex items-center justify-between"><span>4–11 months</span><span className="text-ink-muted">12–15h</span></li>
-                <li className="flex items-center justify-between"><span>1–2 years</span><span className="text-ink-muted">11–14h</span></li>
-                <li className="flex items-center justify-between"><span>3–5 years</span><span className="text-ink-muted">10–13h</span></li>
+                <li className="flex items-center justify-between"><span>{t('new_pages.ns_age_0_3')}</span><span className="text-ink-muted">{t('new_pages.ns_h_14_17')}</span></li>
+                <li className="flex items-center justify-between"><span>{t('new_pages.ns_age_4_11')}</span><span className="text-ink-muted">{t('new_pages.ns_h_12_15')}</span></li>
+                <li className="flex items-center justify-between"><span>{t('new_pages.ns_age_1_2')}</span><span className="text-ink-muted">{t('new_pages.ns_h_11_14')}</span></li>
+                <li className="flex items-center justify-between"><span>{t('new_pages.ns_age_3_5')}</span><span className="text-ink-muted">{t('new_pages.ns_h_10_13')}</span></li>
               </ul>
               <div className="mt-3 rounded-xl bg-lavender-50 px-3 py-2 text-xs text-lavender-700">
-                Pro tip: babies who sleep well in the day often sleep better at night too.
+                {t('new_pages.ns_protip')}
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="py-4">
-              <div className="text-sm font-semibold text-ink-strong mb-3">Recent sessions</div>
-              {(recent ?? []).length === 0 && <p className="text-sm text-ink-muted">None yet.</p>}
+              <div className="text-sm font-semibold text-ink-strong mb-3">{t('new_pages.ns_recent')}</div>
+              {(recent ?? []).length === 0 && <p className="text-sm text-ink-muted">{t('new_pages.ns_none')}</p>}
               <ul className="space-y-2">
                 {recent?.map(r => (
                   <li key={r.id} className="flex items-center gap-3">

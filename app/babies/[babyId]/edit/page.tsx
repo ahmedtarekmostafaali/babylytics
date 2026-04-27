@@ -11,6 +11,8 @@ import {
   Cake, Flag, Droplet, Star, Eye, TrendingUp, ExternalLink,
   UserPlus, Camera, Share2, Stethoscope,
 } from 'lucide-react';
+import { loadUserPrefs } from '@/lib/user-prefs';
+import { tFor, type TFunc } from '@/lib/i18n';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Baby profile' };
@@ -38,30 +40,36 @@ function zodiac(dob: string | null | undefined): string {
 }
 
 /** Age in "Nm Xd" format, clamping to reasonable buckets. */
-function ageFromDays(days: number): string {
-  if (days < 30)      return `${days} day${days === 1 ? '' : 's'}`;
-  if (days < 365)     return `${Math.floor(days / 30)} month${Math.floor(days / 30) === 1 ? '' : 's'}, ${days % 30} day${days % 30 === 1 ? '' : 's'}`;
+function ageFromDays(days: number, t: TFunc): string {
+  if (days < 30) {
+    return days === 1 ? t('edit_baby.age_days_one') : t('edit_baby.age_days_n', { n: days });
+  }
+  if (days < 365) {
+    const m = Math.floor(days / 30);
+    const d = days % 30;
+    return m === 1 ? t('edit_baby.age_months_one', { d }) : t('edit_baby.age_months_n', { m, d });
+  }
   const y = Math.floor(days / 365);
   const m = Math.floor((days % 365) / 30);
-  return `${y} year${y === 1 ? '' : 's'}, ${m} month${m === 1 ? '' : 's'}`;
+  return y === 1 ? t('edit_baby.age_years_one', { m }) : t('edit_baby.age_years_n', { y, m });
 }
 
 /** Very rough next-milestone bucket for the progress bar. */
-function nextMilestone(days: number): { label: string; pct: number } {
-  const milestones: { at: number; label: string }[] = [
-    { at: 30,   label: '1 month' },
-    { at: 60,   label: '2 months' },
-    { at: 90,   label: '3 months' },
-    { at: 120,  label: '4 months' },
-    { at: 180,  label: '6 months' },
-    { at: 365,  label: '1 year' },
-    { at: 730,  label: '2 years' },
+function nextMilestone(days: number, t: TFunc): { label: string; pct: number } {
+  const milestones: { at: number; tkey: string }[] = [
+    { at: 30,   tkey: 'edit_baby.ms_1m' },
+    { at: 60,   tkey: 'edit_baby.ms_2m' },
+    { at: 90,   tkey: 'edit_baby.ms_3m' },
+    { at: 120,  tkey: 'edit_baby.ms_4m' },
+    { at: 180,  tkey: 'edit_baby.ms_6m' },
+    { at: 365,  tkey: 'edit_baby.ms_1y' },
+    { at: 730,  tkey: 'edit_baby.ms_2y' },
   ];
   for (let i = 0; i < milestones.length; i++) {
     if (days < milestones[i]!.at) {
       const prev = i === 0 ? 0 : milestones[i - 1]!.at;
       const pct = Math.round(((days - prev) / (milestones[i]!.at - prev)) * 100);
-      return { label: milestones[i]!.label, pct };
+      return { label: t(milestones[i]!.tkey), pct };
     }
   }
   return { label: '—', pct: 100 };
@@ -70,6 +78,8 @@ function nextMilestone(days: number): { label: string; pct: number } {
 export default async function EditBaby({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const userPrefs = await loadUserPrefs(supabase);
+  const t = tFor(userPrefs.language);
 
   const { data: baby } = await supabase
     .from('babies')
@@ -96,7 +106,7 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
   const canDelete = role === 'owner';
 
   const ageDays = ageInDays(baby.dob);
-  const ms = nextMilestone(ageDays);
+  const ms = nextMilestone(ageDays, t);
   const zod = zodiac(baby.dob);
 
   const weightSpark = ((weightRows ?? []) as { weight_kg: number | null }[]).filter(r => r.weight_kg != null).map(r => Number(r.weight_kg));
@@ -106,12 +116,12 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
   return (
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
-        eyebrow="Profile" eyebrowTint="coral" title="Baby Profile"
-        subtitle={`Manage ${baby.name}'s information and preferences.`}
+        eyebrow={t('edit_baby.eyebrow')} eyebrowTint="coral" title={t('edit_baby.title')}
+        subtitle={t('edit_baby.subtitle', { name: baby.name })}
         right={
           <Link href={`/babies/${params.babyId}`}
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-sm text-ink px-3 py-1.5 shadow-sm">
-            <Eye className="h-4 w-4" /> View profile
+            <Eye className="h-4 w-4" /> {t('edit_baby.view_profile')}
           </Link>
         } />
 
@@ -133,17 +143,17 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
               <span className="h-9 w-9 rounded-xl bg-coral-100 text-coral-600 grid place-items-center">
                 <Star className="h-4 w-4" />
               </span>
-              <h3 className="text-sm font-bold text-ink-strong">At a Glance</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('edit_baby.at_a_glance')}</h3>
             </div>
 
             <ul className="space-y-3 text-sm">
               <li className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 text-ink-muted"><Cake className="h-4 w-4" /> Age</span>
-                <span className="font-semibold text-ink-strong text-right">{ageFromDays(ageDays)}</span>
+                <span className="flex items-center gap-2 text-ink-muted"><Cake className="h-4 w-4" /> {t('edit_baby.age')}</span>
+                <span className="font-semibold text-ink-strong text-right">{ageFromDays(ageDays, t)}</span>
               </li>
               <li>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-ink-muted"><Flag className="h-4 w-4" /> Next milestone</span>
+                  <span className="flex items-center gap-2 text-ink-muted"><Flag className="h-4 w-4" /> {t('edit_baby.next_milestone')}</span>
                   <span className="font-semibold text-ink-strong">{ms.label}</span>
                 </div>
                 <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -152,12 +162,12 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
                 <div className="mt-0.5 text-[10px] text-ink-muted text-right">{Math.max(0, Math.min(100, ms.pct))}%</div>
               </li>
               <li className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 text-ink-muted"><Star className="h-4 w-4" /> Zodiac</span>
+                <span className="flex items-center gap-2 text-ink-muted"><Star className="h-4 w-4" /> {t('edit_baby.zodiac')}</span>
                 <span className="font-semibold text-ink-strong">{zod}</span>
               </li>
               <li className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 text-ink-muted"><Droplet className="h-4 w-4" /> Blood type</span>
-                <span className="font-semibold text-ink-strong">{baby.blood_type && baby.blood_type !== 'unknown' ? baby.blood_type : 'Not set'}</span>
+                <span className="flex items-center gap-2 text-ink-muted"><Droplet className="h-4 w-4" /> {t('edit_baby.blood_type')}</span>
+                <span className="font-semibold text-ink-strong">{baby.blood_type && baby.blood_type !== 'unknown' ? baby.blood_type : t('edit_baby.not_set')}</span>
               </li>
             </ul>
           </section>
@@ -171,9 +181,9 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
                   <Stethoscope className="h-5 w-5" />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs uppercase tracking-wider opacity-80">Health</div>
-                  <div className="font-bold">Doctors &amp; appointments</div>
-                  <p className="text-xs opacity-90 mt-0.5">Manage your pediatrician, specialists and upcoming visits.</p>
+                  <div className="text-xs uppercase tracking-wider opacity-80">{t('edit_baby.health_eyebrow')}</div>
+                  <div className="font-bold">{t('edit_baby.doctors_appts')}</div>
+                  <p className="text-xs opacity-90 mt-0.5">{t('edit_baby.doctors_appts_sub')}</p>
                 </div>
               </div>
             </Link>
@@ -185,38 +195,40 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
               <span className="h-9 w-9 rounded-xl bg-lavender-100 text-lavender-600 grid place-items-center">
                 <TrendingUp className="h-4 w-4" />
               </span>
-              <h3 className="text-sm font-bold text-ink-strong">Growth Summary</h3>
+              <h3 className="text-sm font-bold text-ink-strong">{t('edit_baby.growth_summary')}</h3>
             </div>
 
             <div className="space-y-4">
               <GrowthRow
-                label="Weight"
+                label={t('edit_baby.growth_weight')}
                 value={fmtKg(currentWeight as number | null)}
                 spark={weightSpark}
                 color="#B9A7D8"
+                pctLabel={t('edit_baby.growth_pct')}
               />
               <GrowthRow
-                label="Height"
+                label={t('edit_baby.growth_height')}
                 value={currentHeight != null ? fmtCm(currentHeight) : '—'}
                 spark={heightSpark}
                 color="#7FC8A9"
+                pctLabel={t('edit_baby.growth_pct')}
               />
             </div>
 
             <Link href={`/babies/${params.babyId}/measurements`}
               className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline">
-              View growth chart <ExternalLink className="h-3 w-3" />
+              {t('edit_baby.view_growth_chart')} <ExternalLink className="h-3 w-3" />
             </Link>
           </section>
 
           {/* Quick actions */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
-            <h3 className="text-sm font-bold text-ink-strong mb-3">Quick Actions</h3>
+            <h3 className="text-sm font-bold text-ink-strong mb-3">{t('edit_baby.quick_actions')}</h3>
             <div className="grid grid-cols-2 gap-2">
-              <QuickAction href={`/babies/${params.babyId}/caregivers`} icon={UserPlus} tint="lavender" label="Add caregiver" />
-              <QuickAction href={`/babies/${params.babyId}/edit`} icon={Camera} tint="brand" label="Upload photo" />
-              <QuickAction href={`/babies/${params.babyId}/reports/full`} icon={Share2} tint="mint" label="Export data" />
-              <QuickAction href={`/babies/${params.babyId}/ocr`} icon={Eye} tint="coral" label="Smart scan" />
+              <QuickAction href={`/babies/${params.babyId}/caregivers`} icon={UserPlus} tint="lavender" label={t('edit_baby.qa_caregiver')} />
+              <QuickAction href={`/babies/${params.babyId}/edit`} icon={Camera} tint="brand" label={t('edit_baby.qa_photo')} />
+              <QuickAction href={`/babies/${params.babyId}/reports/full`} icon={Share2} tint="mint" label={t('edit_baby.qa_export')} />
+              <QuickAction href={`/babies/${params.babyId}/ocr`} icon={Eye} tint="coral" label={t('edit_baby.qa_scan')} />
             </div>
           </section>
         </aside>
@@ -226,19 +238,20 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
 }
 
 function GrowthRow({
-  label, value, spark, color,
+  label, value, spark, color, pctLabel,
 }: {
   label: string;
   value: string;
   spark: number[];
   color: string;
+  pctLabel: string;
 }) {
   return (
     <div className="flex items-center gap-3">
       <div className="shrink-0">
         <div className="text-[11px] uppercase tracking-wider text-ink-muted">{label}</div>
         <div className="text-lg font-bold text-ink-strong leading-tight">{value}</div>
-        <div className="mt-0.5 text-[10px] rounded-full bg-mint-50 text-mint-700 inline-block px-2 py-0.5 font-semibold">— percentile</div>
+        <div className="mt-0.5 text-[10px] rounded-full bg-mint-50 text-mint-700 inline-block px-2 py-0.5 font-semibold">{pctLabel}</div>
       </div>
       <div className="flex-1 min-w-0">
         <Sparkline data={spark.length ? spark : [0, 0.5, 1]} color={color} width={160} height={44} strokeWidth={2.5} />

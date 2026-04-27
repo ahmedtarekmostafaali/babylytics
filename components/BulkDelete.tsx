@@ -9,6 +9,7 @@ import { localInputToIso, dayWindow } from '@/lib/dates';
 import {
   Trash2, X, Loader2, AlertTriangle, Calendar, Layers, Check,
 } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 type Table =
   | 'feedings' | 'stool_logs' | 'medications' | 'medication_logs'
@@ -41,6 +42,8 @@ export function BulkDelete({
   kindLabel?: string;
 }) {
   const router = useRouter();
+  const t = useT();
+  const kind = kindLabel ?? t('bulk.default_kind');
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'view' | 'range' | 'day'>('view');
   const [fromDate, setFromDate] = useState<string>(''); // yyyy-mm-dd
@@ -67,7 +70,7 @@ export function BulkDelete({
   const confirmPhrase = 'DELETE';
 
   async function run() {
-    if (confirmText !== confirmPhrase) { setErr(`Type ${confirmPhrase} to confirm.`); return; }
+    if (confirmText !== confirmPhrase) { setErr(t('bulk.err_type_phrase', { phrase: confirmPhrase })); return; }
     setErr(null); setDone(null);
 
     start(async () => {
@@ -75,7 +78,7 @@ export function BulkDelete({
       const nowIso = new Date().toISOString();
 
       if (mode === 'view') {
-        if (visibleIds.length === 0) { setErr('Nothing to delete in this view.'); return; }
+        if (visibleIds.length === 0) { setErr(t('bulk.err_nothing')); return; }
         const { error, count } = await supabase.from(table)
           .update({ deleted_at: nowIso }, { count: 'exact' })
           .in('id', visibleIds)
@@ -83,7 +86,7 @@ export function BulkDelete({
         if (error) { setErr(error.message); return; }
         setDone(count ?? visibleIds.length);
       } else if (mode === 'day') {
-        if (!oneDate) { setErr('Pick a date.'); return; }
+        if (!oneDate) { setErr(t('bulk.err_pick_date')); return; }
         const w = dayWindow(oneDate);
         const { error, count } = await supabase.from(table)
           .update({ deleted_at: nowIso }, { count: 'exact' })
@@ -93,12 +96,12 @@ export function BulkDelete({
         if (error) { setErr(error.message); return; }
         setDone(count ?? 0);
       } else {
-        if (!fromDate || !toDate) { setErr('Pick both dates.'); return; }
+        if (!fromDate || !toDate) { setErr(t('bulk.err_pick_both')); return; }
         const fromIso = localInputToIso(`${fromDate}T00:00`);
         const toIso   = localInputToIso(`${toDate}T23:59`);
-        if (!fromIso || !toIso) { setErr('Invalid date.'); return; }
+        if (!fromIso || !toIso) { setErr(t('bulk.err_invalid_date')); return; }
         if (new Date(fromIso).getTime() > new Date(toIso).getTime()) {
-          setErr('"From" date must be earlier than "To".'); return;
+          setErr(t('bulk.err_from_after_to')); return;
         }
         const { error, count } = await supabase.from(table)
           .update({ deleted_at: nowIso }, { count: 'exact' })
@@ -117,7 +120,7 @@ export function BulkDelete({
     <>
       <button onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 rounded-full border border-coral-200 bg-white hover:bg-coral-50 text-coral-700 text-sm font-semibold px-3 py-1.5 shadow-sm">
-        <Trash2 className="h-4 w-4" /> Bulk delete
+        <Trash2 className="h-4 w-4" /> {t('bulk.btn')}
       </button>
 
       {open && (
@@ -125,7 +128,7 @@ export function BulkDelete({
           <div className="w-full max-w-md rounded-2xl bg-white shadow-panel p-6 relative" onClick={e => e.stopPropagation()}>
             <button onClick={close} disabled={pending}
               className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-slate-100 disabled:opacity-60"
-              aria-label="Close">
+              aria-label={t('bulk.close')}>
               <X className="h-4 w-4" />
             </button>
 
@@ -134,8 +137,8 @@ export function BulkDelete({
                 <AlertTriangle className="h-5 w-5" />
               </span>
               <div>
-                <h3 className="text-lg font-bold text-ink-strong">Bulk delete {kindLabel}</h3>
-                <p className="text-xs text-ink-muted">Soft-delete — rows are preserved in the database but hidden from the app.</p>
+                <h3 className="text-lg font-bold text-ink-strong">{t('bulk.title', { kind })}</h3>
+                <p className="text-xs text-ink-muted">{t('bulk.intro')}</p>
               </div>
             </div>
 
@@ -145,25 +148,25 @@ export function BulkDelete({
                 active={mode === 'view'}
                 onClick={() => setMode('view')}
                 icon={Layers}
-                title={`Delete current view (${visibleIds.length})`}
-                body="Everything currently shown in the list, after range + type filters." />
+                title={t('bulk.mode_view_title', { n: visibleIds.length })}
+                body={t('bulk.mode_view_body')} />
               <ModeRow
                 active={mode === 'day'}
                 onClick={() => setMode('day')}
                 icon={Calendar}
-                title="Delete a specific day"
-                body="All records on one calendar date (Cairo time)." />
+                title={t('bulk.mode_day_title')}
+                body={t('bulk.mode_day_body')} />
               <ModeRow
                 active={mode === 'range'}
                 onClick={() => setMode('range')}
                 icon={Calendar}
-                title="Delete a date range"
-                body="All records between two dates, inclusive." />
+                title={t('bulk.mode_range_title')}
+                body={t('bulk.mode_range_body')} />
             </div>
 
             {mode === 'day' && (
               <div className="mt-4">
-                <Label>Date</Label>
+                <Label>{t('bulk.label_date')}</Label>
                 <Input type="date" value={oneDate} onChange={e => setOneDate(e.target.value)} />
               </div>
             )}
@@ -171,11 +174,11 @@ export function BulkDelete({
             {mode === 'range' && (
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div>
-                  <Label>From</Label>
+                  <Label>{t('bulk.label_from')}</Label>
                   <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
                 </div>
                 <div>
-                  <Label>To</Label>
+                  <Label>{t('bulk.label_to')}</Label>
                   <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
                 </div>
               </div>
@@ -183,8 +186,7 @@ export function BulkDelete({
 
             {/* Confirm gate */}
             <div className="mt-5 rounded-xl bg-coral-50 border border-coral-200 p-3 text-xs text-coral-900">
-              To confirm, type <span className="font-mono font-bold">{confirmPhrase}</span> below.
-              This only hides rows — they can still be restored from the database if needed.
+              {t('bulk.confirm_intro')}<span className="font-mono font-bold">{confirmPhrase}</span>{t('bulk.confirm_outro')}
             </div>
             <div className="mt-2">
               <Input value={confirmText} onChange={e => setConfirmText(e.target.value)}
@@ -195,19 +197,19 @@ export function BulkDelete({
             {done != null && (
               <div className="mt-3 rounded-xl bg-mint-50 border border-mint-200 text-mint-900 px-3 py-2 text-sm flex items-center gap-2">
                 <Check className="h-4 w-4 text-mint-600" />
-                Deleted {done} {kindLabel}.
+                {t('bulk.deleted_count', { n: done, kind })}
               </div>
             )}
 
             <div className="mt-5 flex items-center gap-2">
               <Button type="button" variant="secondary" onClick={close} disabled={pending} className="flex-1">
-                Cancel
+                {t('bulk.cancel')}
               </Button>
               <Button type="button" variant="danger" onClick={run}
                 disabled={pending || confirmText !== confirmPhrase}
                 className="flex-1">
                 {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                {pending ? 'Deleting…' : 'Delete'}
+                {pending ? t('bulk.deleting') : t('bulk.delete')}
               </Button>
             </div>
           </div>
