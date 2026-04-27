@@ -7,6 +7,7 @@ import { CarePlanSchema } from '@/lib/validators';
 import { Button } from '@/components/ui/Button';
 import { Label, Select, Textarea } from '@/components/ui/Input';
 import { Save, Pencil } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type CarePlanValue = {
   medical_plan?: string | null;
@@ -30,6 +31,7 @@ export function CarePlanInline({
   canEdit: boolean;
 }) {
   const router = useRouter();
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [medicalPlan, setMedicalPlan] = useState(initial.medical_plan ?? '');
   const [feedingPlan, setFeedingPlan] = useState(initial.feeding_plan ?? '');
@@ -65,15 +67,15 @@ export function CarePlanInline({
     return (
       <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <PlanField label="Blood type" value={initial.blood_type} mono />
-          <PlanField label="Medical plan" value={initial.medical_plan} multiline />
-          <PlanField label="Feeding plan & suggestions" value={initial.feeding_plan} multiline />
-          <PlanField label="Labs / tests still needed" value={initial.labs_needed} multiline />
+          <PlanField label={t('forms.cp_blood_type')} value={initial.blood_type} emptyLabel={t('forms.cp_not_set')} mono />
+          <PlanField label={t('forms.cp_medical_plan')} value={initial.medical_plan} emptyLabel={t('forms.cp_not_set')} multiline />
+          <PlanField label={t('forms.cp_feeding_plan')} value={initial.feeding_plan} emptyLabel={t('forms.cp_not_set')} multiline />
+          <PlanField label={t('forms.cp_labs_needed')} value={initial.labs_needed} emptyLabel={t('forms.cp_not_set')} multiline />
         </div>
         {canEdit && (
           <button onClick={() => setEditing(true)}
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline no-export">
-            <Pencil className="h-3.5 w-3.5" /> Edit care plan
+            <Pencil className="h-3.5 w-3.5" /> {t('forms.cp_edit_cta')}
           </button>
         )}
       </div>
@@ -84,28 +86,28 @@ export function CarePlanInline({
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Blood type</Label>
+          <Label>{t('forms.cp_blood_type')}</Label>
           <Select value={bloodType} onChange={e => setBloodType(e.target.value)}>
-            {BLOOD_TYPES.map(t => (
-              <option key={t} value={t}>{t || '— Unknown —'}</option>
+            {BLOOD_TYPES.map(bt => (
+              <option key={bt} value={bt}>{bt || t('forms.cp_blood_type_unknown')}</option>
             ))}
           </Select>
         </div>
         <div className="hidden sm:block" />
         <div className="sm:col-span-2">
-          <Label>Medical plan</Label>
+          <Label>{t('forms.cp_medical_plan')}</Label>
           <Textarea rows={3} value={medicalPlan} onChange={e => setMedicalPlan(e.target.value)}
-            placeholder="Ongoing therapies, monitoring schedule, special precautions…" />
+            placeholder={t('forms.cp_medical_plan_ph')} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Feeding plan & suggestions</Label>
+          <Label>{t('forms.cp_feeding_plan')}</Label>
           <Textarea rows={3} value={feedingPlan} onChange={e => setFeedingPlan(e.target.value)}
-            placeholder="Recommended formula, breastfeeding cadence, solids progression, restrictions…" />
+            placeholder={t('forms.cp_feeding_plan_ph')} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Labs / tests still needed</Label>
+          <Label>{t('forms.cp_labs_needed')}</Label>
           <Textarea rows={3} value={labsNeeded} onChange={e => setLabsNeeded(e.target.value)}
-            placeholder="Pending blood work, imaging, follow-up labs to schedule…" />
+            placeholder={t('forms.cp_labs_needed_ph')} />
         </div>
       </div>
 
@@ -114,22 +116,22 @@ export function CarePlanInline({
       <div className="flex items-center gap-2">
         <Button type="button" onClick={save} disabled={saving}
           className="rounded-full bg-gradient-to-r from-brand-500 to-mint-500 px-5">
-          <Save className="h-4 w-4" /> {saving ? 'Saving…' : 'Save care plan'}
+          <Save className="h-4 w-4" /> {saving ? t('forms.saving') : t('forms.cp_save_cta')}
         </Button>
         <button type="button" onClick={() => setEditing(false)}
-          className="text-sm text-ink-muted hover:text-ink-strong">Cancel</button>
+          className="text-sm text-ink-muted hover:text-ink-strong">{t('forms.cp_cancel')}</button>
       </div>
     </div>
   );
 }
 
-function PlanField({ label, value, multiline, mono }: { label: string; value: string | null | undefined; multiline?: boolean; mono?: boolean }) {
+function PlanField({ label, value, emptyLabel, multiline, mono }: { label: string; value: string | null | undefined; emptyLabel: string; multiline?: boolean; mono?: boolean }) {
   const empty = !value || !value.trim();
   return (
     <div>
       <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">{label}</div>
       <div className={`mt-1 ${mono ? 'font-mono' : ''} ${empty ? 'text-ink-muted italic' : 'text-ink-strong'} ${multiline ? 'whitespace-pre-wrap' : ''}`}>
-        {empty ? 'Not set' : value}
+        {empty ? emptyLabel : value}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Label, Select, Textarea } from '@/components/ui/Input';
 import { localInputToIso, isoToLocalInput, nowLocalInput, fmtDateTime } from '@/lib/dates';
 import { Trash2, LogOut } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type DischargeFormValue = {
   id?: string;
@@ -29,6 +30,7 @@ export function DischargeForm({
   initial?: DischargeFormValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [dischargedAt, setDischargedAt] = useState(initial?.discharged_at ? isoToLocalInput(initial.discharged_at) : nowLocalInput());
   const [admissionId, setAdmissionId]   = useState<string | null>(initial?.admission_id ?? admissions[0]?.id ?? null);
   const [hospital, setHospital]         = useState(initial?.hospital ?? '');
@@ -44,7 +46,7 @@ export function DischargeForm({
     e.preventDefault();
     setErr(null);
     const iso = localInputToIso(dischargedAt);
-    if (!iso) { setErr('Pick a valid discharge time.'); return; }
+    if (!iso) { setErr(t('forms.dis_pick_valid_time')); return; }
     const parsed = DischargeSchema.safeParse({
       discharged_at: iso,
       admission_id: admissionId || null,
@@ -73,7 +75,7 @@ export function DischargeForm({
 
   async function onDelete() {
     if (!initial?.id) return;
-    if (!window.confirm('Delete this discharge record?')) return;
+    if (!window.confirm(t('forms.dis_delete_confirm'))) return;
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.from('discharges')
@@ -89,42 +91,42 @@ export function DischargeForm({
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Discharged at</Label>
+          <Label>{t('forms.dis_discharged_at')}</Label>
           <Input type="datetime-local" value={dischargedAt} onChange={e => setDischargedAt(e.target.value)} required />
         </div>
         <div>
-          <Label>Linked admission</Label>
+          <Label>{t('forms.dis_linked_admission')}</Label>
           <Select value={admissionId ?? ''} onChange={e => setAdmissionId(e.target.value || null)}>
-            <option value="">— Standalone (no admission record) —</option>
+            <option value="">{t('forms.dis_standalone')}</option>
             {admissions.map(a => (
               <option key={a.id} value={a.id}>
-                {fmtDateTime(a.admitted_at)} · {a.hospital ?? 'unknown'}{a.reason ? ` · ${a.reason}` : ''}
+                {fmtDateTime(a.admitted_at)} · {a.hospital ?? t('forms.dis_admission_unknown')}{a.reason ? ` · ${a.reason}` : ''}
               </option>
             ))}
           </Select>
         </div>
         <div className="sm:col-span-2">
-          <Label>Hospital</Label>
-          <Input value={hospital} onChange={e => setHospital(e.target.value)} placeholder="Hospital name" />
+          <Label>{t('forms.dis_hospital')}</Label>
+          <Input value={hospital} onChange={e => setHospital(e.target.value)} placeholder={t('forms.dis_hospital_ph')} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Discharge diagnosis</Label>
+          <Label>{t('forms.dis_diagnosis')}</Label>
           <Textarea rows={2} value={diagnosis} onChange={e => setDiagnosis(e.target.value)} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Treatment given</Label>
+          <Label>{t('forms.dis_treatment')}</Label>
           <Textarea rows={3} value={treatment} onChange={e => setTreatment(e.target.value)}
-            placeholder="Procedures, medications, length of stay, transfusions…" />
+            placeholder={t('forms.dis_treatment_ph')} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Follow-up plan</Label>
+          <Label>{t('forms.dis_followup')}</Label>
           <Textarea rows={2} value={followUp} onChange={e => setFollowUp(e.target.value)}
-            placeholder="Next appointments, meds to continue, red-flag symptoms…" />
+            placeholder={t('forms.dis_followup_ph')} />
         </div>
       </div>
 
       <div>
-        <Label>Notes</Label>
+        <Label>{t('forms.notes')}</Label>
         <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} />
       </div>
 
@@ -133,7 +135,7 @@ export function DischargeForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-mint-500 to-brand-500">
-          <LogOut className="h-4 w-4" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save discharge'}
+          <LogOut className="h-4 w-4" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.dis_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-12 rounded-2xl">

@@ -10,6 +10,7 @@ import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Save, Trash2, Plus, X, Clock } from 'lucide-react';
 import { Section, Field, QuickPill, WhenPicker } from '@/components/forms/FormKit';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/client';
 
 export type LabPanelFormValue = {
   id?: string;
@@ -37,19 +38,19 @@ export type LabItem = {
 // Two flavours of "what is this": traditional analytical labs (blood, urine,
 // stool, culture, genetic) and imaging studies / scans. We keep them in a
 // single picker with a soft visual divider so the UI stays one form.
-const PANEL_KINDS: { value: LabPanelFormValue['panel_kind']; label: string; group: 'lab'|'scan' }[] = [
-  { value: 'blood',      label: 'Blood',          group: 'lab'  },
-  { value: 'urine',      label: 'Urine',          group: 'lab'  },
-  { value: 'stool',      label: 'Stool',          group: 'lab'  },
-  { value: 'culture',    label: 'Culture',        group: 'lab'  },
-  { value: 'genetic',    label: 'Genetic',        group: 'lab'  },
-  { value: 'xray',       label: 'X-ray',          group: 'scan' },
-  { value: 'ultrasound', label: 'Ultrasound',     group: 'scan' },
-  { value: 'mri',        label: 'MRI',            group: 'scan' },
-  { value: 'ct',         label: 'CT scan',        group: 'scan' },
-  { value: 'ekg',        label: 'EKG / ECG',      group: 'scan' },
-  { value: 'imaging',    label: 'Other imaging',  group: 'scan' },
-  { value: 'other',      label: 'Other',          group: 'lab'  },
+const PANEL_KIND_KEYS: { value: LabPanelFormValue['panel_kind']; tkey: string; group: 'lab'|'scan' }[] = [
+  { value: 'blood',      tkey: 'forms.lab_panel_kind_blood',   group: 'lab'  },
+  { value: 'urine',      tkey: 'forms.lab_panel_kind_urine',   group: 'lab'  },
+  { value: 'stool',      tkey: 'forms.lab_panel_kind_stool',   group: 'lab'  },
+  { value: 'culture',    tkey: 'forms.lab_panel_kind_culture', group: 'lab'  },
+  { value: 'genetic',    tkey: 'forms.lab_panel_kind_genetic', group: 'lab'  },
+  { value: 'xray',       tkey: 'forms.lab_panel_kind_xray',    group: 'scan' },
+  { value: 'ultrasound', tkey: 'forms.lab_panel_kind_us',      group: 'scan' },
+  { value: 'mri',        tkey: 'forms.lab_panel_kind_mri',     group: 'scan' },
+  { value: 'ct',         tkey: 'forms.lab_panel_kind_ct',      group: 'scan' },
+  { value: 'ekg',        tkey: 'forms.lab_panel_kind_ekg',     group: 'scan' },
+  { value: 'imaging',    tkey: 'forms.lab_panel_kind_imaging', group: 'scan' },
+  { value: 'other',      tkey: 'forms.lab_panel_kind_other',   group: 'lab'  },
 ];
 
 export function LabPanelForm({
@@ -60,6 +61,7 @@ export function LabPanelForm({
   initialItems?: LabItem[];
 }) {
   const router = useRouter();
+  const t = useT();
   const [panelKind, setPanelKind] = useState<LabPanelFormValue['panel_kind']>(initial?.panel_kind ?? 'blood');
   const [panelName, setPanelName] = useState(initial?.panel_name ?? '');
   const [sampleAt, setSampleAt]   = useState(initial?.sample_at ? isoToLocalInput(initial.sample_at) : '');
@@ -90,7 +92,7 @@ export function LabPanelForm({
     e.preventDefault();
     setErr(null);
     const result = localInputToIso(resultAt);
-    if (!result) { setErr('Pick a valid result time.'); return; }
+    if (!result) { setErr(t('forms.lab_pick_valid_time')); return; }
     const sample = sampleAt ? localInputToIso(sampleAt) : null;
     const parsed = LabPanelSchema.safeParse({
       panel_kind: panelKind, panel_name: panelName,
@@ -113,7 +115,7 @@ export function LabPanelForm({
         baby_id: babyId, ...parsed.data,
         created_by: (await supabase.auth.getUser()).data.user?.id,
       }).select('id').single();
-      if (error || !data) { setErr(error?.message ?? 'Could not save panel'); setSaving(false); return; }
+      if (error || !data) { setErr(error?.message ?? t('forms.lab_could_not_save')); setSaving(false); return; }
       panelId = data.id;
     }
 
@@ -142,7 +144,7 @@ export function LabPanelForm({
 
   async function onDelete() {
     if (!initial?.id) return;
-    if (!window.confirm('Delete this lab panel and all its rows?')) return;
+    if (!window.confirm(t('forms.lab_delete_confirm'))) return;
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.from('lab_panels')
@@ -157,23 +159,23 @@ export function LabPanelForm({
   return (
     <form onSubmit={submit} className="space-y-8">
       {/* 1. Panel kind + name */}
-      <Section n={1} title="What kind of lab?">
+      <Section n={1} title={t('forms.lab_section_kind')}>
         <div className="space-y-4">
-          <Field label="Panel type">
+          <Field label={t('forms.lab_panel_type')}>
             <div className="flex flex-wrap gap-2">
-              {PANEL_KINDS.map(k => (
+              {PANEL_KIND_KEYS.map(k => (
                 <QuickPill key={k.value} active={panelKind === k.value} onClick={() => setPanelKind(k.value)} tint="peach">
-                  {k.label}
+                  {t(k.tkey)}
                 </QuickPill>
               ))}
             </div>
           </Field>
-          <Field label="Panel name">
+          <Field label={t('forms.lab_panel_name')}>
             <input
               value={panelName}
               onChange={e => setPanelName(e.target.value)}
               required
-              placeholder="e.g. CBC with differential"
+              placeholder={t('forms.lab_panel_name_ph')}
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
             />
           </Field>
@@ -181,9 +183,9 @@ export function LabPanelForm({
       </Section>
 
       {/* 2. Result details */}
-      <Section n={2} title="Result details">
+      <Section n={2} title={t('forms.lab_section_results')}>
         <div className="space-y-4">
-          <Field label="Sample taken at" hint="Optional — the moment the sample was collected.">
+          <Field label={t('forms.lab_sample_at')} hint={t('forms.lab_sample_at_hint')}>
             <div className={cn(
               'inline-flex items-center gap-2 rounded-2xl border bg-white px-4 py-2.5 w-full sm:w-auto',
               sampleAt ? 'border-peach-500' : 'border-slate-200'
@@ -198,73 +200,77 @@ export function LabPanelForm({
             </div>
           </Field>
 
-          <Field label="Result issued at">
+          <Field label={t('forms.lab_result_at')}>
             <WhenPicker time={resultAt} onChange={setResultAt} tint="peach" />
           </Field>
 
-          <Field label="Laboratory">
+          <Field label={t('forms.lab_lab')}>
             <input
               value={labName}
               onChange={e => setLabName(e.target.value)}
-              placeholder="Where it was run"
+              placeholder={t('forms.lab_lab_ph')}
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
             />
           </Field>
 
-          <Field label="One-line summary">
+          <Field label={t('forms.lab_summary')}>
             <input
               value={summary}
               onChange={e => setSummary(e.target.value)}
-              placeholder="e.g. Mild iron-deficiency anemia, otherwise unremarkable"
+              placeholder={t('forms.lab_summary_ph')}
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
             />
           </Field>
 
           <label className="flex items-center gap-2 text-sm rounded-2xl border border-slate-200 bg-white px-4 py-3 cursor-pointer hover:bg-slate-50">
             <input type="checkbox" checked={abnormal} onChange={e => setAbnormal(e.target.checked)} className="rounded" />
-            <span>Flag panel as <span className="font-semibold text-coral-600">abnormal</span> (will appear in summary)</span>
+            <span>
+              {t('forms.lab_abnormal_pre')}
+              <span className="font-semibold text-coral-600">{t('forms.lab_abnormal_word')}</span>
+              {t('forms.lab_abnormal_post')}
+            </span>
           </label>
         </div>
       </Section>
 
       {/* 3. Structured rows */}
-      <Section n={3} title="Structured test rows" optional>
+      <Section n={3} title={t('forms.lab_section_rows')} optional>
         <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50/40">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-bold text-ink-strong">Per-test values</h4>
-              <p className="text-xs text-ink-muted">Optional — leave empty if you only attached a scan.</p>
+              <h4 className="text-sm font-bold text-ink-strong">{t('forms.lab_per_test_h')}</h4>
+              <p className="text-xs text-ink-muted">{t('forms.lab_per_test_help')}</p>
             </div>
             <button type="button"
               onClick={() => setShowStructured(s => !s)}
               className="text-xs font-semibold text-peach-600 hover:underline">
-              {showStructured ? 'Hide rows' : 'Add rows'}
+              {showStructured ? t('forms.lab_hide_rows') : t('forms.lab_add_rows')}
             </button>
           </div>
 
           {showStructured && (
             <div className="mt-4 space-y-2">
               {items.length === 0 && (
-                <p className="text-xs text-ink-muted italic">No rows yet.</p>
+                <p className="text-xs text-ink-muted italic">{t('forms.lab_no_rows_yet')}</p>
               )}
               {items.map((row, idx) => (
                 <div key={idx} className="grid gap-2 sm:grid-cols-12 items-center">
-                  <Input className="sm:col-span-3" placeholder="Test name (e.g. Hemoglobin)"
+                  <Input className="sm:col-span-3" placeholder={t('forms.lab_test_name_ph')}
                     value={row.test_name} onChange={e => updateRow(idx, { test_name: e.target.value })} />
-                  <Input className="sm:col-span-2" placeholder="Value"
+                  <Input className="sm:col-span-2" placeholder={t('forms.lab_value_ph')}
                     value={row.value ?? ''} onChange={e => updateRow(idx, { value: e.target.value })} />
-                  <Input className="sm:col-span-1" placeholder="Unit"
+                  <Input className="sm:col-span-1" placeholder={t('forms.lab_unit_ph')}
                     value={row.unit ?? ''} onChange={e => updateRow(idx, { unit: e.target.value })} />
-                  <Input className="sm:col-span-3" placeholder="Reference range"
+                  <Input className="sm:col-span-3" placeholder={t('forms.lab_ref_ph')}
                     value={row.reference ?? ''} onChange={e => updateRow(idx, { reference: e.target.value })} />
                   <Select className="sm:col-span-2" value={row.flag ?? ''}
                     onChange={e => updateRow(idx, { flag: (e.target.value || null) as LabItem['flag'], is_abnormal: !!e.target.value })}>
-                    <option value="">— normal —</option>
-                    <option value="low">Low</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                    <option value="positive">Positive</option>
-                    <option value="negative">Negative</option>
+                    <option value="">{t('forms.lab_flag_normal')}</option>
+                    <option value="low">{t('forms.lab_flag_low')}</option>
+                    <option value="high">{t('forms.lab_flag_high')}</option>
+                    <option value="critical">{t('forms.lab_flag_critical')}</option>
+                    <option value="positive">{t('forms.lab_flag_positive')}</option>
+                    <option value="negative">{t('forms.lab_flag_negative')}</option>
                   </Select>
                   <button type="button" onClick={() => removeRow(idx)}
                     className="sm:col-span-1 h-9 grid place-items-center rounded-lg border border-slate-200 text-coral-500 hover:bg-coral-50">
@@ -274,7 +280,7 @@ export function LabPanelForm({
               ))}
               <button type="button" onClick={addRow}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-peach-600 hover:underline mt-2">
-                <Plus className="h-3 w-3" /> Add row
+                <Plus className="h-3 w-3" /> {t('forms.lab_add_row')}
               </button>
             </div>
           )}
@@ -282,12 +288,12 @@ export function LabPanelForm({
       </Section>
 
       {/* 4. Notes */}
-      <Section n={4} title="Add details" optional>
+      <Section n={4} title={t('forms.feed_add_details')} optional>
         <textarea
           rows={3}
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          placeholder="Anything important — context, follow-up, what the doctor said…"
+          placeholder={t('forms.lab_notes_ph')}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-peach-500 focus:ring-2 focus:ring-peach-500/30"
         />
       </Section>
@@ -297,7 +303,7 @@ export function LabPanelForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="w-full h-14 rounded-2xl text-base font-semibold bg-gradient-to-r from-peach-500 to-coral-500 hover:from-peach-600 hover:to-coral-600">
-          <Save className="h-5 w-5" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save lab result'}
+          <Save className="h-5 w-5" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.lab_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-14 rounded-2xl">
@@ -305,7 +311,7 @@ export function LabPanelForm({
           </Button>
         )}
       </div>
-      <p className="text-center text-xs text-ink-muted">Takes less than 2 seconds <span className="text-coral-500">❤️</span></p>
+      <p className="text-center text-xs text-ink-muted">{t('forms.fast_log')} <span className="text-coral-500">❤️</span></p>
     </form>
   );
 }

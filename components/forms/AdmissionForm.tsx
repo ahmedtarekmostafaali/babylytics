@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Label, Textarea } from '@/components/ui/Input';
 import { localInputToIso, isoToLocalInput, nowLocalInput } from '@/lib/dates';
 import { Trash2, Hospital } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export type AdmissionFormValue = {
   id?: string;
@@ -27,6 +28,7 @@ export function AdmissionForm({
   initial?: AdmissionFormValue;
 }) {
   const router = useRouter();
+  const t = useT();
   const [admittedAt, setAdmittedAt] = useState(initial?.admitted_at ? isoToLocalInput(initial.admitted_at) : nowLocalInput());
   const [hospital, setHospital]     = useState(initial?.hospital ?? '');
   const [department, setDepartment] = useState(initial?.department ?? '');
@@ -41,7 +43,7 @@ export function AdmissionForm({
     e.preventDefault();
     setErr(null);
     const iso = localInputToIso(admittedAt);
-    if (!iso) { setErr('Pick a valid admission time.'); return; }
+    if (!iso) { setErr(t('forms.adm_pick_valid_time')); return; }
     const parsed = AdmissionSchema.safeParse({
       admitted_at: iso,
       hospital: hospital || null,
@@ -69,7 +71,7 @@ export function AdmissionForm({
 
   async function onDelete() {
     if (!initial?.id) return;
-    if (!window.confirm('Delete this admission record?')) return;
+    if (!window.confirm(t('forms.adm_delete_confirm'))) return;
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.from('admissions')
@@ -85,31 +87,31 @@ export function AdmissionForm({
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Admitted at</Label>
+          <Label>{t('forms.adm_admitted_at')}</Label>
           <Input type="datetime-local" value={admittedAt} onChange={e => setAdmittedAt(e.target.value)} required />
         </div>
         <div>
-          <Label>Department</Label>
-          <Input value={department} onChange={e => setDepartment(e.target.value)} placeholder="NICU, ER, Pediatric ward…" />
+          <Label>{t('forms.adm_department')}</Label>
+          <Input value={department} onChange={e => setDepartment(e.target.value)} placeholder={t('forms.adm_department_ph')} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Hospital</Label>
-          <Input value={hospital} onChange={e => setHospital(e.target.value)} placeholder="Cleopatra Hospital, Cairo" />
+          <Label>{t('forms.adm_hospital')}</Label>
+          <Input value={hospital} onChange={e => setHospital(e.target.value)} placeholder={t('forms.adm_hospital_ph')} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Reason for admission</Label>
-          <Input value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. neonatal jaundice, fever, respiratory distress" />
+          <Label>{t('forms.adm_reason')}</Label>
+          <Input value={reason} onChange={e => setReason(e.target.value)} placeholder={t('forms.adm_reason_ph')} />
         </div>
         <div className="sm:col-span-2">
-          <Label>Diagnosis</Label>
-          <Textarea rows={2} value={diagnosis} onChange={e => setDiagnosis(e.target.value)} placeholder="Working / discharge diagnosis" />
+          <Label>{t('forms.adm_diagnosis')}</Label>
+          <Textarea rows={2} value={diagnosis} onChange={e => setDiagnosis(e.target.value)} placeholder={t('forms.adm_diagnosis_ph')} />
         </div>
       </div>
 
       <div>
-        <Label>Notes</Label>
+        <Label>{t('forms.notes')}</Label>
         <Textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)}
-          placeholder="Anything else worth noting — meds given, procedures, doctor names…" />
+          placeholder={t('forms.adm_notes_ph')} />
       </div>
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
@@ -117,7 +119,7 @@ export function AdmissionForm({
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}
           className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-lavender-500 to-brand-500">
-          <Hospital className="h-4 w-4" /> {saving ? 'Saving…' : initial?.id ? 'Save changes' : 'Save admission'}
+          <Hospital className="h-4 w-4" /> {saving ? t('forms.saving') : initial?.id ? t('forms.save_changes') : t('forms.adm_save_cta')}
         </Button>
         {initial?.id && (
           <Button type="button" variant="danger" onClick={onDelete} disabled={saving} className="h-12 rounded-2xl">
