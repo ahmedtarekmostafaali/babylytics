@@ -3,18 +3,21 @@
 -- ═══════════════════════════════════════════════════════════════════════
 --
 -- One-shot script that applies every pending migration from this batch
--- in the right order. Every migration is individually idempotent:
---   * `create table if not exists`
---   * `alter table … add column if not exists`
---   * `create or replace function`
---   * `drop trigger if exists … create trigger …`
---   * `on conflict (title, published_at) do nothing` for changelog seeds
---   * backfill UPDATEs gated on `where title_ar is null` etc.
--- so re-running this entire bundle on a database that already has some
--- of the migrations applied is a no-op for those parts.
+-- in the right order. Idempotent — safe to re-run.
 --
 -- Paste the whole file into the Supabase SQL editor and run.
 -- ═══════════════════════════════════════════════════════════════════════
+
+-- ─────────────────────────────────────────────────────────────────────
+-- 0a. Cleanup: drop any existing publish_app_update overloads.
+-- ─────────────────────────────────────────────────────────────────────
+-- If a previous partial run created BOTH the 4-arg (from 029) and the
+-- 6-arg (from 036) overloads, calls in 030–035 with three positional
+-- text arguments become ambiguous (Postgres error 42725). Drop both
+-- explicitly so 029 can recreate the 4-arg cleanly and 036 replaces
+-- it with the 6-arg version. The drops are harmless on a fresh DB.
+drop function if exists public.publish_app_update(text, text, text, date);
+drop function if exists public.publish_app_update(text, text, text, date, text, text);
 
 -- ─────────────────────────────────────────────────────────────────────
 -- 028_per_user_notification_reads.sql
@@ -608,7 +611,7 @@ select public.publish_app_update(
 
 -- ─────────────────────────────────────────────────────────────────────
 -- 036_arabic_updates_and_fixes.sql
--- Arabic columns on app_updates + 5 QA fixes (bigger one)
+-- Arabic columns on app_updates + 5 QA fixes
 -- ─────────────────────────────────────────────────────────────────────
 -- 036: Bug-fix + Arabic-content batch.
 --
@@ -644,9 +647,12 @@ alter table public.app_updates
 
 -- ────────────────────────────────────────────────────────────────────────────
 -- 2. Replace publish_app_update with a 6-arg version that accepts the
---    optional Arabic strings. The 4-arg signature stays available via
---    overloading so older SQL editors and seeded migrations still work.
+--    optional Arabic strings. We DROP the original 4-arg overload first
+--    so callers using positional 3-arg syntax don't hit "is not unique"
+--    (Postgres 42725) when both overloads coexist.
 -- ────────────────────────────────────────────────────────────────────────────
+
+drop function if exists public.publish_app_update(text, text, text, date);
 
 create or replace function public.publish_app_update(
   p_title    text,

@@ -32,9 +32,12 @@ alter table public.app_updates
 
 -- ────────────────────────────────────────────────────────────────────────────
 -- 2. Replace publish_app_update with a 6-arg version that accepts the
---    optional Arabic strings. The 4-arg signature stays available via
---    overloading so older SQL editors and seeded migrations still work.
+--    optional Arabic strings. We DROP the original 4-arg overload first
+--    so callers using positional 3-arg syntax don't hit "is not unique"
+--    (Postgres 42725) when both overloads coexist.
 -- ────────────────────────────────────────────────────────────────────────────
+
+drop function if exists public.publish_app_update(text, text, text, date);
 
 create or replace function public.publish_app_update(
   p_title    text,
