@@ -96,6 +96,7 @@ export default async function BabyOverview({
         prePregnancyWeightKg={pp?.pre_pregnancy_weight_kg ?? null}
         prePregnancyHeightCm={pp?.pre_pregnancy_height_cm ?? null}
         hiddenWidgets={Array.from(hiddenPregnancy)}
+        lang={userPrefs.language}
       />
     );
   }

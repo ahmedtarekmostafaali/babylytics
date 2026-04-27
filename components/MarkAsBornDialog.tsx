@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Label, Select } from '@/components/ui/Input';
 import { Baby, X, Heart } from 'lucide-react';
 import { localInputToIso, nowLocalInput } from '@/lib/dates';
+import { useT } from '@/lib/i18n/client';
 
 /**
  * Pregnancy → Newborn transition dialog. Calls the SQL `mark_baby_born` RPC
@@ -20,6 +21,7 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
   suggestedName?: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen]   = useState(false);
   const [name, setName]   = useState(babyName === 'Baby' && suggestedName ? suggestedName : babyName);
   const [dob, setDob]     = useState(nowLocalInput());
@@ -33,7 +35,7 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
   async function submit() {
     setErr(null);
     const iso = localInputToIso(dob);
-    if (!iso) { setErr('Pick a valid date and time of birth.'); return; }
+    if (!iso) { setErr(t('forms.mab_pick_valid_dob')); return; }
     const parsed = MarkAsBornSchema.safeParse({
       dob: iso,
       birth_weight_kg: weight ? Number(weight) : null,
@@ -69,7 +71,7 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
     <>
       <Button type="button" onClick={() => setOpen(true)}
         className="rounded-full bg-gradient-to-r from-coral-500 to-peach-500 px-5 h-11">
-        <Baby className="h-4 w-4" /> Mark as born
+        <Baby className="h-4 w-4" /> {t('forms.mab_cta')}
       </Button>
 
       {open && (
@@ -77,7 +79,7 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-panel p-6 relative" onClick={e => e.stopPropagation()}>
             <button onClick={() => setOpen(false)}
               className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-slate-100"
-              aria-label="Close">
+              aria-label={t('forms.mab_close')}>
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2">
@@ -85,27 +87,27 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
                 <Heart className="h-5 w-5" />
               </span>
               <div>
-                <h3 className="text-lg font-bold text-ink-strong">Welcome to the world!</h3>
-                <p className="text-xs text-ink-muted">All your pregnancy data stays attached — this just unlocks the newborn tracker.</p>
+                <h3 className="text-lg font-bold text-ink-strong">{t('forms.mab_title')}</h3>
+                <p className="text-xs text-ink-muted">{t('forms.mab_intro')}</p>
               </div>
             </div>
 
             <div className="mt-5 space-y-3">
               <div>
-                <Label>Baby&apos;s name</Label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Their name" />
+                <Label>{t('forms.mab_baby_name')}</Label>
+                <Input value={name} onChange={e => setName(e.target.value)} placeholder={t('forms.mab_baby_name_ph')} />
               </div>
               <div>
-                <Label>Date &amp; time of birth</Label>
+                <Label>{t('forms.mab_dob')}</Label>
                 <Input type="datetime-local" value={dob} onChange={e => setDob(e.target.value)} required />
-                <p className="text-xs text-ink-muted mt-1">Exact time matters for first-day feeding math.</p>
+                <p className="text-xs text-ink-muted mt-1">{t('forms.mab_dob_help')}</p>
               </div>
               <div>
-                <Label>Gender</Label>
+                <Label>{t('forms.mab_gender')}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { v: 'female', label: 'Female' },
-                    { v: 'male',   label: 'Male' },
+                    { v: 'female', tkey: 'forms.baby_gender_female' },
+                    { v: 'male',   tkey: 'forms.baby_gender_male' },
                   ].map(o => (
                     <button type="button" key={o.v} onClick={() => setGender(o.v as typeof gender)}
                       className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
@@ -113,22 +115,22 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
                           ? 'border-coral-500 bg-coral-50 text-coral-700'
                           : 'border-slate-200 bg-white hover:bg-slate-50'
                       }`}>
-                      {o.label}
+                      {t(o.tkey)}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <Label>Weight (kg)</Label>
+                  <Label>{t('forms.mab_weight_kg')}</Label>
                   <Input type="number" step="0.001" min={0} max={10} value={weight} onChange={e => setWeight(e.target.value)} placeholder="3.4" />
                 </div>
                 <div>
-                  <Label>Height (cm)</Label>
+                  <Label>{t('forms.mab_height_cm')}</Label>
                   <Input type="number" step="0.1" min={0} max={80} value={height} onChange={e => setHeight(e.target.value)} placeholder="51" />
                 </div>
                 <div>
-                  <Label>Head (cm)</Label>
+                  <Label>{t('forms.mab_head_cm')}</Label>
                   <Input type="number" step="0.1" min={0} max={80} value={head} onChange={e => setHead(e.target.value)} placeholder="35" />
                 </div>
               </div>
@@ -139,10 +141,10 @@ export function MarkAsBornDialog({ babyId, babyName, suggestedName }: {
             <div className="mt-5 flex items-center gap-2">
               <Button type="button" onClick={submit} disabled={saving}
                 className="flex-1 rounded-full bg-gradient-to-r from-coral-500 to-peach-500 h-12">
-                <Baby className="h-4 w-4" /> {saving ? 'Recording…' : 'Confirm birth'}
+                <Baby className="h-4 w-4" /> {saving ? t('forms.mab_recording') : t('forms.mab_confirm')}
               </Button>
               <button type="button" onClick={() => setOpen(false)}
-                className="text-sm text-ink-muted hover:text-ink-strong">Cancel</button>
+                className="text-sm text-ink-muted hover:text-ink-strong">{t('forms.mab_cancel')}</button>
             </div>
           </div>
         </div>

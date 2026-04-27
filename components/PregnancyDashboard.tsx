@@ -12,6 +12,7 @@ import {
 import { weekInsight, gainStatus } from '@/lib/pregnancy_weeks';
 import { fmtDate } from '@/lib/dates';
 import { fmtKg } from '@/lib/units';
+import { tFor, type Lang } from '@/lib/i18n';
 
 type Summary = {
   edd: string | null;
@@ -30,7 +31,7 @@ type Summary = {
 
 export function PregnancyDashboard({
   babyId, babyName, avatarUrl, edd, lmp, summary, latestUltrasound, nextAppointment, canEdit,
-  prePregnancyWeightKg, prePregnancyHeightCm, hiddenWidgets,
+  prePregnancyWeightKg, prePregnancyHeightCm, hiddenWidgets, lang = 'en',
 }: {
   babyId: string;
   babyName: string;
@@ -44,7 +45,9 @@ export function PregnancyDashboard({
   prePregnancyWeightKg: number | null;
   prePregnancyHeightCm: number | null;
   hiddenWidgets?: string[];
+  lang?: Lang;
 }) {
+  const t = tFor(lang);
   const hidden = new Set(hiddenWidgets ?? []);
   const show = (id: string) => !hidden.has(id);
   const ga = gestationalAge(edd, lmp);
@@ -69,15 +72,17 @@ export function PregnancyDashboard({
         <div className="flex items-center gap-5 flex-wrap">
           <BabyAvatar url={avatarUrl} size="2xl" />
           <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-lavender-700">Expecting</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-lavender-700">{t('pregd.eyebrow')}</div>
             <h1 className="text-3xl font-bold tracking-tight text-ink-strong mt-1">{babyName}</h1>
             <div className="mt-3 flex flex-wrap gap-2 text-sm">
               {ga && <Chip tint="lavender">{ga.weeks}w {ga.days}d</Chip>}
-              {tri && <Chip tint="brand">Trimester {tri}</Chip>}
-              {edd && <Chip tint="coral">EDD {fmtDate(edd)}</Chip>}
+              {tri && <Chip tint="brand">{t('pregd.chip_trimester', { n: tri })}</Chip>}
+              {edd && <Chip tint="coral">{t('pregd.chip_edd', { date: fmtDate(edd) })}</Chip>}
               {distance != null && (
                 <Chip tint={distance < 0 ? 'peach' : 'mint'}>
-                  {distance < 0 ? `${Math.abs(distance)} days past EDD` : `${distance} days to EDD`}
+                  {distance < 0
+                    ? t('pregd.chip_days_past', { n: Math.abs(distance) })
+                    : t('pregd.chip_days_to', { n: distance })}
                 </Chip>
               )}
             </div>
@@ -85,7 +90,7 @@ export function PregnancyDashboard({
           <div className="ml-auto flex items-center gap-2">
             <Link href={`/babies/${babyId}/dashboard-settings`}
               className="h-10 w-10 grid place-items-center rounded-full bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
-              title="Customize dashboard" aria-label="Customize dashboard">
+              title={t('pregd.customize')} aria-label={t('pregd.customize')}>
               <SlidersHorizontal className="h-4 w-4 text-ink" />
             </Link>
             <NotificationsBell babyId={babyId} />
@@ -95,28 +100,28 @@ export function PregnancyDashboard({
 
         {lateStage && show('late_term_banner') && (
           <div className="mt-4 rounded-xl bg-white/70 border border-coral-200 px-4 py-2 text-sm text-coral-800 inline-flex items-center gap-2">
-            <Sparkles className="h-4 w-4" /> You&apos;re close to term. Tap <strong>Mark as born</strong> the moment baby arrives — every prenatal record stays attached.
+            <Sparkles className="h-4 w-4" /> {t('pregd.late_term')}
           </div>
         )}
       </div>
 
       {/* KPI grid */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        {show('kpi_ga') && <Kpi label="Gestational age" value={fmtGestationalAge(edd, lmp)}
-          tint="lavender" icon={HeartPulse} sub={tri ? `Trimester ${tri}` : undefined} />}
-        {show('kpi_bp') && <Kpi label="Latest BP"
+        {show('kpi_ga') && <Kpi label={t('pregd.kpi_ga')} value={fmtGestationalAge(edd, lmp)}
+          tint="lavender" icon={HeartPulse} sub={tri ? t('pregd.chip_trimester', { n: tri }) : undefined} />}
+        {show('kpi_bp') && <Kpi label={t('pregd.kpi_bp')}
           value={summary.latest_bp_systolic ? `${summary.latest_bp_systolic}/${summary.latest_bp_diastolic}` : '—'}
           tint={bpCat === 'hypertensive' ? 'coral' : bpCat === 'elevated' ? 'peach' : 'mint'}
           icon={Activity}
-          sub={bpCat ? prettyBp(bpCat) : 'No reading yet'} />}
-        {show('kpi_weight') && <Kpi label="Maternal weight"
+          sub={bpCat ? prettyBp(bpCat, t) : t('pregd.kpi_bp_no_reading')} />}
+        {show('kpi_weight') && <Kpi label={t('pregd.kpi_weight')}
           value={summary.latest_weight_kg ? fmtKg(summary.latest_weight_kg) : '—'}
           tint="brand" icon={Heart}
-          sub={summary.weight_gain_kg != null ? `+${summary.weight_gain_kg.toFixed(1)} kg gained` : 'Track at next visit'} />}
-        {show('kpi_fhr') && <Kpi label="Fetal HR"
+          sub={summary.weight_gain_kg != null ? t('pregd.kpi_weight_gained', { n: summary.weight_gain_kg.toFixed(1) }) : t('pregd.kpi_weight_track')} />}
+        {show('kpi_fhr') && <Kpi label={t('pregd.kpi_fhr')}
           value={summary.latest_fhr ? `${summary.latest_fhr} bpm` : '—'}
           tint="coral" icon={HeartPulse}
-          sub="From last visit / scan" />}
+          sub={t('pregd.kpi_fhr_sub')} />}
       </div>
 
       {/* Insight cards: week-by-week + IOM weight gain band */}
@@ -129,12 +134,12 @@ export function PregnancyDashboard({
                   <BookOpen className="h-3.5 w-3.5" />
                 </span>
                 <div className="text-[11px] font-bold uppercase tracking-wider text-lavender-700">
-                  Week {insight.week} · Trimester {insight.trimester}
+                  {t('pregd.week_label', { week: insight.week, tri: insight.trimester })}
                 </div>
               </div>
               <div className="mt-2 text-sm font-semibold text-ink-strong inline-flex items-center gap-1.5">
                 <Apple className="h-4 w-4 text-coral-600" />
-                Baby is the size of {insight.size}.
+                {t('pregd.week_size_pre')}{insight.size}{t('pregd.week_size_post')}
               </div>
               <p className="mt-2 text-sm text-ink leading-relaxed">{insight.highlight}</p>
               {insight.parent_tip && (
@@ -152,10 +157,10 @@ export function PregnancyDashboard({
                   <Heart className="h-3.5 w-3.5" />
                 </span>
                 <div className="text-[11px] font-bold uppercase tracking-wider text-mint-700">
-                  Weight gain · {prettyCategory(gain.band.category)}
+                  {t('pregd.gain_eyebrow', { category: prettyCategory(gain.band.category, t) })}
                 </div>
                 <span className="ml-auto text-[10px] uppercase tracking-wider text-ink-muted">
-                  IOM {gain.band.min_kg}–{gain.band.max_kg} kg total
+                  {t('pregd.gain_iom_total', { min: gain.band.min_kg, max: gain.band.max_kg })}
                 </span>
               </div>
               <div className="mt-3">
@@ -164,7 +169,7 @@ export function PregnancyDashboard({
                 </div>
                 {gain.expected_min != null && gain.expected_max != null && (
                   <div className="mt-1 text-xs text-ink-muted">
-                    Expected by week {ga?.weeks ?? '—'}: {gain.expected_min.toFixed(1)}–{gain.expected_max.toFixed(1)} kg
+                    {t('pregd.gain_expected_by', { wk: ga?.weeks ?? '—', min: gain.expected_min.toFixed(1), max: gain.expected_max.toFixed(1) })}
                   </div>
                 )}
                 <div className="mt-3">
@@ -181,12 +186,12 @@ export function PregnancyDashboard({
                   gain.status === 'low'  ? 'text-peach-700' :
                   gain.status === 'on_track' ? 'text-mint-700' : 'text-ink-muted'
                 }`}>
-                  {gain.status === 'on_track' && '✓ On track for your IOM band'}
-                  {gain.status === 'low'      && '↓ A little below — chat with your provider if it persists'}
-                  {gain.status === 'high'     && '↑ Above expected — your provider may want to discuss'}
+                  {gain.status === 'on_track' && t('pregd.gain_on_track')}
+                  {gain.status === 'low'      && t('pregd.gain_low')}
+                  {gain.status === 'high'     && t('pregd.gain_high')}
                   {gain.status === 'unknown'  && (summary.weight_gain_kg == null
-                    ? 'Log a prenatal visit with weight to see status'
-                    : 'Need pre-pregnancy weight & height for guidance')}
+                    ? t('pregd.gain_unknown_log')
+                    : t('pregd.gain_unknown_need_pre'))}
                 </div>
               </div>
             </div>
@@ -199,28 +204,28 @@ export function PregnancyDashboard({
         {show('kicks_card') && <Link href={`/babies/${babyId}/prenatal/kicks`}
           className={`rounded-2xl border p-5 hover:shadow-card transition ${kicksLow ? 'bg-coral-50 border-coral-200' : 'bg-white border-slate-200'}`}>
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-ink-muted">
-            <Activity className="h-3.5 w-3.5" /> Kick count today
+            <Activity className="h-3.5 w-3.5" /> {t('pregd.kicks_today')}
           </div>
           <div className="mt-1 text-3xl font-bold text-ink-strong">{summary.kicks_today ?? 0}</div>
           <div className="text-xs text-ink-muted mt-1">
-            {kicksLow ? '⚠ Below 10 — keep counting' : 'Tap to start a session →'}
+            {kicksLow ? t('pregd.kicks_low') : t('pregd.kicks_tap')}
           </div>
         </Link>}
         {show('visits_count') && <Link href={`/babies/${babyId}/prenatal/visits`}
           className="rounded-2xl border border-slate-200 bg-white p-5 hover:shadow-card transition">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-ink-muted">
-            <Stethoscope className="h-3.5 w-3.5" /> Prenatal visits
+            <Stethoscope className="h-3.5 w-3.5" /> {t('pregd.visits')}
           </div>
           <div className="mt-1 text-3xl font-bold text-ink-strong">{summary.prenatal_visit_count ?? 0}</div>
-          <div className="text-xs text-ink-muted mt-1">Tap to log a new visit →</div>
+          <div className="text-xs text-ink-muted mt-1">{t('pregd.visits_tap')}</div>
         </Link>}
         {show('ultrasounds_count') && <Link href={`/babies/${babyId}/prenatal/ultrasounds`}
           className="rounded-2xl border border-slate-200 bg-white p-5 hover:shadow-card transition">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-ink-muted">
-            <ScanLine className="h-3.5 w-3.5" /> Ultrasounds
+            <ScanLine className="h-3.5 w-3.5" /> {t('pregd.ultrasounds')}
           </div>
           <div className="mt-1 text-3xl font-bold text-ink-strong">{summary.ultrasound_count ?? 0}</div>
-          <div className="text-xs text-ink-muted mt-1">Tap to add a scan →</div>
+          <div className="text-xs text-ink-muted mt-1">{t('pregd.ultrasounds_tap')}</div>
         </Link>}
       </div>
 
@@ -229,67 +234,67 @@ export function PregnancyDashboard({
         {show('latest_ultrasound') && <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-2 mb-2">
             <ScanLine className="h-4 w-4 text-brand-600" />
-            <h3 className="text-sm font-bold text-ink-strong">Latest ultrasound</h3>
+            <h3 className="text-sm font-bold text-ink-strong">{t('pregd.latest_us')}</h3>
           </div>
           {latestUltrasound ? (
             <div>
               <div className="text-xs text-ink-muted">{fmtDate(latestUltrasound.scanned_at)}{latestUltrasound.gestational_week != null ? ` · ${latestUltrasound.gestational_week}w` : ''}</div>
-              <p className="text-sm text-ink-strong mt-1">{latestUltrasound.summary ?? 'No radiologist summary recorded.'}</p>
+              <p className="text-sm text-ink-strong mt-1">{latestUltrasound.summary ?? t('pregd.latest_us_no_summary')}</p>
               <Link href={`/babies/${babyId}/prenatal/ultrasounds/${latestUltrasound.id}`}
                 className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline">
-                Open scan <ArrowRight className="h-3 w-3" />
+                {t('pregd.open_scan')} <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
           ) : (
-            <EmptyHint icon={ScanLine} text="No ultrasounds logged yet."
-              ctaHref={`/babies/${babyId}/prenatal/ultrasounds/new`} ctaLabel="Add ultrasound" />
+            <EmptyHint icon={ScanLine} text={t('pregd.no_us')}
+              ctaHref={`/babies/${babyId}/prenatal/ultrasounds/new`} ctaLabel={t('pregd.add_us')} />
           )}
         </div>}
 
         {show('next_appointment') && <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-2 mb-2">
             <CalendarClock className="h-4 w-4 text-lavender-600" />
-            <h3 className="text-sm font-bold text-ink-strong">Next appointment</h3>
+            <h3 className="text-sm font-bold text-ink-strong">{t('pregd.next_appt')}</h3>
           </div>
           {nextAppointment ? (
             <div>
               <div className="text-sm font-semibold text-ink-strong">{fmtDate(nextAppointment.scheduled_at)}</div>
-              <div className="text-xs text-ink-muted">{nextAppointment.doctor_name ?? 'Provider'}{nextAppointment.purpose ? ` · ${nextAppointment.purpose}` : ''}</div>
+              <div className="text-xs text-ink-muted">{nextAppointment.doctor_name ?? t('pregd.next_appt_provider')}{nextAppointment.purpose ? ` · ${nextAppointment.purpose}` : ''}</div>
             </div>
           ) : (
-            <EmptyHint icon={CalendarClock} text="No upcoming appointment booked."
-              ctaHref={`/babies/${babyId}/doctors`} ctaLabel="Book one" />
+            <EmptyHint icon={CalendarClock} text={t('pregd.no_appt')}
+              ctaHref={`/babies/${babyId}/doctors`} ctaLabel={t('pregd.book_appt')} />
           )}
         </div>}
       </div>}
 
       {/* Quick actions */}
       {show('quick_actions') && <div className="flex flex-wrap gap-2">
-        <QuickLink href={`/babies/${babyId}/prenatal/visits/new`}     icon={Stethoscope} label="Log prenatal visit" tint="lavender" />
-        <QuickLink href={`/babies/${babyId}/prenatal/ultrasounds/new`} icon={ScanLine}   label="Log ultrasound"     tint="brand" />
-        <QuickLink href={`/babies/${babyId}/prenatal/kicks`}           icon={Activity}   label="Kick counter"        tint="coral" />
-        <QuickLink href={`/babies/${babyId}/prenatal/maternal-vitals`} icon={Heart}      label="Maternal vitals"      tint="peach" />
-        <QuickLink href={`/babies/${babyId}/medications`}              icon={Pill}       label="Pregnancy meds"       tint="mint" />
-        <QuickLink href={`/babies/${babyId}/medical-profile`}          icon={Sparkles}   label="Medical profile"      tint="lavender" />
+        <QuickLink href={`/babies/${babyId}/prenatal/visits/new`}     icon={Stethoscope} label={t('pregd.qa_visit')}   tint="lavender" />
+        <QuickLink href={`/babies/${babyId}/prenatal/ultrasounds/new`} icon={ScanLine}   label={t('pregd.qa_us')}      tint="brand" />
+        <QuickLink href={`/babies/${babyId}/prenatal/kicks`}           icon={Activity}   label={t('pregd.qa_kicks')}   tint="coral" />
+        <QuickLink href={`/babies/${babyId}/prenatal/maternal-vitals`} icon={Heart}      label={t('pregd.qa_vitals')}  tint="peach" />
+        <QuickLink href={`/babies/${babyId}/medications`}              icon={Pill}       label={t('pregd.qa_meds')}    tint="mint" />
+        <QuickLink href={`/babies/${babyId}/medical-profile`}          icon={Sparkles}   label={t('pregd.qa_profile')} tint="lavender" />
       </div>}
     </div>
   );
 }
 
-function prettyBp(cat: 'normal'|'elevated'|'hypertensive'): string {
+function prettyBp(cat: 'normal'|'elevated'|'hypertensive', t: ReturnType<typeof tFor>): string {
   switch (cat) {
-    case 'normal':       return 'Normal';
-    case 'elevated':     return 'Elevated';
-    case 'hypertensive': return '⚠ Hypertensive';
+    case 'normal':       return t('pregd.kpi_bp_normal');
+    case 'elevated':     return t('pregd.kpi_bp_elevated');
+    case 'hypertensive': return t('pregd.kpi_bp_hyper');
   }
 }
 
-function prettyCategory(c: 'underweight'|'normal'|'overweight'|'obese'): string {
+function prettyCategory(c: 'underweight'|'normal'|'overweight'|'obese', t: ReturnType<typeof tFor>): string {
   switch (c) {
-    case 'underweight': return 'Pre-preg BMI: under';
-    case 'normal':      return 'Pre-preg BMI: normal';
-    case 'overweight':  return 'Pre-preg BMI: over';
-    case 'obese':       return 'Pre-preg BMI: high';
+    case 'underweight': return t('pregd.bmi_under');
+    case 'normal':      return t('pregd.bmi_normal');
+    case 'overweight':  return t('pregd.bmi_over');
+    case 'obese':       return t('pregd.bmi_obese');
   }
 }
 
