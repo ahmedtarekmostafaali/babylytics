@@ -15,6 +15,7 @@ import {
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
   Stethoscope, CalendarClock, HeartPulse, ScanLine, Activity, Heart, Tv, FlaskConical,
   Smile, MessageCircle, ChevronDown, Settings, ShoppingCart, Megaphone, MessageSquare,
+  ShieldCheck,
 } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 
@@ -41,6 +42,9 @@ export function Sidebar() {
   const [avatars, setAvatars] = useState<Record<string, string | null>>({});
   const [babySwitcherOpen, setBabySwitcherOpen] = useState(false);
   const [role, setRole] = useState<string | null>(null);
+  // Platform-admin flag — drives the "Admin" link rendering. Default false so
+  // non-admins never see the link even for a moment during the auth check.
+  const [isAdmin, setIsAdmin] = useState(false);
   // Per-category collapse state, persisted to localStorage so it survives
   // page navigation. Default: every category open.
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
@@ -65,6 +69,13 @@ export function Sidebar() {
         .select('display_name').eq('id', u.id).maybeSingle();
       const dn = (prof?.display_name as string | undefined)?.trim() || null;
       setDisplayName(dn);
+      // Check platform-admin status. Failures (e.g. RPC missing on a stale
+      // deploy) silently leave the flag false — never accidentally show the
+      // admin link to non-admins.
+      try {
+        const { data: ok } = await supabase.rpc('is_platform_admin');
+        setIsAdmin(Boolean(ok));
+      } catch { setIsAdmin(false); }
     });
     supabase.from('babies')
       .select('id,name,dob,avatar_path,lifecycle_stage,edd,lmp')
@@ -232,6 +243,12 @@ export function Sidebar() {
             active={pathname?.startsWith('/updates') ?? false} collapsed={collapsed} tint="mint" />
           <NavItem href="/feedback" icon={MessageSquare} label={t('nav.feedback')}
             active={pathname?.startsWith('/feedback') ?? false} collapsed={collapsed} tint="coral" />
+          {/* Platform admin entry — only renders for platform_admins (the
+              client-side flag matches the server-side guard on /admin/*). */}
+          {isAdmin && (
+            <NavItem href="/admin" icon={ShieldCheck} label="Admin"
+              active={pathname?.startsWith('/admin') ?? false} collapsed={collapsed} tint="lavender" />
+          )}
         </NavGroup>
 
         {currentBabyId && (
