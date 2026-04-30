@@ -19,6 +19,11 @@
 
 begin;
 
+-- v2 changes the RETURNS TABLE shape (new pregnancy_count / babies / recent
+-- columns), so we have to drop the v1 signature first — Postgres refuses
+-- CREATE OR REPLACE when the row type changes.
+drop function if exists public.admin_user_list(int, int, text);
+
 create or replace function public.admin_user_list(
   p_limit  int default 50,
   p_offset int default 0,

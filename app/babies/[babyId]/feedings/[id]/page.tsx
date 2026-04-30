@@ -13,7 +13,7 @@ export default async function EditFeeding({ params }: { params: { babyId: string
   await assertRole(params.babyId, { requireWrite: true });
   const { data } = await supabase
     .from('feedings')
-    .select('id,baby_id,feeding_time,milk_type,quantity_ml,kcal,duration_min,notes')
+    .select('id,baby_id,feeding_time,milk_type,quantity_ml,kcal,duration_min,notes,formula_name,food_name,food_symptoms,post_feed_effect')
     .eq('id', params.id).is('deleted_at', null).single();
   if (!data) notFound();
 
@@ -34,6 +34,10 @@ export default async function EditFeeding({ params }: { params: { babyId: string
           milk_type: data.milk_type as 'formula',
           quantity_ml: data.quantity_ml, kcal: data.kcal,
           duration_min: data.duration_min, notes: data.notes,
+          formula_name: data.formula_name ?? null,
+          food_name: data.food_name ?? null,
+          food_symptoms: data.food_symptoms ?? null,
+          post_feed_effect: data.post_feed_effect ?? null,
         }} />
       </CardContent></Card>
       <Comments babyId={params.babyId} target="feedings" targetId={data.id} />

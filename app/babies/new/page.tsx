@@ -7,11 +7,14 @@ import { Input, Label, Select } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { BabySchema, PregnancyOnboardSchema } from '@/lib/validators';
 import { PageShell, PageHeader } from '@/components/PageHeader';
-import { Baby, Heart } from 'lucide-react';
+import { Baby, Heart, Calendar } from 'lucide-react';
 import { eddFromLmp } from '@/lib/lifecycle';
 import { useT } from '@/lib/i18n/client';
 
-type Stage = 'pregnancy' | 'born';
+// 044 batch: 'planning' is the new pre-pregnancy stage — Mom uses this
+// while still trying to conceive, gets the cycle calendar + period log.
+// She transitions to 'pregnancy' from her baby profile when ready.
+type Stage = 'planning' | 'pregnancy' | 'born';
 
 export default function NewBabyPage() {
   const router = useRouter();
@@ -27,6 +30,8 @@ export default function NewBabyPage() {
 
       {stage === null ? (
         <StagePicker onPick={setStage} />
+      ) : stage === 'planning' ? (
+        <PlanningForm onBack={() => setStage(null)} router={router} />
       ) : stage === 'pregnancy' ? (
         <PregnancyForm onBack={() => setStage(null)} router={router} />
       ) : (
@@ -36,13 +41,73 @@ export default function NewBabyPage() {
   );
 }
 
+// PlanningForm — minimal create flow: just a placeholder name (so the
+// sidebar / dashboard have something to show). Cycle data gets logged on
+// the planner page once the row exists.
+function PlanningForm({ onBack, router }: { onBack: () => void; router: ReturnType<typeof useRouter> }) {
+  const t = useT();
+  const [name, setName] = useState('Future baby');
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null); setLoading(true);
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc('create_planning_baby_with_owner', {
+      p_name: name.trim() || 'Planning',
+    });
+    setLoading(false);
+    if (error) { setErr(error.message); return; }
+    router.push(`/babies/${data}/planner`);
+  }
+
+  return (
+    <Card>
+      <CardContent className="py-6">
+        <form className="space-y-4" onSubmit={submit}>
+          <p className="text-sm text-ink-muted">
+            We'll set up your fertility planner. Pick a name (you can change it any time) — the calendar opens once we save.
+          </p>
+          <div>
+            <Label>Placeholder name</Label>
+            <Input value={name} onChange={e => setName(e.target.value)}
+              placeholder="e.g. Future baby, Baby #2" />
+          </div>
+          {err && <p className="text-sm text-coral-600">{err}</p>}
+          <div className="flex items-center gap-2 pt-2">
+            <Button type="submit" disabled={loading}
+              className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-coral-500 to-peach-500">
+              <Calendar className="h-4 w-4" /> {loading ? 'Creating…' : 'Open my planner'}
+            </Button>
+            <button type="button" onClick={onBack}
+              className="text-sm text-ink-muted hover:text-ink-strong">{t('forms.nb_back')}</button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 function StagePicker({ onPick }: { onPick: (s: Stage) => void }) {
   const t = useT();
   return (
     <Card>
       <CardContent className="py-6">
         <p className="text-sm text-ink-muted mb-4">{t('forms.nb_pick_question')}</p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {/* Planning is new in the 044 batch — pre-pregnancy fertility planner. */}
+          <button
+            onClick={() => onPick('planning')}
+            className="rounded-2xl border-2 border-peach-200 bg-gradient-to-br from-peach-50 to-coral-50 p-5 text-left hover:border-peach-400 hover:shadow-card transition">
+            <div className="flex items-center gap-2">
+              <span className="h-10 w-10 rounded-xl bg-peach-500 text-white grid place-items-center">
+                <Calendar className="h-5 w-5" />
+              </span>
+              <div className="font-bold text-ink-strong">Planning</div>
+            </div>
+            <p className="text-xs text-ink-muted mt-3">Trying to conceive — track your cycle, ovulation, fertile window.</p>
+          </button>
           <button
             onClick={() => onPick('pregnancy')}
             className="rounded-2xl border-2 border-lavender-200 bg-gradient-to-br from-lavender-50 to-coral-50 p-5 text-left hover:border-lavender-400 hover:shadow-card transition">

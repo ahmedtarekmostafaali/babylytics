@@ -20,7 +20,34 @@ export type FeedingFormValue = {
   kcal?: number | null;
   duration_min?: number | null;
   notes?: string | null;
+  // 044 batch additions:
+  formula_name?: string | null;
+  food_name?: string | null;
+  post_feed_effect?: string | null;
+  food_symptoms?: string[] | null;
 };
+
+// Quick-pick chips for solids — toggleable, lined up under the food name.
+// "no_reaction" is special: selecting it deselects the others (and vice
+// versa) so a parent can't simultaneously claim "no reaction" and "rash".
+const FOOD_SYMPTOM_OPTIONS: { key: string; label: string; tint: string }[] = [
+  { key: 'no_reaction', label: 'No reaction',     tint: 'mint' },
+  { key: 'rash',        label: 'Rash',            tint: 'coral' },
+  { key: 'hives',       label: 'Hives',           tint: 'coral' },
+  { key: 'gas',         label: 'Gas / bloating',  tint: 'peach' },
+  { key: 'vomit',       label: 'Vomit',           tint: 'coral' },
+  { key: 'diarrhea',    label: 'Diarrhea',        tint: 'coral' },
+  { key: 'constipation',label: 'Constipation',    tint: 'peach' },
+  { key: 'fussy',       label: 'Fussy',           tint: 'lavender' },
+  { key: 'swelling',    label: 'Swelling',        tint: 'coral' },
+];
+
+// Common post-feed effects — quick-pick row above the free text. Same chip
+// pattern as the food symptoms but applies to ALL feeding types, not just
+// solids (a baby can spit up after a bottle too).
+const POST_EFFECT_OPTIONS = [
+  'spit-up', 'happy', 'sleepy', 'fussy', 'gassy', 'reflux', 'rash', 'choking',
+];
 
 function modeFromMilkType(t?: FeedingFormValue['milk_type']): FeedMode {
   if (t === 'breast' || t === 'mixed') return 'breast';
@@ -74,6 +101,31 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
   const [bottleKind, setBottleKind] = useState<'formula'|'mixed'|'other'>(
     initial?.milk_type === 'mixed' ? 'mixed' : initial?.milk_type === 'other' ? 'other' : 'formula'
   );
+  // Formula brand (Similac Advance, Aptamil 1, etc.) — surfaced on bottle/mixed.
+  const [formulaName, setFormulaName] = useState<string>(initial?.formula_name ?? '');
+
+  // Solid food name + symptom chips
+  const [foodName, setFoodName] = useState<string>(initial?.food_name ?? '');
+  const [foodSymptoms, setFoodSymptoms] = useState<string[]>(initial?.food_symptoms ?? []);
+
+  // Post-feed effect: free text + chip toggles. We persist whatever the
+  // textarea ends up showing, so chips are a write-into-text affordance.
+  const [postEffect, setPostEffect] = useState<string>(initial?.post_feed_effect ?? '');
+  function toggleEffectChip(label: string) {
+    const set = new Set(postEffect.split(/[,;]\s*/).map(s => s.trim()).filter(Boolean));
+    if (set.has(label)) set.delete(label); else set.add(label);
+    setPostEffect(Array.from(set).join(', '));
+  }
+  function toggleFoodSymptom(key: string) {
+    setFoodSymptoms(prev => {
+      const has = prev.includes(key);
+      // "no_reaction" is exclusive — picking it clears the others, picking
+      // anything else clears "no_reaction".
+      if (key === 'no_reaction') return has ? [] : ['no_reaction'];
+      const next = has ? prev.filter(k => k !== key) : [...prev.filter(k => k !== 'no_reaction'), key];
+      return next;
+    });
+  }
 
   const isBottle = mode === 'bottle';
   const isBreast = mode === 'breast';
@@ -88,6 +140,9 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
     const iso = localInputToIso(time);
     if (!iso) { setErr('Pick a valid time.'); return; }
 
+    // Shared post-feed effect — applies to every mode. Empty string → null.
+    const effect = postEffect.trim() || null;
+
     let payload: Partial<FeedingFormValue>;
     if (isBreast) {
       if (totalBreastMin <= 0) { setErr('Add minutes to at least one breast, or start the timer.'); return; }
@@ -98,6 +153,10 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
         kcal: null,
         duration_min: totalBreastMin,
         notes: [notes, `Left ${leftMin}m · Right ${rightMin}m`].filter(Boolean).join(' · ').trim() || null,
+        formula_name: null,
+        food_name: null,
+        food_symptoms: null,
+        post_feed_effect: effect,
       };
     } else if (isBottle) {
       const mlNum = ml ? Number(ml) : null;
@@ -109,17 +168,28 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
         kcal: kcal ? Number(kcal) : null,
         duration_min: null,
         notes: notes || null,
+        // formula_name only meaningful for formula/mixed bottles, but we
+        // still persist whatever the parent typed even on "other" — it's
+        // free text, doesn't hurt.
+        formula_name: formulaName.trim() || null,
+        food_name: null,
+        food_symptoms: null,
+        post_feed_effect: effect,
       };
     } else {
       // solid
-      if (!notes.trim()) { setErr('Describe the solid food in notes.'); return; }
+      if (!foodName.trim()) { setErr('What food did baby try? Add the food name.'); return; }
       payload = {
         feeding_time: iso,
         milk_type: 'solid',
         quantity_ml: null,
         kcal: kcal ? Number(kcal) : null,
         duration_min: null,
-        notes: notes.trim(),
+        notes: notes.trim() || null,
+        formula_name: null,
+        food_name: foodName.trim(),
+        food_symptoms: foodSymptoms.length > 0 ? foodSymptoms : null,
+        post_feed_effect: effect,
       };
     }
 
@@ -239,16 +309,75 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
                 ))}
               </div>
             </Field>
+            {/* Brand free-text — useful both for medical history AND when
+                tracking which formula correlates with reflux/rashes. */}
+            {(bottleKind === 'formula' || bottleKind === 'mixed') && (
+              <Field label="Formula brand">
+                <input type="text" maxLength={120}
+                  value={formulaName} onChange={e => setFormulaName(e.target.value)}
+                  placeholder="e.g. Similac Advance, Aptamil 1, Bebelac Comfort"
+                  list="formula-suggestions"
+                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+                <datalist id="formula-suggestions">
+                  <option value="Similac Advance" />
+                  <option value="Similac Total Comfort" />
+                  <option value="Aptamil 1" />
+                  <option value="Aptamil Comfort" />
+                  <option value="Bebelac 1" />
+                  <option value="Bebelac Comfort" />
+                  <option value="Hipp Combiotic" />
+                  <option value="Nan Optipro" />
+                  <option value="Enfamil Gentlease" />
+                  <option value="S-26 Gold" />
+                </datalist>
+              </Field>
+            )}
           </div>
         )}
 
         {isSolid && (
-          <div>
+          <div className="space-y-4">
+            <Field label="Food name (required)">
+              <input type="text" maxLength={120}
+                value={foodName} onChange={e => setFoodName(e.target.value)}
+                placeholder="e.g. Banana, rice cereal, yogurt, scrambled egg"
+                list="food-suggestions"
+                className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+              <datalist id="food-suggestions">
+                <option value="Banana" /><option value="Avocado" /><option value="Sweet potato" />
+                <option value="Rice cereal" /><option value="Oatmeal" /><option value="Apple puree" />
+                <option value="Pear puree" /><option value="Carrot puree" /><option value="Yogurt" />
+                <option value="Scrambled egg" /><option value="Chicken puree" /><option value="Lentil soup" />
+                <option value="Bread" /><option value="Cheese" /><option value="Pasta" />
+              </datalist>
+            </Field>
             <Field label={t('forms.feed_kcal')}>
               <input type="number" min={0} max={5000} step={1}
                 value={kcal} onChange={e => setKcal(e.target.value)}
                 placeholder="e.g. 120"
                 className="h-12 w-40 rounded-2xl border border-slate-200 bg-white px-4 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+            </Field>
+            {/* Symptom chips — saved as text[] in food_symptoms, drives the
+                Solid-food KPI on the overview + reports. */}
+            <Field label="Did this food affect baby? (tap any that apply)">
+              <div className="flex flex-wrap gap-1.5">
+                {FOOD_SYMPTOM_OPTIONS.map(opt => {
+                  const on = foodSymptoms.includes(opt.key);
+                  const tintMap: Record<string, string> = {
+                    coral:    on ? 'bg-coral-500 text-white border-coral-500' : 'bg-white text-coral-700 border-coral-200',
+                    mint:     on ? 'bg-mint-500 text-white border-mint-500'   : 'bg-white text-mint-700 border-mint-200',
+                    peach:    on ? 'bg-peach-500 text-white border-peach-500' : 'bg-white text-peach-700 border-peach-200',
+                    lavender: on ? 'bg-lavender-500 text-white border-lavender-500' : 'bg-white text-lavender-700 border-lavender-200',
+                  };
+                  return (
+                    <button key={opt.key} type="button"
+                      onClick={() => toggleFoodSymptom(opt.key)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${tintMap[opt.tint]}`}>
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </Field>
           </div>
         )}
@@ -264,6 +393,31 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
         <textarea rows={3} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
           placeholder={t('forms.feed_notes_placeholder')}
           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+      </Section>
+
+      {/* 5. Post-feed effect — universal. Tap chips to seed common phrases,
+          then refine with free text. Drives the post-feed banner on the
+          detail panel + appears in reports. */}
+      <Section title="Post-feed effect" n={5} optional>
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-1.5">
+            {POST_EFFECT_OPTIONS.map(opt => {
+              const on = postEffect.toLowerCase().includes(opt.toLowerCase());
+              return (
+                <button key={opt} type="button" onClick={() => toggleEffectChip(opt)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    on ? 'bg-peach-500 text-white border-peach-500'
+                       : 'bg-white text-peach-700 border-peach-200 hover:bg-peach-50'
+                  }`}>
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+          <textarea rows={2} value={postEffect} onChange={e => setPostEffect(e.target.value)}
+            placeholder="Anything you noticed after the feed (spit-up amount, mood, rash, etc.)"
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
+        </div>
       </Section>
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
