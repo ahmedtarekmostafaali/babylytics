@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { BabyAvatar } from '@/components/BabyAvatar';
@@ -62,6 +62,18 @@ export default async function BabyOverview({
     .select('id,name,dob,gender,birth_weight_kg,feeding_factor_ml_per_kg_per_day,avatar_path,lifecycle_stage,edd,lmp')
     .eq('id', babyId).is('deleted_at', null).single();
   if (!baby) notFound();
+
+  // 046 batch: pharmacy users only see medication stock — bounce them off
+  // the overview which would 404 anyway since the dashboard reads from
+  // tables the pharmacy RLS denies.
+  const { data: { user: meUser } } = await supabase.auth.getUser();
+  if (meUser) {
+    const { data: meRow } = await supabase.from('baby_users')
+      .select('role').eq('baby_id', babyId).eq('user_id', meUser.id).maybeSingle();
+    if (meRow?.role === 'pharmacy') {
+      redirect(`/babies/${babyId}/medications/stock`);
+    }
+  }
 
   const avatarUrl = await signAvatarUrl(supabase, baby.avatar_path);
 

@@ -156,7 +156,11 @@ export function Sidebar() {
 
   const isViewer = role === 'viewer';
   const isParent = role === 'owner' || role === 'parent' || role === 'editor';
-  const canViewLogs = !!role && !isViewer;
+  // 046 batch: pharmacy is a read-only role scoped to medication stock
+  // alone. They get a stripped-down sidebar (just meds + stock) and the
+  // RLS layer blocks them from everything else server-side.
+  const isPharmacy = role === 'pharmacy';
+  const canViewLogs = !!role && !isViewer && !isPharmacy;
   const canExport = isParent || role === 'doctor';
 
   const currentBaby = currentBabyId
@@ -257,15 +261,28 @@ export function Sidebar() {
           )}
         </NavGroup>
 
-        {currentBabyId && (
+        {currentBabyId && isPharmacy && (
+          // Pharmacy-only sidebar: lock them down to the medication tabs.
+          // The RLS layer blocks them from everything else server-side; this
+          // just trims the UI so they don't see broken links.
+          <NavGroup label="PHARMACY" collapsed={collapsed}>
+            <NavItem href={`/babies/${currentBabyId}/medications`} icon={Pill}
+              label="Medications" active={pathname === `/babies/${currentBabyId}/medications` || (pathname?.startsWith(`/babies/${currentBabyId}/medications/`) && !pathname.startsWith(`/babies/${currentBabyId}/medications/stock`))}
+              collapsed={collapsed} tint="lavender" />
+            <NavItem href={`/babies/${currentBabyId}/medications/stock`} icon={Pill}
+              label="Stock" active={pathname?.startsWith(`/babies/${currentBabyId}/medications/stock`) ?? false}
+              collapsed={collapsed} tint="mint" />
+          </NavGroup>
+        )}
+
+        {currentBabyId && !isPharmacy && (
           <>
             {/* Always-visible Overview link */}
             <NavGroup label={isPlanning ? 'PLANNING' : isPregnancy ? 'PREGNANCY' : 'TRACK'} collapsed={collapsed}>
               <NavItem href={`/babies/${currentBabyId}`} icon={isPregnancy ? HeartPulse : Clock}
                 label={t('nav.overview')} active={pathname === `/babies/${currentBabyId}`}
                 collapsed={collapsed} tint={isPregnancy ? 'lavender' : 'brand'} />
-              {/* Planning-only: planner is the only meaningful destination
-                  before there's a pregnancy or born baby to track. */}
+              {/* Planning-only: planner sits next to the overview link. */}
               {isPlanning && (
                 <NavItem href={`/babies/${currentBabyId}/planner`} icon={Heart}
                   label="Planner" active={pathname?.startsWith(`/babies/${currentBabyId}/planner`) ?? false}
@@ -273,9 +290,31 @@ export function Sidebar() {
               )}
             </NavGroup>
 
+            {/* ─────── Planning mode: pre-pregnancy care nav ─────── */}
+            {/* Mom is trying to conceive. Show meds (folic acid, prenatal
+                vitamins), labs (AMH, hormone panels), scans (HSG, follicle
+                tracking), files, doctors. Skips pregnancy-specific stuff
+                like kicks / fetal symptoms. */}
+            {isPlanning && canViewLogs && (
+              <>
+                <NavCategory id="plan_care" label={t('nav.cat_care')} icon={Stethoscope} collapsed={collapsed}
+                  open={isCatOpen('plan_care')} onToggle={() => toggleCat('plan_care')}>
+                  <NavItem href={`/babies/${currentBabyId}/labs`}                  icon={FlaskConical} label={t('nav.labs_scans')} active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
+                  <NavItem href={`/babies/${currentBabyId}/medications`}           icon={Pill}        label={t('nav.medications')} active={pathname === `/babies/${currentBabyId}/medications` || (pathname?.startsWith(`/babies/${currentBabyId}/medications/`) && !pathname.startsWith(`/babies/${currentBabyId}/medications/stock`))} collapsed={collapsed} tint="mint" />
+                  <NavItem href={`/babies/${currentBabyId}/medications/stock`}     icon={Pill}        label="Medication stock" active={pathname?.startsWith(`/babies/${currentBabyId}/medications/stock`) ?? false} collapsed={collapsed} tint="mint" />
+                  {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`}  icon={CalendarClock} label={t('nav.appointments')} active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
+                </NavCategory>
+
+                <NavCategory id="plan_records" label={t('nav.cat_records')} icon={FileText} collapsed={collapsed}
+                  open={isCatOpen('plan_records')} onToggle={() => toggleCat('plan_records')}>
+                  <NavItem href={`/babies/${currentBabyId}/ocr`}             icon={FileText}  label={t('nav.files')} active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />
+                  <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label={t('nav.medical_profile')} active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />
+                  <NavItem href={`/babies/${currentBabyId}/shopping`}        icon={ShoppingCart} label={t('nav.shopping')} active={pathname?.startsWith(`/babies/${currentBabyId}/shopping`) ?? false} collapsed={collapsed} tint="mint" />
+                </NavCategory>
+              </>
+            )}
+
             {/* ─────── Pregnancy mode: prenatal categories ─────── */}
-            {/* Skipped entirely in planning mode — there's nothing to track
-                yet, only the cycle calendar above. */}
             {isPregnancy && !isPlanning && canViewLogs && (
               <>
                 <NavCategory id="preg_visits" label={t('nav.cat_care')} icon={Stethoscope} collapsed={collapsed}
@@ -283,7 +322,8 @@ export function Sidebar() {
                   <NavItem href={`/babies/${currentBabyId}/prenatal/visits`}       icon={Stethoscope} label="Prenatal visits" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/visits`) ?? false} collapsed={collapsed} tint="lavender" />
                   <NavItem href={`/babies/${currentBabyId}/prenatal/ultrasounds`}  icon={ScanLine}    label="Ultrasounds"     active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/ultrasounds`) ?? false} collapsed={collapsed} tint="brand" />
                   <NavItem href={`/babies/${currentBabyId}/labs`}                  icon={FlaskConical} label={t('nav.labs_scans')} active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
-                  <NavItem href={`/babies/${currentBabyId}/medications`}           icon={Pill}        label={t('nav.medications')} active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="mint" />
+                  <NavItem href={`/babies/${currentBabyId}/medications`}           icon={Pill}        label={t('nav.medications')} active={pathname === `/babies/${currentBabyId}/medications` || (pathname?.startsWith(`/babies/${currentBabyId}/medications/`) && !pathname.startsWith(`/babies/${currentBabyId}/medications/stock`))} collapsed={collapsed} tint="mint" />
+                  <NavItem href={`/babies/${currentBabyId}/medications/stock`}     icon={Pill}        label="Medication stock" active={pathname?.startsWith(`/babies/${currentBabyId}/medications/stock`) ?? false} collapsed={collapsed} tint="mint" />
                   {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`}  icon={CalendarClock} label={t('nav.appointments')} active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
                 </NavCategory>
 
@@ -325,7 +365,7 @@ export function Sidebar() {
 
                 <NavCategory id="baby_care" label={t('nav.cat_care')} icon={Stethoscope} collapsed={collapsed}
                   open={isCatOpen('baby_care')} onToggle={() => toggleCat('baby_care')}>
-                  <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}        label={t('nav.medications')}  active={pathname?.startsWith(`/babies/${currentBabyId}/medications`) ?? false} collapsed={collapsed} tint="lavender" />
+                  <NavItem href={`/babies/${currentBabyId}/medications`}   icon={Pill}        label={t('nav.medications')}  active={pathname === `/babies/${currentBabyId}/medications` || (pathname?.startsWith(`/babies/${currentBabyId}/medications/`) && !pathname.startsWith(`/babies/${currentBabyId}/medications/stock`))} collapsed={collapsed} tint="lavender" />
                   {/* Stock is a separate destination from the dose log so the
                       parent can refill / audit without scrolling past doses. */}
                   <NavItem href={`/babies/${currentBabyId}/medications/stock`} icon={Pill}    label="Medication stock"   active={pathname?.startsWith(`/babies/${currentBabyId}/medications/stock`) ?? false} collapsed={collapsed} tint="mint" />

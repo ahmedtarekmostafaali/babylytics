@@ -1,7 +1,7 @@
 /**
  * Role-based permissions for Babylytics.
  *
- * Five effective levels (caregiver is an alias of nurse, editor is a legacy
+ * Six effective levels (caregiver is an alias of nurse, editor is a legacy
  * alias of parent):
  *
  *   owner    → everything
@@ -9,13 +9,14 @@
  *   doctor   → read logs, add comments, export reports
  *   nurse    → read logs only
  *   viewer   → overview only (no logs, no reports)
+ *   pharmacy → medication stock view only (added in 046 batch)
  *
  * All UI gates go through these helpers. Server-side RLS enforces the same
  * rules so even a misbehaving client can't bypass them.
  */
 
 export type Role =
-  | 'owner' | 'parent' | 'doctor' | 'nurse' | 'viewer'
+  | 'owner' | 'parent' | 'doctor' | 'nurse' | 'viewer' | 'pharmacy'
   | 'editor'    // legacy alias of parent
   | 'caregiver' // legacy alias of nurse
   | null
@@ -52,8 +53,15 @@ export function canUploadFiles(role: Role): boolean {
 
 /** Can the user read the log pages at all (beyond the overview)? */
 export function canViewLogs(role: Role): boolean {
-  // Viewers are restricted to the overview. Every other role may read logs.
-  return r(role) !== '' && r(role) !== 'viewer';
+  // Viewers are restricted to the overview. Pharmacies are restricted to
+  // medication stock only — they don't see feedings/stool/sleep.
+  const k = r(role);
+  return k !== '' && k !== 'viewer' && k !== 'pharmacy';
+}
+
+/** Pharmacy-only flag — used to redirect them straight to /medications/stock. */
+export function isPharmacy(role: Role): boolean {
+  return r(role) === 'pharmacy';
 }
 
 /** Does the user have any access to this baby at all? */
@@ -72,5 +80,6 @@ export function roleLabel(role: Role): string {
     nurse:  'Nurse',
     caregiver: 'Nurse',
     viewer: 'Viewer',
+    pharmacy: 'Pharmacy',
   }[k] ?? 'Unknown';
 }

@@ -4,34 +4,39 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
-import { Mail, Shield, Stethoscope, Heart, Eye, Check, Link2, Copy, Share2 } from 'lucide-react';
+import { Mail, Shield, Stethoscope, Heart, Eye, Check, Link2, Copy, Share2, Pill } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/client';
 
-export type CaregiverRole = 'parent' | 'doctor' | 'nurse' | 'viewer';
+// 046 batch added 'pharmacy' as a caregiver role with read-only access to
+// medication stock + dose history (RLS enforced server-side).
+export type CaregiverRole = 'parent' | 'doctor' | 'nurse' | 'viewer' | 'pharmacy';
 type Mode = 'email' | 'link';
 
 const ROLE_META: { value: CaregiverRole; icon: React.ComponentType<{ className?: string }>; tint: string }[] = [
-  { value: 'parent', icon: Shield,      tint: 'bg-brand-100 text-brand-700'     },
-  { value: 'doctor', icon: Stethoscope, tint: 'bg-lavender-100 text-lavender-700' },
-  { value: 'nurse',  icon: Heart,       tint: 'bg-coral-100 text-coral-700'     },
-  { value: 'viewer', icon: Eye,         tint: 'bg-slate-100 text-ink'           },
+  { value: 'parent',   icon: Shield,      tint: 'bg-brand-100 text-brand-700'     },
+  { value: 'doctor',   icon: Stethoscope, tint: 'bg-lavender-100 text-lavender-700' },
+  { value: 'nurse',    icon: Heart,       tint: 'bg-coral-100 text-coral-700'     },
+  { value: 'pharmacy', icon: Pill,        tint: 'bg-mint-100 text-mint-700'       },
+  { value: 'viewer',   icon: Eye,         tint: 'bg-slate-100 text-ink'           },
 ];
 
 export function InviteForm({ babyId }: { babyId: string }) {
   const router = useRouter();
   const t = useT();
   const ROLE_LABEL: Record<CaregiverRole, string> = {
-    parent: t('forms.invite_role_parent'),
-    doctor: t('forms.invite_role_doctor'),
-    nurse:  t('forms.invite_role_nurse'),
-    viewer: t('forms.invite_role_viewer'),
+    parent:   t('forms.invite_role_parent'),
+    doctor:   t('forms.invite_role_doctor'),
+    nurse:    t('forms.invite_role_nurse'),
+    viewer:   t('forms.invite_role_viewer'),
+    pharmacy: 'Pharmacy',
   };
   const ROLE_DESC: Record<CaregiverRole, string> = {
-    parent: t('forms.invite_role_parent_desc'),
-    doctor: t('forms.invite_role_doctor_desc'),
-    nurse:  t('forms.invite_role_nurse_desc'),
-    viewer: t('forms.invite_role_viewer_desc'),
+    parent:   t('forms.invite_role_parent_desc'),
+    doctor:   t('forms.invite_role_doctor_desc'),
+    nurse:    t('forms.invite_role_nurse_desc'),
+    viewer:   t('forms.invite_role_viewer_desc'),
+    pharmacy: 'Sees medication stock + dose history only. Useful for refill coordination.',
   };
   const [mode, setMode]   = useState<Mode>('email');
   const [email, setEmail] = useState('');
