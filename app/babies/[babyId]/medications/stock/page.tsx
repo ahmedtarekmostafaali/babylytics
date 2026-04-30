@@ -5,6 +5,7 @@ import { PageShell, PageHeader } from '@/components/PageHeader';
 import { assertRole } from '@/lib/role-guard';
 import { fmtDate, fmtDateTime, fmtRelative } from '@/lib/dates';
 import { MedicationStockActions } from '@/components/MedicationStockActions';
+import { AddMedToShopping } from '@/components/AddMedToShopping';
 import { Pill, AlertTriangle, ArrowDown, ArrowUp, Minus, Plus, Calendar, ShieldCheck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -156,11 +157,19 @@ export default async function MedicationStockPage({ params }: { params: { babyId
                   </div>
                   <div>
                     {perms.canWriteLogs && (
-                      <MedicationStockActions
-                        medId={s.medication_id}
-                        current={s.current_stock}
-                        threshold={s.low_stock_threshold}
-                      />
+                      <>
+                        <MedicationStockActions
+                          medId={s.medication_id}
+                          current={s.current_stock}
+                          threshold={s.low_stock_threshold}
+                        />
+                        {/* Highlight the shopping shortcut when stock is low —
+                            that's when a refill is most urgent. */}
+                        <div className={`mt-2 flex justify-end ${low ? '' : 'opacity-70'}`}>
+                          <AddMedToShopping medId={s.medication_id}
+                            label={low ? 'Add refill to shopping' : 'Add to shopping'} />
+                        </div>
+                      </>
                     )}
                   </div>
                 </li>

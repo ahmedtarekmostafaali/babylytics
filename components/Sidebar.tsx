@@ -272,6 +272,11 @@ export function Sidebar() {
             <NavItem href={`/babies/${currentBabyId}/medications/stock`} icon={Pill}
               label="Stock" active={pathname?.startsWith(`/babies/${currentBabyId}/medications/stock`) ?? false}
               collapsed={collapsed} tint="mint" />
+            {/* Shopping (medication scope only) — pharmacy can see refills
+                queued by the parent. RLS scopes the rows automatically. */}
+            <NavItem href={`/babies/${currentBabyId}/shopping?scope=medication`} icon={ShoppingCart}
+              label="Refill list" active={pathname?.startsWith(`/babies/${currentBabyId}/shopping`) ?? false}
+              collapsed={collapsed} tint="peach" />
           </NavGroup>
         )}
 

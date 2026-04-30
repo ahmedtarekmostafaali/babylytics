@@ -6,6 +6,7 @@ import { LogRangeTabs } from '@/components/LogRangeTabs';
 import { LogTypeFilter } from '@/components/LogTypeFilter';
 import { LogRowDelete } from '@/components/LogRowDelete';
 import { BulkDelete } from '@/components/BulkDelete';
+import { AddMedToShopping } from '@/components/AddMedToShopping';
 import { Comments } from '@/components/Comments';
 import { assertRole } from '@/lib/role-guard';
 import { loadUserPrefs } from '@/lib/user-prefs';
@@ -223,12 +224,18 @@ export default async function MedicationsLog({
                       </div>
                     </div>
                   </Link>
-                  <Link href={`/babies/${params.babyId}/medications/log?m=${m.id}`}
-                    className={`rounded-full text-white text-[11px] px-2.5 py-1 whitespace-nowrap font-semibold ${
-                      overdue ? 'bg-coral-600 hover:bg-coral-700' : 'bg-lavender-500 hover:bg-lavender-600'
-                    }`}>
-                    {t('trackers.meds_log_btn')}
-                  </Link>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Quick-action: queue this med for the next pharmacy run.
+                        Visible to anyone with write access — RLS does the
+                        last-mile check on save. */}
+                    {perms.canWriteLogs && <AddMedToShopping medId={m.id} label="Refill" />}
+                    <Link href={`/babies/${params.babyId}/medications/log?m=${m.id}`}
+                      className={`rounded-full text-white text-[11px] px-2.5 py-1 whitespace-nowrap font-semibold ${
+                        overdue ? 'bg-coral-600 hover:bg-coral-700' : 'bg-lavender-500 hover:bg-lavender-600'
+                      }`}>
+                      {t('trackers.meds_log_btn')}
+                    </Link>
+                  </div>
                 </div>
               );
             })}

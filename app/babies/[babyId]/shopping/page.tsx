@@ -4,7 +4,7 @@ import { assertRole } from '@/lib/role-guard';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { Comments } from '@/components/Comments';
 import { ShoppingItemRow } from '@/components/ShoppingItemRow';
-import { ShoppingCart, Plus, Baby, Heart } from 'lucide-react';
+import { ShoppingCart, Plus, Baby, Heart, Pill } from 'lucide-react';
 import { effectiveStage, type LifecycleStage } from '@/lib/lifecycle';
 
 export const dynamic = 'force-dynamic';
@@ -22,19 +22,26 @@ type Row = {
   created_at: string;
 };
 
-const SCOPE_LABEL: Record<'baby'|'pregnancy', string> = {
+// 047 batch added 'medication' scope so pharmacy caregivers can coordinate
+// refills without seeing the parent's other shopping plans.
+type Scope = 'baby' | 'pregnancy' | 'medication';
+const SCOPE_LABEL: Record<Scope, string> = {
   baby: 'Baby essentials',
   pregnancy: 'Pregnancy & mom',
+  medication: 'Medication refills',
 };
 
 export default async function ShoppingList({
   params, searchParams,
 }: {
   params: { babyId: string };
-  searchParams: { scope?: 'baby'|'pregnancy' };
+  searchParams: { scope?: Scope };
 }) {
   const supabase = createClient();
-  const perms = await assertRole(params.babyId, { requireLogs: true });
+  // Removed requireLogs so pharmacy caregivers (who fail canViewLogs but
+  // need to see the medication-scoped shopping list) aren't bounced.
+  const perms = await assertRole(params.babyId);
+  const isPharmacy = perms.role === 'pharmacy';
 
   // Pull baby stage so we can default to the most relevant tab.
   const { data: baby } = await supabase.from('babies')
@@ -43,7 +50,12 @@ export default async function ShoppingList({
   const stage = baby ? effectiveStage(baby.lifecycle_stage as LifecycleStage | null, baby.dob as string | null) : null;
   const isPregnancy = stage === 'pregnancy';
 
-  const scope = searchParams.scope ?? (isPregnancy ? 'pregnancy' : 'baby');
+  // Pharmacy users are locked to the medication scope — anything else
+  // would 0-row anyway via RLS, but forcing the URL keeps the empty-state
+  // copy honest.
+  const scope: Scope = isPharmacy
+    ? 'medication'
+    : (searchParams.scope ?? (isPregnancy ? 'pregnancy' : 'baby'));
 
   const { data: rowsData } = await supabase.from('shopping_list_items')
     .select('id,name,category,quantity,priority,notes,is_done,done_at,created_at')
@@ -76,12 +88,18 @@ export default async function ShoppingList({
           )
         } />
 
-      {/* Scope tabs */}
-      <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 p-1 self-start">
-        <ScopeTab active={scope === 'baby'} href={`/babies/${params.babyId}/shopping?scope=baby`}
-          icon={Baby} label={SCOPE_LABEL.baby} />
-        <ScopeTab active={scope === 'pregnancy'} href={`/babies/${params.babyId}/shopping?scope=pregnancy`}
-          icon={Heart} label={SCOPE_LABEL.pregnancy} />
+      {/* Scope tabs — pharmacy sees only the medication tab. */}
+      <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 p-1 self-start flex-wrap">
+        {!isPharmacy && (
+          <>
+            <ScopeTab active={scope === 'baby'} href={`/babies/${params.babyId}/shopping?scope=baby`}
+              icon={Baby} label={SCOPE_LABEL.baby} />
+            <ScopeTab active={scope === 'pregnancy'} href={`/babies/${params.babyId}/shopping?scope=pregnancy`}
+              icon={Heart} label={SCOPE_LABEL.pregnancy} />
+          </>
+        )}
+        <ScopeTab active={scope === 'medication'} href={`/babies/${params.babyId}/shopping?scope=medication`}
+          icon={Pill} label={SCOPE_LABEL.medication} />
       </div>
 
       {rows.length === 0 ? (
