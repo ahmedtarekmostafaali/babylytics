@@ -18,7 +18,9 @@ type Table =
   | 'prenatal_visits' | 'ultrasounds' | 'fetal_movements' | 'maternal_symptoms'
   | 'teething_logs' | 'speaking_logs' | 'developmental_milestones'
   | 'shopping_list_items'
-  | 'vital_signs_logs' | 'blood_sugar_logs';
+  | 'vital_signs_logs' | 'blood_sugar_logs'
+  // 044 batch
+  | 'vomiting_logs' | 'menstrual_cycles';
 
 /**
  * Bulk-delete dialog for any log table. Two modes:
