@@ -24,7 +24,7 @@ export default async function EditShoppingItem({
     .select('*').eq('id', params.id).is('deleted_at', null).single();
   if (!data) notFound();
 
-  const scope: 'baby'|'pregnancy' = (data.scope as 'baby'|'pregnancy') ?? 'baby';
+  const scope: 'baby'|'pregnancy'|'medication' = (data.scope as 'baby'|'pregnancy'|'medication') ?? 'baby';
 
   return (
     <PageShell max="3xl">

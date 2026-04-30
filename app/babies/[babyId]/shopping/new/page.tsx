@@ -10,24 +10,31 @@ export default async function NewShoppingItem({
   params, searchParams,
 }: {
   params: { babyId: string };
-  searchParams: { scope?: 'baby'|'pregnancy' };
+  searchParams: { scope?: 'baby'|'pregnancy'|'medication' };
 }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: m } = await supabase.from('baby_users')
     .select('role').eq('baby_id', params.babyId).eq('user_id', user?.id ?? '').maybeSingle();
   const role = m?.role as string | undefined;
-  if (!role || role === 'viewer' || role === 'doctor' || role === 'nurse') {
-    redirect(`/babies/${params.babyId}/shopping`);
+  // Pharmacy is read-only on shopping — bounce them back to the list.
+  if (!role || role === 'viewer' || role === 'doctor' || role === 'nurse' || role === 'pharmacy') {
+    redirect(`/babies/${params.babyId}/shopping${role === 'pharmacy' ? '?scope=medication' : ''}`);
   }
 
-  const scope: 'baby'|'pregnancy' = searchParams.scope === 'pregnancy' ? 'pregnancy' : 'baby';
+  const scope: 'baby'|'pregnancy'|'medication' =
+    searchParams.scope === 'pregnancy' ? 'pregnancy'
+    : searchParams.scope === 'medication' ? 'medication'
+    : 'baby';
+
+  const title = scope === 'pregnancy' ? 'Pregnancy & mom item'
+    : scope === 'medication' ? 'Medication / refill item'
+    : 'Baby item';
 
   return (
     <PageShell max="3xl">
       <PageHeader backHref={`/babies/${params.babyId}/shopping?scope=${scope}`} backLabel="Shopping list"
-        eyebrow="Add" eyebrowTint="mint"
-        title={scope === 'pregnancy' ? 'Pregnancy & mom item' : 'Baby item'} />
+        eyebrow="Add" eyebrowTint="mint" title={title} />
       <Card><CardContent className="py-6">
         <ShoppingItemForm babyId={params.babyId} scope={scope}
           initial={{ scope, name: '', priority: 'normal' }} />

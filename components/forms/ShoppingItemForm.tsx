@@ -12,7 +12,8 @@ import { useT } from '@/lib/i18n/client';
 
 export type ShoppingItemValue = {
   id?: string;
-  scope: 'baby' | 'pregnancy';
+  // 047 batch: 'medication' is the pharmacy-shared scope.
+  scope: 'baby' | 'pregnancy' | 'medication';
   name: string;
   category?: string | null;
   quantity?: string | null;
@@ -21,8 +22,9 @@ export type ShoppingItemValue = {
   is_done?: boolean;
 };
 
-const BABY_CATEGORIES      = ['Diapers', 'Feeding', 'Clothing', 'Bath', 'Health', 'Toys', 'Gear', 'Other'];
-const PREGNANCY_CATEGORIES = ['Hospital bag', 'Vitamins', 'Maternity', 'Nursery', 'Postpartum', 'Mom self-care', 'Other'];
+const BABY_CATEGORIES       = ['Diapers', 'Feeding', 'Clothing', 'Bath', 'Health', 'Toys', 'Gear', 'Other'];
+const PREGNANCY_CATEGORIES  = ['Hospital bag', 'Vitamins', 'Maternity', 'Nursery', 'Postpartum', 'Mom self-care', 'Other'];
+const MEDICATION_CATEGORIES = ['Medication', 'Supplement', 'OTC', 'Other'];
 
 const PRIORITIES: { value: ShoppingItemValue['priority']; label: string; tint: 'mint'|'peach'|'coral' }[] = [
   { value: 'low',    label: 'Low',    tint: 'mint'  },
@@ -34,7 +36,7 @@ export function ShoppingItemForm({
   babyId, scope, initial,
 }: {
   babyId: string;
-  scope: 'baby' | 'pregnancy';
+  scope: 'baby' | 'pregnancy' | 'medication';
   initial?: ShoppingItemValue;
 }) {
   const router = useRouter();
@@ -48,7 +50,11 @@ export function ShoppingItemForm({
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const categoryOptions = scope === 'pregnancy' ? PREGNANCY_CATEGORIES : BABY_CATEGORIES;
+  const categoryOptions = scope === 'pregnancy'
+    ? PREGNANCY_CATEGORIES
+    : scope === 'medication'
+      ? MEDICATION_CATEGORIES
+      : BABY_CATEGORIES;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

@@ -35,7 +35,8 @@ export function ShoppingItemRow({
 }: {
   item: Row;
   babyId: string;
-  scope: 'baby'|'pregnancy';
+  // 047 batch added 'medication' scope for the pharmacy-shared refill list.
+  scope: 'baby'|'pregnancy'|'medication';
   canWrite: boolean;
 }) {
   const router = useRouter();
