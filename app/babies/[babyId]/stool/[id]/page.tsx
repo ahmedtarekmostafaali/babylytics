@@ -13,7 +13,7 @@ export default async function EditStool({ params }: { params: { babyId: string; 
   await assertRole(params.babyId, { requireWrite: true });
   const { data } = await supabase
     .from('stool_logs')
-    .select('id,baby_id,stool_time,quantity_category,quantity_ml,color,consistency,has_diaper_rash,notes')
+    .select('id,baby_id,stool_time,quantity_category,quantity_ml,color,consistency,has_diaper_rash,notes,attachment_path')
     .eq('id', params.id).is('deleted_at', null).single();
   if (!data) notFound();
   return (
@@ -27,6 +27,7 @@ export default async function EditStool({ params }: { params: { babyId: string; 
           quantity_category: data.quantity_category as 'medium',
           quantity_ml: data.quantity_ml, color: data.color, consistency: data.consistency,
           has_diaper_rash: data.has_diaper_rash, notes: data.notes,
+          attachment_path: data.attachment_path,
         }} />
       </CardContent></Card>
       <Comments babyId={params.babyId} target="stool_logs" targetId={data.id} />

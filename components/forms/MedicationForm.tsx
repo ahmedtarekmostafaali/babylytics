@@ -29,7 +29,28 @@ export type MedicationFormValue = {
   doctor_id?: string | null;
   prescribed_by?: string | null;
   notes?: string | null;
+  // 045 batch — structured dosage amount + unit
+  dosage_amount?: number | null;
+  dosage_unit?: string | null;
 };
+
+// Pediatric dosage units. "spoon_5ml" is the standard pediatric teaspoon
+// supplied with most syrups in Egypt; "spoon_15ml" is a tablespoon.
+const DOSAGE_UNITS: { key: string; label: string }[] = [
+  { key: 'drop',         label: 'Drop' },
+  { key: 'tab',          label: 'Tablet' },
+  { key: 'capsule',      label: 'Capsule' },
+  { key: 'spoon_5ml',    label: 'Teaspoon (5 ml)' },
+  { key: 'spoon_15ml',   label: 'Tablespoon (15 ml)' },
+  { key: 'ml',           label: 'ml' },
+  { key: 'mg',           label: 'mg' },
+  { key: 'puff',         label: 'Puff (inhaler)' },
+  { key: 'sachet',       label: 'Sachet' },
+  { key: 'application',  label: 'Application' },
+  { key: 'suppository',  label: 'Suppository' },
+  { key: 'iu',           label: 'IU' },
+  { key: 'other',        label: 'Other…' },
+];
 
 export type DoctorOption = {
   id: string;
@@ -58,7 +79,17 @@ export function MedicationForm({
   const t = useT();
   const [name, setName]     = useState(initial?.name ?? '');
   const [dosage, setDosage] = useState(initial?.dosage ?? '');
+  // Structured amount + unit (added in 045 batch). Falls back to free-text
+  // `dosage` for legacy rows. We let parents pick from a fixed list of
+  // pediatric units; "Other" reveals a free-text input.
+  const [dosageAmount, setDosageAmount] = useState<string>(
+    initial?.dosage_amount?.toString() ?? '');
+  const [dosageUnit,   setDosageUnit]   = useState<string>(initial?.dosage_unit ?? '');
+  const [dosageUnitOther, setDosageUnitOther] = useState<string>('');
   const [route, setRoute]   = useState<Route>(initial?.route ?? 'oral');
+  // When route === 'other' we prompt for a free-text label and merge it
+  // into the notes field on save (we don't have a separate column for it).
+  const [routeOther, setRouteOther] = useState<string>('');
   const initialFreq = initial?.frequency_hours;
   const matchedPreset = FREQ_PRESETS.find(p => p.hours === (initialFreq ?? null));
   const [freqPreset, setFreqPreset] = useState<string | 'custom'>(matchedPreset?.key ?? (initialFreq == null ? 'prn' : 'custom'));
@@ -102,22 +133,47 @@ export function MedicationForm({
       prescribedBy = doc?.name ?? null;
     }
 
+    // Resolve the dosage unit: 'other' means we wrote a free-text label
+    // into dosageUnitOther — persist that into the legacy `dosage` text
+    // field so existing UIs that show free-text can still render it.
+    let resolvedUnit: string | null = dosageUnit || null;
+    let resolvedDosageText: string | null = dosage || null;
+    if (dosageUnit === 'other' && dosageUnitOther.trim()) {
+      resolvedUnit = 'other';
+      resolvedDosageText = dosageAmount
+        ? `${dosageAmount} ${dosageUnitOther.trim()}`
+        : dosageUnitOther.trim();
+    }
+
+    // Surface a custom route specification by appending it to notes —
+    // we don't add a new column for it.
+    const finalNotes = (route === 'other' && routeOther.trim())
+      ? [`Route: ${routeOther.trim()}`, notes].filter(Boolean).join('\n')
+      : (notes || null);
+
     const parsed = MedicationSchema.safeParse({
-      name, dosage: dosage || null, route,
+      name, dosage: resolvedDosageText, route,
       frequency_hours: resolvedFreqHours(),
       total_doses: doses || null,
       starts_at: localInputToIso(starts) ?? '',
       ends_at: localInputToIso(ends),
       doctor_id: doctorId,
       prescribed_by: prescribedBy,
-      notes: notes || null,
+      notes: finalNotes || null,
     });
     if (!parsed.success) { setErr(parsed.error.errors[0]?.message ?? 'invalid'); return; }
     setSaving(true);
     const supabase = createClient();
+    // Tack on the structured dosage columns next to whatever the schema
+    // returned. The validator doesn't know about them yet but Supabase
+    // accepts unknown keys as direct column writes.
+    const extras = {
+      dosage_amount: dosageAmount ? Number(dosageAmount) : null,
+      dosage_unit: resolvedUnit,
+    };
     const op = initial?.id
-      ? supabase.from('medications').update({ ...parsed.data }).eq('id', initial.id)
-      : supabase.from('medications').insert({ baby_id: babyId, ...parsed.data, created_by: (await supabase.auth.getUser()).data.user?.id });
+      ? supabase.from('medications').update({ ...parsed.data, ...extras }).eq('id', initial.id)
+      : supabase.from('medications').insert({ baby_id: babyId, ...parsed.data, ...extras, created_by: (await supabase.auth.getUser()).data.user?.id });
     const { error } = await op;
     setSaving(false);
     if (error) { setErr(error.message); return; }
@@ -150,10 +206,45 @@ export function MedicationForm({
         </div>
       </Section>
 
-      {/* 2. Dosage */}
+      {/* 2. Dosage — structured amount + unit (free-text 'dosage' below for
+            anything that doesn't fit, e.g. "1 tab AM, ½ tab PM"). */}
       <Section n={2} title={t('forms.med_dosage')}>
-        <Input value={dosage ?? ''} onChange={e => setDosage(e.target.value)}
-          className="h-12 text-base" />
+        <div className="grid grid-cols-[120px_1fr] gap-2 items-end">
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold block mb-1">Amount</label>
+            <input type="number" min={0} step="0.001" value={dosageAmount}
+              onChange={e => setDosageAmount(e.target.value)}
+              placeholder="e.g. 2.5"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-3 text-base font-semibold focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30" />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold block mb-1">Unit</label>
+            <select value={dosageUnit}
+              onChange={e => setDosageUnit(e.target.value)}
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-3 text-base focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30">
+              <option value="">— pick one —</option>
+              {DOSAGE_UNITS.map(u => <option key={u.key} value={u.key}>{u.label}</option>)}
+            </select>
+          </div>
+        </div>
+        {dosageUnit === 'other' && (
+          <div className="mt-2">
+            <label className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold block mb-1">Specify the unit</label>
+            <Input value={dosageUnitOther} onChange={e => setDosageUnitOther(e.target.value)}
+              placeholder="e.g. patch, gum, lozenge"
+              className="h-12 text-base" />
+          </div>
+        )}
+        <details className="mt-3">
+          <summary className="text-[11px] text-ink-muted cursor-pointer hover:text-ink">
+            Need free-form text instead? (e.g. complex sliding-scale dose)
+          </summary>
+          <div className="mt-2">
+            <Input value={dosage ?? ''} onChange={e => setDosage(e.target.value)}
+              placeholder="Anything that doesn't fit the dropdown"
+              className="h-12 text-base" />
+          </div>
+        </details>
       </Section>
 
       {/* 3. Route */}
@@ -167,6 +258,14 @@ export function MedicationForm({
           <TypeTile icon={Syringe}    label={t('forms.med_route_injection')} tint="lavender" active={route === 'injection'} onClick={() => setRoute('injection')} sub={t('forms.med_route_injection_sub')} />
           <TypeTile icon={Circle}     label={t('forms.med_route_other')}     tint="mint"     active={route === 'other'}     onClick={() => setRoute('other')} sub="" />
         </div>
+        {route === 'other' && (
+          <div className="mt-3">
+            <label className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold block mb-1">Specify the route</label>
+            <Input value={routeOther} onChange={e => setRouteOther(e.target.value)}
+              placeholder="e.g. transdermal patch, ear drops, eye drops"
+              className="h-12 text-base" />
+          </div>
+        )}
       </Section>
 
       {/* 4. Frequency */}

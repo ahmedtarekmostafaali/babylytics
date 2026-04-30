@@ -274,7 +274,9 @@ export function Sidebar() {
             </NavGroup>
 
             {/* ─────── Pregnancy mode: prenatal categories ─────── */}
-            {isPregnancy && canViewLogs && (
+            {/* Skipped entirely in planning mode — there's nothing to track
+                yet, only the cycle calendar above. */}
+            {isPregnancy && !isPlanning && canViewLogs && (
               <>
                 <NavCategory id="preg_visits" label={t('nav.cat_care')} icon={Stethoscope} collapsed={collapsed}
                   open={isCatOpen('preg_visits')} onToggle={() => toggleCat('preg_visits')}>
@@ -305,7 +307,7 @@ export function Sidebar() {
             )}
 
             {/* ─────── Baby mode: categorised trackers ─────── */}
-            {!isPregnancy && canViewLogs && (
+            {!isPregnancy && !isPlanning && canViewLogs && (
               <>
                 <NavCategory id="baby_vital" label={t('nav.cat_vital_signs')} icon={HeartPulse} collapsed={collapsed}
                   open={isCatOpen('baby_vital')} onToggle={() => toggleCat('baby_vital')}>
@@ -350,7 +352,9 @@ export function Sidebar() {
               </>
             )}
 
-            {isParent && (
+            {/* Hide the "Family" category in planning mode — settings page
+                is reachable below as a single nav item. */}
+            {isParent && !isPlanning && (
               <NavCategory id="settings_family" label={t('nav.cat_family')} icon={Users} collapsed={collapsed}
                 open={isCatOpen('settings_family')} onToggle={() => toggleCat('settings_family')}>
                 {isPregnancy && (
@@ -363,8 +367,9 @@ export function Sidebar() {
               </NavCategory>
             )}
 
-            {/* Preferences is always reachable — even for non-parents on a baby. */}
-            {!isParent && (
+            {/* Preferences is always reachable — even for non-parents on a baby,
+                AND for planning-stage parents (who skip the Family category). */}
+            {(!isParent || isPlanning) && (
               <NavGroup label="" collapsed={collapsed}>
                 <NavItem href="/preferences" icon={Settings} label={t('nav.preferences')}
                   active={pathname?.startsWith('/preferences') ?? false} collapsed={collapsed} tint="brand" />

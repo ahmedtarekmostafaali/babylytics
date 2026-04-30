@@ -551,6 +551,15 @@ begin
   end if;
 end $$;
 
+-- Migration 022 narrowed the gender check to ('male','female'), but planning
+-- rows have no baby yet so gender is 'unspecified'. Re-widen the check to
+-- include the original 'unspecified' option (also restores 'other' for
+-- non-binary parents). Existing 'male'/'female' rows are unaffected.
+alter table public.babies drop constraint if exists babies_gender_check;
+alter table public.babies
+  add constraint babies_gender_check
+  check (gender in ('male','female','other','unspecified'));
+
 commit;
 
 -- Publish a changelog entry so users see what changed.

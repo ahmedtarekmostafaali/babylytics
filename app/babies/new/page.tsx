@@ -142,6 +142,9 @@ function PregnancyForm({ onBack, router }: { onBack: () => void; router: ReturnT
   const [edd, setEdd] = useState('');
   const [lmp, setLmp] = useState('');
   const [conception, setConception] = useState<'natural'|'ivf'|'iui'|'icsi'|'other'|''>('');
+  // Free-text label when conception='other' — gets appended to baby name
+  // (we don't have a dedicated column for it).
+  const [conceptionOther, setConceptionOther] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -204,6 +207,12 @@ function PregnancyForm({ onBack, router }: { onBack: () => void; router: ReturnT
               <option value="iui">{t('forms.pg_conception_iui')}</option>
               <option value="other">{t('forms.pg_conception_other')}</option>
             </Select>
+            {conception === 'other' && (
+              <div className="mt-2">
+                <Input value={conceptionOther} onChange={e => setConceptionOther(e.target.value)}
+                  placeholder="Tell us briefly (e.g. donor egg, surrogacy, frozen embryo transfer)" />
+              </div>
+            )}
           </div>
           {err && <p className="text-sm text-coral-600">{err}</p>}
           <div className="flex items-center gap-2 pt-2">

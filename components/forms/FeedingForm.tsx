@@ -104,6 +104,32 @@ export function FeedingForm({ babyId, initial }: { babyId: string; initial?: Fee
   // Formula brand (Similac Advance, Aptamil 1, etc.) — surfaced on bottle/mixed.
   const [formulaName, setFormulaName] = useState<string>(initial?.formula_name ?? '');
 
+  // On mount (new entry only), auto-fill the formula brand from the last
+  // bottle/mixed feeding. Saves a parent retyping "Similac Advance" every
+  // 3 hours. We don't override an explicit edit-mode value or anything the
+  // parent has already typed.
+  useEffect(() => {
+    if (initial?.id) return;            // editing — leave alone
+    if (initial?.formula_name) return;  // explicit prefill
+    if (formulaName) return;            // user already typed something
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data } = await supabase.from('feedings')
+        .select('formula_name')
+        .eq('baby_id', babyId).is('deleted_at', null)
+        .in('milk_type', ['formula', 'mixed'])
+        .not('formula_name', 'is', null)
+        .order('feeding_time', { ascending: false })
+        .limit(1).maybeSingle();
+      if (!cancelled && data?.formula_name) setFormulaName(data.formula_name as string);
+    })();
+    return () => { cancelled = true; };
+    // Only run once on mount — re-running on every state change would
+    // overwrite the parent's keystrokes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Solid food name + symptom chips
   const [foodName, setFoodName] = useState<string>(initial?.food_name ?? '');
   const [foodSymptoms, setFoodSymptoms] = useState<string[]>(initial?.food_symptoms ?? []);
