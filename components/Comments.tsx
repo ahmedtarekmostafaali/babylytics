@@ -8,7 +8,9 @@ import { useT } from '@/lib/i18n/client';
 
 type TargetTable =
   | 'feedings' | 'stool_logs' | 'medications' | 'medication_logs' | 'measurements'
-  | 'temperature_logs' | 'vaccinations' | 'sleep_logs' | 'medical_files' | 'extracted_text' | 'babies';
+  | 'temperature_logs' | 'vaccinations' | 'sleep_logs' | 'medical_files' | 'extracted_text' | 'babies'
+  // 044 batch: new vomiting tracker uses the same Comments thread pattern.
+  | 'vomiting_logs';
 
 type Row = {
   id: string;
