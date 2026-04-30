@@ -1,7 +1,9 @@
 // Lifecycle stage helpers for the Pregnancy → Newborn → Infant → ... evolution.
 // See docs/lifecycle_extension_spec.md for the full design.
 
-export type LifecycleStage = 'pregnancy' | 'newborn' | 'infant' | 'toddler' | 'child' | 'archived';
+// 044 batch added 'planning' as the pre-pregnancy stage. Order here mirrors
+// the SQL check constraint (planning → pregnancy → newborn → ... → archived).
+export type LifecycleStage = 'planning' | 'pregnancy' | 'newborn' | 'infant' | 'toddler' | 'child' | 'archived';
 
 /**
  * Compute the effective stage from stored stage + dob. Mirrors the SQL
@@ -9,6 +11,9 @@ export type LifecycleStage = 'pregnancy' | 'newborn' | 'infant' | 'toddler' | 'c
  * round-trip when it already has the babies row.
  */
 export function effectiveStage(stored: LifecycleStage | null | undefined, dob: string | null | undefined): LifecycleStage {
+  // Planning is sticky — never downgrade or auto-promote based on dob (there
+  // shouldn't be one yet anyway). Mom moves out of it explicitly.
+  if (stored === 'planning')  return 'planning';
   if (stored === 'pregnancy') return 'pregnancy';
   if (stored === 'archived')  return 'archived';
   if (!dob) return 'pregnancy';
@@ -90,6 +95,7 @@ export function eddDistanceDays(edd: string | null | undefined): number | null {
 /** Pretty stage label for UI badges. */
 export function prettyStage(stage: LifecycleStage): string {
   switch (stage) {
+    case 'planning':  return 'Planning';
     case 'pregnancy': return 'Expecting';
     case 'newborn':   return 'Newborn';
     case 'infant':    return 'Infant';
@@ -102,6 +108,7 @@ export function prettyStage(stage: LifecycleStage): string {
 /** Color tint for the stage badge. */
 export function stageTint(stage: LifecycleStage): 'coral' | 'mint' | 'brand' | 'peach' | 'lavender' | 'slate' {
   switch (stage) {
+    case 'planning':  return 'peach';
     case 'pregnancy': return 'lavender';
     case 'newborn':   return 'coral';
     case 'infant':    return 'brand';

@@ -24,7 +24,9 @@ type BabyRow = {
   name: string;
   dob: string | null;
   avatar_path: string | null;
-  lifecycle_stage?: 'pregnancy'|'newborn'|'infant'|'toddler'|'child'|'archived' | null;
+  // 044 batch: 'planning' is the new pre-pregnancy stage. Keep it in the
+  // union so the isPlanning comparison below type-checks.
+  lifecycle_stage?: 'planning'|'pregnancy'|'newborn'|'infant'|'toddler'|'child'|'archived' | null;
   edd?: string | null;
   lmp?: string | null;
 };
