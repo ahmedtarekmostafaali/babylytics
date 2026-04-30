@@ -475,6 +475,68 @@ end;
 $$;
 grant execute on function public.create_planning_baby_with_owner(text) to authenticated;
 
+-- Extend the audit-summary whitelist so AuditFooter can show "Logged by …"
+-- on the new vomiting + cycle tables. Same body as migration 038, just a
+-- wider allowed[] list that adds the two new tables.
+create or replace function public.row_audit_summaries(
+  p_table text,
+  p_ids uuid[]
+)
+returns table(
+  row_id uuid,
+  created_by uuid,
+  created_at timestamptz,
+  last_updated_by uuid,
+  last_updated_at timestamptz
+)
+language plpgsql security definer set search_path = public as $$
+declare
+  allowed text[] := array[
+    'feedings','stool_logs','sleep_logs','medications','medication_logs',
+    'measurements','temperature_logs','vaccinations',
+    'screen_time_logs','activity_logs','teething_logs','speaking_logs',
+    'developmental_milestones','shopping_list_items','allergies',
+    'medical_conditions','admissions','discharges','lab_panels','lab_panel_items',
+    'doctors','appointments','prenatal_visits','ultrasounds','fetal_movements',
+    'maternal_symptoms','medical_files',
+    'vital_signs_logs','blood_sugar_logs',
+    -- 044 batch additions
+    'vomiting_logs','menstrual_cycles'
+  ];
+  q text;
+begin
+  if not (p_table = any(allowed)) then
+    raise exception 'row_audit_summaries: table % not allowed', p_table;
+  end if;
+
+  q := format($f$
+    with rows as (
+      select id, baby_id, created_by, created_at
+      from public.%I
+      where id = any($1)
+        and public.has_baby_access(baby_id)
+    ),
+    upd as (
+      select row_id,
+             max(edited_at)                                                    as last_updated_at,
+             (array_agg(edited_by order by edited_at desc) filter (where edited_by is not null))[1]
+                                                                               as last_updated_by
+      from public.audit_log
+      where table_name = %L
+        and operation = 'UPDATE'
+        and row_id = any($1)
+      group by row_id
+    )
+    select r.id, r.created_by, r.created_at, u.last_updated_by, u.last_updated_at
+    from rows r
+    left join upd u on u.row_id = r.id
+  $f$, p_table, p_table);
+  return query execute q using p_ids;
+end;
+$$;
+revoke all on function public.row_audit_summaries(text, uuid[]) from public;
+grant execute on function public.row_audit_summaries(text, uuid[]) to authenticated;
+
 -- The babies table requires dob NOT NULL in the original schema. Loosen
 -- it so 'planning' rows can exist without a date of birth (they get one
 -- transitioning to 'pregnancy' or 'newborn' later).

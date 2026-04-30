@@ -30,7 +30,9 @@ export type AuditTable =
   | 'medical_conditions' | 'admissions' | 'discharges' | 'lab_panels' | 'lab_panel_items'
   | 'doctors' | 'appointments' | 'prenatal_visits' | 'ultrasounds' | 'fetal_movements'
   | 'maternal_symptoms' | 'medical_files'
-  | 'vital_signs_logs' | 'blood_sugar_logs';
+  | 'vital_signs_logs' | 'blood_sugar_logs'
+  // 044 batch: new vomiting tracker has its own audit trigger.
+  | 'vomiting_logs' | 'menstrual_cycles';
 
 /**
  * Load audit signatures for a batch of rows in one round-trip and resolve
