@@ -1954,6 +1954,8 @@ export const en = {
     recent_pattern_x:   'Your baseline (median cycle, regularity, top symptoms) computed from your own data. Pattern checks become ready-to-send doctor questions — one tap delivers them privately to your doctor caregiver.',
     recent_ramadan_t:   'Ramadan-aware (auto)',
     recent_ramadan_x:   'During the holy month the cycle dashboard surfaces iftar / suhoor / hydration tips — and the religious nuance for women on their period (no fasting, no prayer, qada later). Off automatically the rest of the year.',
+    recent_partner_t:   'Partner mode',
+    recent_partner_x:   'Invite your spouse with the new Partner role. They see a curated cycle summary — current phase, today\'s forecast, what helps this week, when your next period is due. No raw symptom logs. Same private chat between just the two of you.',
     recent_apple_t:    'Apple Health import',
     recent_apple_x:    'Drop your export.zip — your cycle history backfills in seconds. Parsed locally in your browser; only the cycle subset leaves your device.',
 

@@ -315,6 +315,7 @@ export default async function Landing() {
           <SmallSpotlight tint="lavender" Icon={Brain}            title={t('landing.recent_pattern_t')}    body={t('landing.recent_pattern_x')} />
           <SmallSpotlight tint="mint"     Icon={Activity}         title={t('landing.recent_lifestyle_t')}  body={t('landing.recent_lifestyle_x')} />
           <SmallSpotlight tint="lavender" Icon={Moon}             title={t('landing.recent_ramadan_t')}    body={t('landing.recent_ramadan_x')} />
+          <SmallSpotlight tint="coral"    Icon={Heart}            title={t('landing.recent_partner_t')}    body={t('landing.recent_partner_x')} />
           <SmallSpotlight tint="brand"    Icon={Apple}            title={t('landing.recent_apple_t')}      body={t('landing.recent_apple_x')} />
           <SmallSpotlight tint="lavender" Icon={MessagesSquare}   title={t('landing.recent_chat_t')}       body={t('landing.recent_chat_x')} />
         </div>

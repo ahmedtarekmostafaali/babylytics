@@ -7,11 +7,12 @@ import { createClient } from '@/lib/supabase/client';
 import { MoreHorizontal, Trash2, ChevronRight, Loader2, Eye, X, Save } from 'lucide-react';
 import { AreaPicker } from '@/components/AreaPicker';
 
-type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor' | 'pharmacy';
+type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor' | 'pharmacy' | 'partner';
 
 const ROLES: { value: Exclude<Role, 'editor' | 'caregiver'>; label: string }[] = [
   { value: 'owner',    label: 'Owner' },
   { value: 'parent',   label: 'Parent / Guardian' },
+  { value: 'partner',  label: 'Partner' },
   { value: 'doctor',   label: 'Doctor' },
   { value: 'nurse',    label: 'Nurse' },
   { value: 'pharmacy', label: 'Pharmacy' },

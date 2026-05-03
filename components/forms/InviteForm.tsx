@@ -4,18 +4,19 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
-import { Mail, Shield, Stethoscope, Heart, Eye, Check, Link2, Copy, Share2, Pill } from 'lucide-react';
+import { Mail, Shield, Stethoscope, Heart, Eye, Check, Link2, Copy, Share2, Pill, Users as UsersIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/client';
 import { AreaPicker } from '@/components/AreaPicker';
 
 // 046 batch added 'pharmacy' as a caregiver role with read-only access to
 // medication stock + dose history (RLS enforced server-side).
-export type CaregiverRole = 'parent' | 'doctor' | 'nurse' | 'viewer' | 'pharmacy';
+export type CaregiverRole = 'parent' | 'doctor' | 'nurse' | 'viewer' | 'pharmacy' | 'partner';
 type Mode = 'email' | 'link';
 
 const ROLE_META: { value: CaregiverRole; icon: React.ComponentType<{ className?: string }>; tint: string }[] = [
   { value: 'parent',   icon: Shield,      tint: 'bg-brand-100 text-brand-700'     },
+  { value: 'partner',  icon: UsersIcon,   tint: 'bg-lavender-100 text-lavender-700' },
   { value: 'doctor',   icon: Stethoscope, tint: 'bg-lavender-100 text-lavender-700' },
   { value: 'nurse',    icon: Heart,       tint: 'bg-coral-100 text-coral-700'     },
   { value: 'pharmacy', icon: Pill,        tint: 'bg-mint-100 text-mint-700'       },
@@ -36,6 +37,7 @@ export function InviteForm({ babyId, stage }: {
     nurse:    t('forms.invite_role_nurse'),
     viewer:   t('forms.invite_role_viewer'),
     pharmacy: 'Pharmacy',
+    partner:  'Partner',
   };
   const ROLE_DESC: Record<CaregiverRole, string> = {
     parent:   t('forms.invite_role_parent_desc'),
@@ -43,6 +45,7 @@ export function InviteForm({ babyId, stage }: {
     nurse:    t('forms.invite_role_nurse_desc'),
     viewer:   t('forms.invite_role_viewer_desc'),
     pharmacy: 'Sees medication stock + dose history only. Useful for refill coordination.',
+    partner:  'Curated cycle summary — current phase, today\'s forecast, what helps this week. No raw symptom logs.',
   };
   const [mode, setMode]   = useState<Mode>('email');
   const [email, setEmail] = useState('');

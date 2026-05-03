@@ -83,11 +83,22 @@ export default async function BabyOverview({
   // Stage-aware fork — pregnancy gets a completely different dashboard.
   const stage = effectiveStage(baby.lifecycle_stage as 'planning'|'pregnancy'|'newborn'|'infant'|'toddler'|'child'|'archived'|null, baby.dob);
 
-  // Planning ('My cycle') stage uses the planner page as its overview —
-  // there's no DOB / feedings / sleep to summarise yet, just the cycle
-  // calendar and the consultation tile, which already live there.
+  // Wave 18: Overview ≠ Cycle calendar. Planning profiles get their own
+  // dedicated overview (cycle mode, baseline, red flags, energy forecast,
+  // Ramadan card, daily ideas, consultation upsell). The CALENDAR view
+  // lives on /planner and is reachable from the Calendar button + sidebar.
+  // Wave 16: partner caregivers get a curated PartnerCycleView instead —
+  // friendly summary, no raw symptom logs.
   if (stage === 'planning') {
-    redirect(`/babies/${babyId}/planner`);
+    const { data: { user: u } } = await supabase.auth.getUser();
+    const { data: roleRow } = await supabase.from('baby_users')
+      .select('role').eq('baby_id', babyId).eq('user_id', u?.id ?? '').maybeSingle();
+    if (roleRow?.role === 'partner') {
+      const { PartnerCycleView } = await import('@/components/PartnerCycleView');
+      return <PartnerCycleView babyId={babyId} babyName={baby.name} lang={userPrefs.language} />;
+    }
+    const { CycleDashboard } = await import('@/components/CycleDashboard');
+    return <CycleDashboard babyId={babyId} babyName={baby.name} lang={userPrefs.language} />;
   }
   if (stage === 'pregnancy') {
     const [{ data: m }, { data: summaryRow }, { data: lastUs }, { data: nextAppt }, { data: pregProf }, hiddenPregnancy, { data: recentSymptoms }] = await Promise.all([

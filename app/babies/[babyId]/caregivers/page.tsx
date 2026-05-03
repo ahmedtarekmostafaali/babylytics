@@ -16,7 +16,7 @@ import { tFor, type TFunc } from '@/lib/i18n';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Caregivers' };
 
-type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor' | 'pharmacy';
+type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor' | 'pharmacy' | 'partner';
 
 const ROLE_META: Record<Role, { tkey: string; tint: string; icon: React.ComponentType<{ className?: string }> }> = {
   owner:     { tkey: 'caregivers.label_owner',  tint: 'bg-brand-100    text-brand-700',    icon: Shield },
@@ -29,10 +29,13 @@ const ROLE_META: Record<Role, { tkey: string; tint: string; icon: React.Componen
   // 046 batch — pharmacy role. Not yet i18n-keyed; falls back to literal
   // strings so the legend stays accurate when a pharmacy caregiver exists.
   pharmacy:  { tkey: 'Pharmacy',                tint: 'bg-mint-100     text-mint-700',     icon: Heart },
+  // Wave 16 — partner role for cycle profiles. Curated summary view.
+  partner:   { tkey: 'Partner',                 tint: 'bg-lavender-100 text-lavender-700', icon: Users },
 };
 
 const ROLE_DEFS: { role: Role; titleKey: string; permsKey: string }[] = [
   { role: 'parent',   titleKey: 'caregivers.role_parent_t', permsKey: 'caregivers.role_parent_p' },
+  { role: 'partner',  titleKey: 'Partner',                   permsKey: 'Sees a curated cycle summary — current phase, energy forecast, what helps this week. No raw symptom logs.' },
   { role: 'doctor',   titleKey: 'caregivers.role_doctor_t', permsKey: 'caregivers.role_doctor_p' },
   { role: 'nurse',    titleKey: 'caregivers.role_nurse_t',  permsKey: 'caregivers.role_nurse_p' },
   { role: 'pharmacy', titleKey: 'Pharmacy',                  permsKey: 'Sees medication stock + dose history only — useful for refill coordination.' },

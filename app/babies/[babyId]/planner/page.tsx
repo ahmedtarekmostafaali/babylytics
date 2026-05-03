@@ -6,18 +6,12 @@ import { assertRole } from '@/lib/role-guard';
 import { fmtDate } from '@/lib/dates';
 import { Calendar, Heart, Plus, Sparkles, Edit3 } from 'lucide-react';
 import { MarkAsPregnantDialog } from '@/components/MarkAsPregnantDialog';
-import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
-import { SuggestionsCard } from '@/components/SuggestionsCard';
-import { cyclePhaseFor } from '@/lib/suggestions';
-import { loadUserPrefs } from '@/lib/user-prefs';
-import { CycleModeCard, type CycleMode } from '@/components/CycleModeCard';
-import { CycleRedFlagsCard, type CycleRedFlag } from '@/components/CycleRedFlagsCard';
-import { CycleEnergyForecast } from '@/components/CycleEnergyForecast';
-import { CycleBaselineCard, type CycleBaseline } from '@/components/CycleBaselineCard';
-import { type DoctorQuestion } from '@/components/SendToDoctorButton';
-import { RamadanCard } from '@/components/RamadanCard';
-import { dayOfRamadan } from '@/lib/ramadan';
 import { Download } from 'lucide-react';
+// Wave 18: this page is now JUST the cycle calendar. The cycle mode
+// picker, baseline, red flags, energy forecast, Ramadan card, daily
+// ideas, and consultation upsell live on the cycle Overview at /babies/[id]
+// (rendered by components/CycleDashboard.tsx). Keeping the two pages
+// distinct so Overview ≠ Calendar.
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'My cycle' };
@@ -66,10 +60,9 @@ export default async function PlannerPage({
   await assertRole(params.babyId, { requireLogs: true });
 
   const { data: baby } = await supabase.from('babies')
-    .select('id,name,lifecycle_stage,cycle_mode')
+    .select('id,name,lifecycle_stage')
     .eq('id', params.babyId).single();
   if (!baby) notFound();
-  const cycleMode = ((baby as { cycle_mode?: CycleMode | null }).cycle_mode ?? null);
 
   // Default to current month in user's locale (server is UTC; close enough).
   const month = (searchParams.month && /^\d{4}-\d{2}$/.test(searchParams.month))
@@ -77,46 +70,18 @@ export default async function PlannerPage({
     : isoMonth(new Date());
   const monthStart = month + '-01';
 
-  const [
-    { data: calData, error: calErr },
-    { data: cycleData },
-    userPrefs,
-    { data: redFlagsRaw },
-    { data: baselineRaw },
-    { data: questionsRaw },
-  ] = await Promise.all([
+  // Wave 18: planner page only needs the calendar grid + recent cycles
+  // for the list at the bottom. Overview cards moved to /babies/[id].
+  const [{ data: calData, error: calErr }, { data: cycleData }] = await Promise.all([
     supabase.rpc('cycle_calendar', { p_baby: params.babyId, p_month: monthStart }),
     supabase.from('menstrual_cycles')
       .select('id,period_start,period_end,cycle_length,flow_intensity,symptoms,notes')
       .eq('baby_id', params.babyId).is('deleted_at', null)
       .order('period_start', { ascending: false })
       .limit(12),
-    loadUserPrefs(supabase),
-    // Wave 12: anomaly detection from your own historical cycles.
-    supabase.rpc('cycle_red_flags', { p_baby: params.babyId }),
-    // Wave 14: personal baseline + doctor-ready questions. Both RPCs run
-    // in parallel — they read the same table but compute different angles.
-    supabase.rpc('cycle_personal_baseline', { p_baby: params.babyId }).maybeSingle(),
-    supabase.rpc('cycle_doctor_questions', { p_baby: params.babyId }),
   ]);
-  const redFlags = (redFlagsRaw ?? []) as CycleRedFlag[];
-  const baseline = (baselineRaw as CycleBaseline | null) ?? null;
-  const doctorQuestions = (questionsRaw ?? []) as DoctorQuestion[];
   const calendar = (calData ?? []) as CalRow[];
   const cycles   = (cycleData ?? []) as Cycle[];
-
-  // Wave 5: derive current cycle phase + days-since-period for the
-  // SuggestionsCard. Only meaningful once at least one cycle is logged.
-  const lastForPhase = cycles[0];
-  let cycleMarker: number | null = null;
-  let cyclePhase: ReturnType<typeof cyclePhaseFor> | undefined;
-  if (lastForPhase) {
-    const start = new Date(lastForPhase.period_start + 'T00:00:00Z');
-    const now = Date.now();
-    const days = Math.max(0, Math.floor((now - start.getTime()) / 86400000));
-    cycleMarker = days;
-    cyclePhase = cyclePhaseFor(days, lastForPhase.cycle_length ?? 28);
-  }
 
   // Project the next period: most recent cycle.start + cycle_length.
   const last = cycles[0];
@@ -154,8 +119,8 @@ export default async function PlannerPage({
         backLabel={baby.name}
         eyebrow="Track"
         eyebrowTint="coral"
-        title="My cycle"
-        subtitle="Period, ovulation, fertile window, symptoms — for planning, postpartum, or just personal."
+        title="Cycle calendar"
+        subtitle="Month-view of period, ovulation, and fertile window. The Overview lives one tap back."
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
             <Link href={`/babies/${params.babyId}/planner/cycles/new`}
@@ -175,25 +140,7 @@ export default async function PlannerPage({
         }
       />
 
-      {/* Wave 17: Ramadan-aware banner — only renders during the holy
-          month. Sets the tone for the day's suggestions card below. */}
-      {(() => {
-        const day = dayOfRamadan();
-        return day != null
-          ? <RamadanCard dayOfRamadan={day} lang={userPrefs.language} />
-          : null;
-      })()}
-
-      {/* Wave 12: cycle mode picker + red flags. Mode picker is always
-          visible (small, tap-to-edit). Red flags only render when there's
-          something detected from the user's own historical patterns.
-          Wave 14: red flags now includes the SendToDoctorButton, and the
-          new BaselineCard shows your personal numbers above. */}
-      <CycleModeCard babyId={params.babyId} initialMode={cycleMode} />
-      <CycleBaselineCard baseline={baseline} babyId={params.babyId} />
-      <CycleRedFlagsCard flags={redFlags} babyId={params.babyId} questions={doctorQuestions} />
-
-      {/* Top insight strip */}
+      {/* Top insight strip — quick context for the calendar below */}
       <section className="grid sm:grid-cols-3 gap-3">
         <Tile icon={Calendar} tint="coral"
           label="Last period"
@@ -267,32 +214,6 @@ export default async function PlannerPage({
           </div>
         </div>
       </section>
-
-      {/* Wave 13 — Today's forecast. Phase-derived energy/focus/social
-          baseline, with a one-line hint. Renders even before the first
-          cycle is logged (shows neutral baseline + "log a period" prompt). */}
-      <CycleEnergyForecast phase={cyclePhase ?? null} daysSincePeriodStart={cycleMarker} />
-
-      {/* Wave 5 — "Ideas for today" — three cycle-phase-aware self-care
-          suggestions (iron in menstrual, cardio in follicular, etc.). Only
-          renders once at least one cycle is logged so we know the phase. */}
-      <SuggestionsCard
-        babyId={params.babyId}
-        stage="cycle"
-        marker={cycleMarker}
-        phase={cyclePhase}
-        mode={cycleMode}
-        // Wave 17: only set 'ramadan' during the holy month so the
-        // picker prefers iftar/suhoor/qada tips. Outside Ramadan the
-        // context is undefined and Ramadan-tagged items are filtered
-        // out entirely.
-        context={dayOfRamadan() != null ? 'ramadan' : undefined}
-        lang={userPrefs.language}
-      />
-
-      {/* Doctor consultation upsell — placeholder for now. Same component
-          shown across pregnancy + baby overviews so users see the roadmap. */}
-      <ConsultationComingSoon stage="cycle" />
 
       {/* Recent cycle log */}
       <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
