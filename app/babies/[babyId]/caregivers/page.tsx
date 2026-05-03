@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { InviteForm } from '@/components/forms/InviteForm';
 import { CaregiverRowActions } from '@/components/CaregiverRowActions';
+import { MessageButton } from '@/components/MessageButton';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { fmtDate } from '@/lib/dates';
 import {
@@ -151,12 +152,16 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                             </div>
                           )}
                           {/* Mobile-only meta: role chip + joined under email */}
-                          <div className="mt-1 flex items-center gap-2 sm:hidden">
+                          <div className="mt-1 flex items-center gap-2 sm:hidden flex-wrap">
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.tint}`}>
                               <meta.icon className="h-3 w-3" />
                               {t(meta.tkey)}
                             </span>
                             <span className="text-[10px] text-ink-muted">{t('caregivers.joined', { date: fmtDate(r.created_at) })}</span>
+                            {!isSelf && (
+                              <MessageButton babyId={params.babyId} otherUserId={r.user_id}
+                                className="inline-flex items-center gap-1 rounded-full border border-lavender-200 bg-lavender-50/60 hover:bg-lavender-100 text-lavender-700 text-[10px] font-semibold px-2 py-0.5" />
+                            )}
                           </div>
                         </div>
                       </div>
@@ -175,8 +180,17 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                         <span className="text-[11px] text-ink-muted whitespace-nowrap">{fmtDate(r.created_at)}</span>
                       </div>
 
+                      {/* Wave 8: Message button — opens (or creates) a
+                          private 1:1 thread with this caregiver. Hidden
+                          for self (you can't message yourself). */}
+                      {!isSelf && (
+                        <div className="shrink-0 hidden sm:block">
+                          <MessageButton babyId={params.babyId} otherUserId={r.user_id} />
+                        </div>
+                      )}
+
                       {/* Actions menu — always at the end. Includes the
-                          new "Edit visibility" option that opens the
+                          "Edit visibility" option that opens the
                           AreaPicker scoped to this profile's stage. */}
                       <div className="shrink-0">
                         <CaregiverRowActions babyId={params.babyId} userId={r.user_id}
