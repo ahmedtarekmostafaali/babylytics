@@ -9,6 +9,7 @@ import { Comments } from '@/components/Comments';
 import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
 import { NotificationsBell } from '@/components/NotificationsBell';
+import { ChatBell } from '@/components/ChatBell';
 import { VoiceCommander } from '@/components/VoiceCommander';
 import { GrowthInsights } from '@/components/GrowthInsights';
 import { SuggestionsCard } from '@/components/SuggestionsCard';
@@ -550,6 +551,7 @@ export default async function BabyOverview({
           </Link>
           <DayPicker babyId={babyId} value={focusDate} />
           <VoiceCommander babyId={babyId} lang={userPrefs.language} />
+          <ChatBell babyId={babyId} />
           <NotificationsBell babyId={babyId} />
         </div>
       </header>

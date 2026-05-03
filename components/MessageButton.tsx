@@ -8,9 +8,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MessageCircle, Loader2 } from 'lucide-react';
+import { useT } from '@/lib/i18n/client';
 
 export function MessageButton({
-  babyId, otherUserId, label = 'Message', className,
+  babyId, otherUserId, label, className,
 }: {
   babyId: string;
   otherUserId: string;
@@ -18,6 +19,7 @@ export function MessageButton({
   className?: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [busy, setBusy] = useState(false);
 
   async function open() {
@@ -28,7 +30,7 @@ export function MessageButton({
     });
     setBusy(false);
     if (error || !threadId) {
-      window.alert(error?.message ?? 'Could not open chat');
+      window.alert(error?.message ?? t('chat.could_not_open'));
       return;
     }
     router.push(`/babies/${babyId}/chat?thread=${threadId}`);
@@ -39,13 +41,13 @@ export function MessageButton({
       type="button"
       onClick={open}
       disabled={busy}
-      title="Open direct chat"
+      title={t('chat.open_direct_title')}
       className={
         className
         ?? 'inline-flex items-center gap-1.5 rounded-full border border-lavender-200 bg-lavender-50/60 hover:bg-lavender-100 text-lavender-700 text-xs font-semibold px-3 py-1.5'
       }>
       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
-      {label}
+      {label ?? t('chat.message_btn')}
     </button>
   );
 }

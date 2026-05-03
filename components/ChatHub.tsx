@@ -20,6 +20,7 @@ import {
 import { fmtRelative, fmtDateTime } from '@/lib/dates';
 import { BabyChat, type ChatMessage as GroupMessage, type ChatMember } from '@/components/BabyChat';
 import { tokenizeBody } from '@/lib/mentions';
+import { useT } from '@/lib/i18n/client';
 
 export interface ThreadSummary {
   id: string;
@@ -61,6 +62,7 @@ export function ChatHub({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useT();
   const [pending, startTransition] = useTransition();
 
   // Bucketed thread list — group always at top, direct threads sorted by
@@ -136,7 +138,7 @@ export function ChatHub({
       <aside className={`${selectedThreadId ? 'hidden lg:block' : 'block'} space-y-2`}>
         <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100">
-            <h3 className="text-xs font-bold text-ink-strong uppercase tracking-wider">Conversations</h3>
+            <h3 className="text-xs font-bold text-ink-strong uppercase tracking-wider">{t('chat.conversations')}</h3>
           </div>
 
           {/* Group chat row */}
@@ -149,9 +151,9 @@ export function ChatHub({
               <Users className="h-4 w-4" />
             </span>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-ink-strong text-sm truncate">Group chat</div>
+              <div className="font-semibold text-ink-strong text-sm truncate">{t('chat.group_chat')}</div>
               <div className="text-[11px] text-ink-muted truncate">
-                Everyone with access · {members.length} {members.length === 1 ? 'member' : 'members'}
+                {t('chat.group_chat_meta', { n: members.length === 1 ? t('chat.member_one') : t('chat.members_n', { n: members.length }) })}
               </div>
             </div>
           </button>
@@ -160,7 +162,7 @@ export function ChatHub({
           {sortedDirect.length > 0 && (
             <>
               <div className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted border-t border-slate-100">
-                Direct messages
+                {t('chat.direct_messages')}
               </div>
               {sortedDirect.map(t => {
                 const active = t.id === selectedThreadId;
@@ -193,7 +195,7 @@ export function ChatHub({
           {dmCandidates.length > 0 && (
             <>
               <div className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted border-t border-slate-100">
-                Start a direct message
+                {t('chat.start_dm')}
               </div>
               {dmCandidates.map(c => {
                 const name = c.display_name?.trim() || c.email?.split('@')[0] || c.user_id.slice(0, 6);
@@ -224,7 +226,7 @@ export function ChatHub({
         {selectedThreadId && (
           <button type="button" onClick={() => selectThread(null)}
             className="lg:hidden mb-2 inline-flex items-center gap-1 text-sm text-ink-muted hover:text-ink-strong">
-            <ArrowLeft className="h-4 w-4" /> Back to conversations
+            <ArrowLeft className="h-4 w-4" /> {t('chat.back_to_list')}
           </button>
         )}
 
@@ -249,7 +251,7 @@ export function ChatHub({
           />
         ) : (
           <div className="rounded-2xl bg-white border border-dashed border-slate-300 p-12 text-center text-sm text-ink-muted">
-            Pick a conversation on the left to start chatting.
+            {t('chat.pick_conversation')}
           </div>
         )}
       </div>
@@ -273,6 +275,7 @@ function ThreadChatPanel({
   members: ChatMember[];
   isParent: boolean;
 }) {
+  const t = useT();
   const [messages, setMessages] = useState<ThreadMessage[]>(initialMessages);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -341,7 +344,7 @@ function ThreadChatPanel({
   }
 
   async function remove(messageId: string) {
-    if (!window.confirm('Delete this message?')) return;
+    if (!window.confirm(t('chat.delete_confirm'))) return;
     const supabase = createClient();
     const { error } = await supabase.rpc('soft_delete_thread_message', { p_message_id: messageId });
     if (error) { setErr(error.message); return; }
@@ -392,7 +395,7 @@ function ThreadChatPanel({
         <div className="flex-1 min-w-0">
           <h2 className="text-sm font-bold text-ink-strong leading-tight truncate">{otherName}</h2>
           <p className="text-[11px] text-ink-muted leading-tight">
-            Direct message · {otherRole ?? 'caregiver'} · only you two
+            {t('chat.direct_meta', { role: otherRole ?? 'caregiver' })}
           </p>
         </div>
       </div>
@@ -404,7 +407,7 @@ function ThreadChatPanel({
               <div className="mx-auto h-12 w-12 rounded-full bg-lavender-100 text-lavender-600 grid place-items-center mb-2">
                 <MessageCircle className="h-6 w-6" />
               </div>
-              No messages yet — say hi.
+              {t('chat.no_dm')}
             </div>
           </div>
         ) : (
@@ -441,7 +444,7 @@ function ThreadChatPanel({
                   {canDelete && (
                     <button type="button" onClick={() => remove(m.id)}
                       className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-ink-muted hover:text-coral-600">
-                      <Trash2 className="h-3 w-3" /> delete
+                      <Trash2 className="h-3 w-3" /> {t('chat.delete_msg')}
                     </button>
                   )}
                 </div>
@@ -459,7 +462,7 @@ function ThreadChatPanel({
             onChange={e => setDraft(e.target.value)}
             onKeyDown={onKeyDown}
             rows={1}
-            placeholder={`Message ${otherName}…`}
+            placeholder={t('chat.placeholder_dm', { name: otherName })}
             className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm resize-none focus:border-lavender-500 focus:ring-2 focus:ring-lavender-500/30 max-h-32"
             style={{ minHeight: 44 }}
           />

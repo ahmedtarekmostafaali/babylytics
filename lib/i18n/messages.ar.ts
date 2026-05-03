@@ -2484,6 +2484,37 @@ export const ar: Messages = {
     app_update_generic:    'أطلقنا للتو تحديثًا جديدًا. اضغط للاطلاع على الجديد.',
   },
 
+  // ── الدردشة (مجموعة + ثنائي خاص) ─────────────────────────────
+  chat: {
+    aria_open:             'فتح الدردشة',
+    title:                 'الدردشة',
+    subtitle_group_dms:    'دردشة جماعية + رسائل خاصة لـ {name}.',
+    subtitle_group_only:   'دردشة جماعية لكل من له صلاحية على {name}.',
+    header_label:          'الدردشة',
+    header_sub:            'كل من له صلاحية على هذا الملف يرى هذه الرسائل.',
+    members_n:             '{n} أعضاء',
+    member_one:            'عضو واحد',
+    no_messages:           'لا توجد رسائل بعد — كن أول من يكتب.',
+    no_dm:                 'لا توجد رسائل بعد — قل مرحبًا.',
+    placeholder:           'اكتب رسالة… (اكتب @ للإشارة، Enter للإرسال)',
+    placeholder_dm:        'مراسلة {name}…',
+    delete_msg:            'حذف',
+    delete_confirm:        'حذف هذه الرسالة؟',
+    mention_someone:       'الإشارة إلى شخص',
+    conversations:         'المحادثات',
+    group_chat:            'الدردشة الجماعية',
+    group_chat_meta:       'الجميع · {n}',
+    direct_messages:       'رسائل خاصة',
+    start_dm:              'بدء رسالة خاصة',
+    back_to_list:          'العودة للمحادثات',
+    pick_conversation:     'اختر محادثة من اليمين لبدء الدردشة.',
+    direct_meta:           'رسالة خاصة · {role} · بينكما فقط',
+    daily:                 'يومي',
+    message_btn:           'مراسلة',
+    open_direct_title:     'فتح دردشة مباشرة',
+    could_not_open:        'تعذر فتح الدردشة',
+  },
+
   // ── Legal footer ────────────────────────────────────────────────
   footer: {
     medical_disclaimer:    'بابيليتيكس ليس جهازًا طبيًا. المعلومات المعروضة للمتابعة فقط — استشر دائمًا طبيب الأطفال.',

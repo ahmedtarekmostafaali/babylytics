@@ -12,6 +12,7 @@ import { fmtRelative, fmtDateTime } from '@/lib/dates';
 import {
   getMentionContext, filterMembers, applyMention, tokenizeBody, mentionLabel,
 } from '@/lib/mentions';
+import { useT } from '@/lib/i18n/client';
 
 export interface ChatMessage {
   id: string;
@@ -41,6 +42,7 @@ export function BabyChat({
   /** Parent/owner — can delete any message (not just their own). */
   isParent: boolean;
 }) {
+  const t = useT();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -118,7 +120,7 @@ export function BabyChat({
   }
 
   async function remove(messageId: string) {
-    if (!window.confirm('Delete this message?')) return;
+    if (!window.confirm(t('chat.delete_confirm'))) return;
     const supabase = createClient();
     const { error } = await supabase.rpc('soft_delete_baby_message', { p_message_id: messageId });
     if (error) { setErr(error.message); return; }
@@ -205,17 +207,15 @@ export function BabyChat({
   return (
     <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden flex flex-col h-[600px]">
       <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100 bg-gradient-to-r from-mint-50 to-lavender-50">
-        <span className="h-8 w-8 rounded-lg grid place-items-center bg-mint-100 text-mint-600">
+        <span className="h-8 w-8 rounded-lg grid place-items-center bg-mint-100 text-mint-600 shrink-0">
           <MessageCircle className="h-4 w-4" />
         </span>
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-bold text-ink-strong leading-tight">Chat</h2>
-          <p className="text-[11px] text-ink-muted leading-tight">
-            Everyone with access to this profile sees these messages.
-          </p>
+          <h2 className="text-sm font-bold text-ink-strong leading-tight">{t('chat.header_label')}</h2>
+          <p className="text-[11px] text-ink-muted leading-tight">{t('chat.header_sub')}</p>
         </div>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-          {members.length} {members.length === 1 ? 'member' : 'members'}
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted shrink-0">
+          {members.length === 1 ? t('chat.member_one') : t('chat.members_n', { n: members.length })}
         </span>
       </div>
 
@@ -226,7 +226,7 @@ export function BabyChat({
               <div className="mx-auto h-12 w-12 rounded-full bg-mint-100 text-mint-600 grid place-items-center mb-2">
                 <MessageCircle className="h-6 w-6" />
               </div>
-              No messages yet — be the first to write.
+              {t('chat.no_messages')}
             </div>
           </div>
         ) : (
@@ -263,7 +263,7 @@ export function BabyChat({
                   {canDelete && (
                     <button type="button" onClick={() => remove(m.id)}
                       className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-ink-muted hover:text-coral-600">
-                      <Trash2 className="h-3 w-3" /> delete
+                      <Trash2 className="h-3 w-3" /> {t('chat.delete_msg')}
                     </button>
                   )}
                 </div>
@@ -281,7 +281,7 @@ export function BabyChat({
         {mentionCtx && mentionMatches.length > 0 && (
           <div className="absolute left-3 right-3 bottom-full mb-2 rounded-2xl border border-slate-200 bg-white shadow-panel overflow-hidden z-20">
             <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-ink-muted border-b border-slate-100 flex items-center gap-1.5">
-              <AtSign className="h-3 w-3" /> Mention someone
+              <AtSign className="h-3 w-3" /> {t('chat.mention_someone')}
             </div>
             {mentionMatches.map((m, i) => (
               <button
@@ -308,7 +308,7 @@ export function BabyChat({
             onKeyDown={onKeyDown}
             onBlur={() => setTimeout(() => setMentionCtx(null), 100)}
             rows={1}
-            placeholder="Write a message… (type @ to mention, Enter sends)"
+            placeholder={t('chat.placeholder')}
             className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm resize-none focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30 max-h-32"
             style={{ minHeight: 44 }}
           />

@@ -2524,6 +2524,37 @@ export const en = {
     app_update_generic:    "We just shipped a new update. Tap to see what's new.",
   },
 
+  // ── Chat (group + 1:1 direct threads, header bell, hub) ─────────
+  chat: {
+    aria_open:             'Open chat',
+    title:                 'Chat',
+    subtitle_group_dms:    'Group chat + direct messages for {name}.',
+    subtitle_group_only:   'Group chat for everyone with access to {name}.',
+    header_label:          'Chat',
+    header_sub:            'Everyone with access to this profile sees these messages.',
+    members_n:             '{n} members',
+    member_one:            '1 member',
+    no_messages:           'No messages yet — be the first to write.',
+    no_dm:                 'No messages yet — say hi.',
+    placeholder:           'Write a message… (type @ to mention, Enter sends)',
+    placeholder_dm:        'Message {name}…',
+    delete_msg:            'delete',
+    delete_confirm:        'Delete this message?',
+    mention_someone:       'Mention someone',
+    conversations:         'Conversations',
+    group_chat:            'Group chat',
+    group_chat_meta:       'Everyone with access · {n}',
+    direct_messages:       'Direct messages',
+    start_dm:              'Start a direct message',
+    back_to_list:          'Back to conversations',
+    pick_conversation:     'Pick a conversation on the left to start chatting.',
+    direct_meta:           'Direct message · {role} · only you two',
+    daily:                 'daily',
+    message_btn:           'Message',
+    open_direct_title:     'Open direct chat',
+    could_not_open:        'Could not open chat',
+  },
+
   // ── Legal footer ────────────────────────────────────────────────
   footer: {
     medical_disclaimer:    'Babylytics is not a medical device. Information shown is for tracking only — always consult your pediatrician.',

@@ -143,8 +143,8 @@ export default async function BabyChatPage({
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
         eyebrow={t('nav.cat_family').toUpperCase()} eyebrowTint="mint"
-        title="Chat"
-        subtitle={`Group chat + direct messages for ${baby.name}.`} />
+        title={t('chat.title')}
+        subtitle={t('chat.subtitle_group_dms', { name: baby.name })} />
       <ChatHub
         babyId={params.babyId}
         currentUserId={user.id}
