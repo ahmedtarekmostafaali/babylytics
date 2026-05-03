@@ -85,11 +85,22 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
 
   const { data: baby } = await supabase
     .from('babies')
-    .select('id,name,dob,gender,birth_weight_kg,birth_height_cm,feeding_factor_ml_per_kg_per_day,notes,avatar_path,blood_type,doctor_name,doctor_phone,doctor_clinic,next_appointment_at,next_appointment_notes,lifecycle_stage,enabled_features')
+    .select('id,name,dob,gender,birth_weight_kg,birth_height_cm,feeding_factor_ml_per_kg_per_day,notes,avatar_path,blood_type,doctor_name,doctor_phone,doctor_clinic,next_appointment_at,next_appointment_notes,lifecycle_stage')
     .eq('id', params.babyId)
     .is('deleted_at', null)
     .single();
   if (!baby) notFound();
+
+  // 051 batch: enabled_features lives on the babies table now. Fetched in a
+  // SEPARATE query so the page still loads on environments where sql/051
+  // hasn't been applied yet (column missing → query fails silently, card
+  // shows "all areas" until the migration runs).
+  const { data: featRow } = await supabase
+    .from('babies')
+    .select('enabled_features')
+    .eq('id', params.babyId)
+    .maybeSingle();
+  const enabledFeatures = (featRow as { enabled_features?: string[] | null } | null)?.enabled_features ?? null;
 
   const [{ data: membership }, { data: currentWeight }, { data: weightRows }, { data: heightRows }, avatarUrl] = await Promise.all([
     supabase.from('baby_users')
@@ -230,7 +241,7 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
           <ProfileFeaturesCard
             babyId={params.babyId}
             stage={(baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null}
-            initial={(baby as { enabled_features?: string[] | null }).enabled_features ?? null}
+            initial={enabledFeatures}
             canEdit={canEditHealth}
           />
 

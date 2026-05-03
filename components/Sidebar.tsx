@@ -441,7 +441,13 @@ export function Sidebar() {
                 )}
                 <NavItem href={`/babies/${currentBabyId}/doctors`}    icon={Stethoscope} label={t('nav.doctors')}    active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false}    collapsed={collapsed} tint="lavender" />
                 <NavItem href={`/babies/${currentBabyId}/caregivers`} icon={Users}       label={t('nav.caregivers')} active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`) ?? false} collapsed={collapsed} tint="mint" />
-                <NavItem href={`/babies/${currentBabyId}/edit`}       icon={UserCog}     label="Profile"             active={pathname?.startsWith(`/babies/${currentBabyId}/edit`) ?? false}       collapsed={collapsed} tint="brand" />
+                {/* "Profile" → /edit is the BabyProfileForm (DOB, birth weight,
+                    blood type…) which doesn't apply to pregnancy profiles, so
+                    hide it there — "Pregnancy profile" right above is the
+                    equivalent destination. */}
+                {!isPregnancy && (
+                  <NavItem href={`/babies/${currentBabyId}/edit`}       icon={UserCog}     label="Profile"             active={pathname?.startsWith(`/babies/${currentBabyId}/edit`) ?? false}       collapsed={collapsed} tint="brand" />
+                )}
                 <NavItem href="/preferences"                          icon={Settings}    label={t('nav.preferences')} active={pathname?.startsWith('/preferences') ?? false} collapsed={collapsed} tint="brand" />
               </NavCategory>
             )}

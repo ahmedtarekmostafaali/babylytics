@@ -37,6 +37,7 @@ html[dir="rtl"] aside.fixed.left-0 { left: auto; right: 0; }
    neutral surfaces so existing brand-tinted accents (coral/mint/lavender)
    still pop without redefining every Tailwind class. */
 html.dark {
+  color-scheme: dark;
   --canvas:   #0F141B;
   --ink:      #E2E8F0;
   --ink-strong: #F8FAFC;
@@ -163,6 +164,68 @@ html.dark .border-slate-100 { border-color: #232C3A !important; }
 
 /* The body radial-gradient already exists for dark mode at the top of
    this stylesheet — nothing to add here. */
+
+/* 051 batch follow-up — Wave 4.1 dark-mode contrast pass.
+   The dashboard KPI tiles and growth-insight cards used `to-white`,
+   `via-white`, and opacity-modified pastel-50 stops (e.g. `from-coral-50/70`)
+   that bypass the earlier overrides — they were rendering the bright
+   "silver overlay" on top of dark canvas. Re-tint every variant. */
+html.dark .to-white   { --tw-gradient-to:   #1A2230 var(--tw-gradient-to-position); }
+html.dark .from-white { --tw-gradient-from: #1A2230 var(--tw-gradient-from-position); --tw-gradient-to: rgba(26,34,48,0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html.dark .via-white  { --tw-gradient-via:  #1A2230 var(--tw-gradient-via-position); }
+
+/* Opacity-modified pastel-50 stops used by GrowthInsights cards. */
+html.dark .from-coral-50\/70    { --tw-gradient-from: #2A1F22 var(--tw-gradient-from-position); --tw-gradient-to: rgba(42,31,34,0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html.dark .from-mint-50\/70     { --tw-gradient-from: #18241F var(--tw-gradient-from-position); --tw-gradient-to: rgba(24,36,31,0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html.dark .from-lavender-50\/70 { --tw-gradient-from: #221F2C var(--tw-gradient-from-position); --tw-gradient-to: rgba(34,31,44,0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html.dark .from-peach-50\/70    { --tw-gradient-from: #2A2418 var(--tw-gradient-from-position); --tw-gradient-to: rgba(42,36,24,0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html.dark .from-brand-50\/70    { --tw-gradient-from: #18222C var(--tw-gradient-from-position); --tw-gradient-to: rgba(24,34,44,0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+
+html.dark .to-coral-50\/40    { --tw-gradient-to: #2A1F22 var(--tw-gradient-to-position); }
+html.dark .to-mint-50\/40     { --tw-gradient-to: #18241F var(--tw-gradient-to-position); }
+html.dark .to-lavender-50\/40 { --tw-gradient-to: #221F2C var(--tw-gradient-to-position); }
+html.dark .to-peach-50\/40    { --tw-gradient-to: #2A2418 var(--tw-gradient-to-position); }
+html.dark .to-brand-50\/40    { --tw-gradient-to: #18222C var(--tw-gradient-to-position); }
+
+/* And the opacity-modified -50/X chip backgrounds used by the inline
+   refill widget on Medication stock (`bg-mint-50/40`), the date-divider
+   strips on log feeds (`bg-slate-50/60`), the dashed empty-state cards
+   (`bg-white/70`), etc. */
+html.dark .bg-coral-50\/40,
+html.dark .bg-coral-50\/60,
+html.dark .bg-coral-50\/70    { background-color: rgba(244, 166, 166, 0.10) !important; }
+html.dark .bg-mint-50\/40,
+html.dark .bg-mint-50\/60,
+html.dark .bg-mint-50\/70     { background-color: rgba(127, 200, 169, 0.10) !important; }
+html.dark .bg-lavender-50\/40,
+html.dark .bg-lavender-50\/60,
+html.dark .bg-lavender-50\/70 { background-color: rgba(185, 167, 216, 0.10) !important; }
+html.dark .bg-peach-50\/40,
+html.dark .bg-peach-50\/60,
+html.dark .bg-peach-50\/70    { background-color: rgba(246, 193, 119, 0.10) !important; }
+html.dark .bg-brand-50\/40,
+html.dark .bg-brand-50\/60,
+html.dark .bg-brand-50\/70    { background-color: rgba(123, 174, 220, 0.10) !important; }
+
+/* slate-50 with opacity — date dividers on log feeds, etc. */
+html.dark .bg-slate-50\/40,
+html.dark .bg-slate-50\/60,
+html.dark .bg-slate-50\/70    { background-color: #232C3A !important; }
+html.dark .bg-slate-100\/40,
+html.dark .bg-slate-100\/60,
+html.dark .bg-slate-100\/70   { background-color: #2A3344 !important; }
+
+/* Native form controls (inputs without an explicit bg-X) — make their
+   field surface match the surrounding dark cards. The earlier
+   `color-scheme: dark` declaration on html.dark also flips the user-agent
+   styling, but explicit overrides eliminate edge cases (Chrome's default
+   input still ships with a light grey on dark scheme on some platforms). */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark textarea,
+html.dark select {
+  background-color: #1F2837;
+  border-color: #2A3344;
+}
 
 html, body { height: 100%; }
 
