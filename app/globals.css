@@ -32,6 +32,42 @@ html[dir="rtl"] aside.fixed.left-0 { left: auto; right: 0; }
   --peach-500: #F6C177;
 }
 
+/* 050 batch — dark theme. Activated by .dark on <html> (set by the boot
+   script in app/layout.tsx based on user_preferences.theme). Re-tunes the
+   neutral surfaces so existing brand-tinted accents (coral/mint/lavender)
+   still pop without redefining every Tailwind class. */
+html.dark {
+  --canvas:   #0F141B;
+  --ink:      #E2E8F0;
+  --ink-strong: #F8FAFC;
+  --ink-muted:  #94A3B8;
+}
+html.dark body {
+  background-image:
+    radial-gradient(at 10% 0%,   rgba(123,174,220,0.06) 0, transparent 45%),
+    radial-gradient(at 100% 5%,  rgba(244,166,166,0.05) 0, transparent 50%),
+    radial-gradient(at 85% 100%, rgba(127,200,169,0.06) 0, transparent 55%);
+}
+/* Surface elevations: cards/panels get a slightly lighter slate so they
+   pop against the canvas. Existing `bg-white` classes are left in place
+   intentionally — reverse-engineering every component would balloon scope.
+   Wave 4 will theme each surface card properly. */
+html.dark .bg-white,
+html.dark .bg-white\/85,
+html.dark .bg-white\/95,
+html.dark .bg-white\/80 {
+  background-color: #1A2230 !important;
+  color: var(--ink);
+}
+html.dark .border-slate-200,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/70 {
+  border-color: #2A3344 !important;
+}
+html.dark .text-ink-strong { color: var(--ink-strong); }
+html.dark .text-ink        { color: var(--ink); }
+html.dark .text-ink-muted  { color: var(--ink-muted); }
+
 html, body { height: 100%; }
 
 body {

@@ -4,6 +4,7 @@ import { ageInDays, fmtDateTime } from '@/lib/dates';
 import { fmtKg } from '@/lib/units';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import { BabyAvatar } from '@/components/BabyAvatar';
+import { MarkAllRead } from '@/components/MarkAllRead';
 import { Bell, Plus, Heart, Sparkles, ArrowRight } from 'lucide-react';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { tFor, type TFunc } from '@/lib/i18n';
@@ -185,6 +186,10 @@ export default async function DashboardPage() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-coral-700 bg-coral-50 px-1.5 py-0.5 rounded-full">
               {unread.length}
             </span>
+            {/* Mark-all-read button — calls the SECURITY DEFINER RPC that
+                inserts notification_reads rows for everything currently
+                unread. */}
+            <MarkAllRead />
           </div>
           <div className="rounded-2xl bg-white/85 border border-slate-200 divide-y divide-slate-100 shadow-card">
             {unread.map(n => {
@@ -208,12 +213,19 @@ export default async function DashboardPage() {
                 }
               })();
               const baby = (babies ?? []).find(b => b.id === n.baby_id);
+              // 050 batch: app_update notifications carry the actual title
+              // in payload.title — show that instead of the generic kind
+              // label so the tile is meaningful at a glance.
+              const payload = n.payload as Record<string, unknown> | null;
+              const headline = (n.kind === 'app_update' && typeof payload?.title === 'string')
+                ? (payload.title as string)
+                : friendlyNotificationLabel(n.kind, t);
               return (
                 <Link key={n.id} href={href}
-                  className="flex items-center justify-between py-3 px-4 hover:bg-slate-50 transition group">
-                  <div className="min-w-0">
-                    <div className="font-medium text-ink-strong">{friendlyNotificationLabel(n.kind, t)}</div>
-                    {baby && <div className="text-[11px] text-ink-muted">{baby.name}</div>}
+                  className="flex items-center justify-between py-3 px-4 hover:bg-slate-50 transition group gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-ink-strong truncate">{headline}</div>
+                    {baby && <div className="text-[11px] text-ink-muted truncate">{baby.name}</div>}
                   </div>
                   <span className="text-xs text-ink-muted shrink-0">{fmtDateTime(n.created_at)}</span>
                 </Link>

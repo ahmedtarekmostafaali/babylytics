@@ -8,6 +8,8 @@ import type { Lang } from '@/lib/i18n';
 
 export type TimeFormat = '12h' | '24h';
 export type UnitSystem = 'metric' | 'imperial';
+// 050 batch: 'system' follows the OS preference (prefers-color-scheme).
+export type Theme = 'system' | 'light' | 'dark';
 
 export type UserPrefs = {
   language: Lang;
@@ -17,6 +19,7 @@ export type UserPrefs = {
   unit_system: UnitSystem;
   whatsapp_e164: string | null;
   whatsapp_optin: boolean;
+  theme: Theme;
 };
 
 export const DEFAULT_PREFS: UserPrefs = {
@@ -27,6 +30,7 @@ export const DEFAULT_PREFS: UserPrefs = {
   unit_system: 'metric',
   whatsapp_e164: null,
   whatsapp_optin: false,
+  theme: 'system',
 };
 
 /** Load the current user's preferences. Returns DEFAULT_PREFS when no row exists. */
@@ -35,7 +39,7 @@ export async function loadUserPrefs(supabase: SupabaseClient): Promise<UserPrefs
   if (!user) return DEFAULT_PREFS;
 
   const { data } = await supabase.from('user_preferences')
-    .select('language,country,timezone,time_format,unit_system,whatsapp_e164,whatsapp_optin')
+    .select('language,country,timezone,time_format,unit_system,whatsapp_e164,whatsapp_optin,theme')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -48,6 +52,7 @@ export async function loadUserPrefs(supabase: SupabaseClient): Promise<UserPrefs
     unit_system:    (data.unit_system    as UnitSystem) ?? DEFAULT_PREFS.unit_system,
     whatsapp_e164:  (data.whatsapp_e164  as string | null) ?? null,
     whatsapp_optin: Boolean(data.whatsapp_optin),
+    theme:          (data.theme          as Theme)      ?? DEFAULT_PREFS.theme,
   };
 }
 

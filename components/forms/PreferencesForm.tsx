@@ -10,11 +10,17 @@ import {
   type UserPrefs, type TimeFormat, type UnitSystem, saveUserPrefs,
 } from '@/lib/user-prefs';
 import type { Lang } from '@/lib/i18n';
-import { Save, Globe, MapPin, Clock, Ruler, Bell, Check } from 'lucide-react';
+import { Save, Globe, MapPin, Clock, Ruler, Bell, Check, Palette, Sun, Moon, Monitor, Sliders } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WhatsAppSandboxJoin } from '@/components/WhatsAppSandboxJoin';
+import { AreaPicker } from '@/components/AreaPicker';
 
-export function PreferencesForm({ initial }: { initial: UserPrefs }) {
+export function PreferencesForm({ initial, initialFeatures }: {
+  initial: UserPrefs;
+  /** 050 batch: per-stage feature visibility shaped {planning,pregnancy,baby:[area,...]}.
+   *  Undefined or missing key = unrestricted for that stage. */
+  initialFeatures?: Record<string, string[]>;
+}) {
   const router = useRouter();
   const t = useT();
 
@@ -25,6 +31,17 @@ export function PreferencesForm({ initial }: { initial: UserPrefs }) {
   const [unitSystem,  setUnitSystem]  = useState<UnitSystem>(initial.unit_system);
   const [waNumber,    setWaNumber]    = useState(initial.whatsapp_e164 ?? '');
   const [waOptin,     setWaOptin]     = useState(initial.whatsapp_optin);
+  // 050 batch: theme. Applied on save by toggling the .dark class on <html>
+  // — same trick Tailwind's dark: variant uses.
+  const [theme,       setTheme]       = useState<typeof initial.theme>(initial.theme);
+  // 050 batch: per-stage feature visibility. Tabs let the user pick a stage
+  // and toggle areas. Saved on submit alongside the rest of the prefs.
+  const [featStage,   setFeatStage]   = useState<'planning'|'pregnancy'|'baby'>('baby');
+  const [features,    setFeatures]    = useState<Record<string, string[] | null>>(() => ({
+    planning:  initialFeatures?.planning  && initialFeatures.planning.length  > 0 ? initialFeatures.planning  : null,
+    pregnancy: initialFeatures?.pregnancy && initialFeatures.pregnancy.length > 0 ? initialFeatures.pregnancy : null,
+    baby:      initialFeatures?.baby      && initialFeatures.baby.length      > 0 ? initialFeatures.baby      : null,
+  }));
 
   const [pending, start] = useTransition();
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -46,9 +63,29 @@ export function PreferencesForm({ initial }: { initial: UserPrefs }) {
         time_format: timeFormat, unit_system: unitSystem,
         whatsapp_e164: waNumber.trim() || null,
         whatsapp_optin: waOptin && !!waNumber.trim(),
+        theme,
       });
       if (!res.ok) { setErr(res.error); return; }
+      // 050 batch: persist per-stage features in a separate update — they
+      // live in the same row but as a jsonb column. We strip empty arrays
+      // back to "no key" so the my_enabled_features RPC returns null
+      // (= unrestricted) instead of an empty list (= block everything).
+      const featurePayload: Record<string, string[]> = {};
+      for (const k of ['planning','pregnancy','baby'] as const) {
+        const v = features[k];
+        if (v && v.length > 0) featurePayload[k] = v;
+      }
+      const supabase2 = createClient();
+      const { data: { user } } = await supabase2.auth.getUser();
+      if (user) {
+        await supabase2.from('user_preferences')
+          .update({ enabled_features: featurePayload })
+          .eq('user_id', user.id);
+      }
       setSavedAt(Date.now());
+      // Apply the chosen theme immediately — no need to wait for the
+      // server round-trip + page refresh. Same logic the layout runs.
+      applyThemeClass(theme);
       // Force the layout to re-fetch prefs (lang/dir flip) on next paint.
       router.refresh();
     });
@@ -112,6 +149,22 @@ export function PreferencesForm({ initial }: { initial: UserPrefs }) {
         </div>
       </Card>
 
+      {/* Theme — light, dark, or follow OS. */}
+      <Card icon={Palette} title="Theme">
+        <div className="grid grid-cols-3 gap-2">
+          <PickerTile active={theme === 'system'} onClick={() => setTheme('system')}>
+            <span className="inline-flex items-center gap-1.5"><Monitor className="h-4 w-4" /> System</span>
+          </PickerTile>
+          <PickerTile active={theme === 'light'} onClick={() => setTheme('light')}>
+            <span className="inline-flex items-center gap-1.5"><Sun className="h-4 w-4" /> Light</span>
+          </PickerTile>
+          <PickerTile active={theme === 'dark'} onClick={() => setTheme('dark')}>
+            <span className="inline-flex items-center gap-1.5"><Moon className="h-4 w-4" /> Dark</span>
+          </PickerTile>
+        </div>
+        <p className="text-[11px] text-ink-muted mt-2">System follows your device setting and switches automatically when it changes.</p>
+      </Card>
+
       {/* Units */}
       <Card icon={Ruler} title={t('prefs.units')}>
         <div className="grid grid-cols-2 gap-2">
@@ -158,6 +211,26 @@ export function PreferencesForm({ initial }: { initial: UserPrefs }) {
         </div>
       </Card>
 
+      {/* Features visibility (050 batch) — pick which areas you want
+          to see for each stage. Applies to YOU only and only on profiles
+          where you're the parent/owner. */}
+      <Card icon={Sliders} title="Features per stage">
+        <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 p-1 mb-3">
+          {(['planning','pregnancy','baby'] as const).map(s => (
+            <button key={s} type="button" onClick={() => setFeatStage(s)}
+              className={cn('px-3 py-1.5 rounded-full text-xs font-semibold capitalize',
+                featStage === s ? 'bg-white text-ink-strong shadow-sm' : 'text-ink-muted hover:text-ink')}>
+              {s === 'planning' ? 'My cycle' : s === 'pregnancy' ? 'Pregnancy' : 'Baby'}
+            </button>
+          ))}
+        </div>
+        <AreaPicker
+          value={features[featStage]}
+          onChange={next => setFeatures(prev => ({ ...prev, [featStage]: next }))}
+          stage={featStage}
+        />
+      </Card>
+
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
 
       <div className="flex items-center gap-3">
@@ -173,6 +246,17 @@ export function PreferencesForm({ initial }: { initial: UserPrefs }) {
       </div>
     </form>
   );
+}
+
+/** Apply the chosen theme class to <html> right now. The same logic runs
+ *  again on every page load via app/layout.tsx (server-side) — this just
+ *  avoids a flash on save. */
+function applyThemeClass(theme: 'system' | 'light' | 'dark') {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  const wantsDark = theme === 'dark'
+    || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  root.classList.toggle('dark', wantsDark);
 }
 
 function Card({ icon: Icon, title, children }: {

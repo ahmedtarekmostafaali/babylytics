@@ -1,6 +1,9 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  // 050 batch: opt into class-based dark mode. The boot script in
+  // app/layout.tsx toggles `.dark` on <html> based on the user's pref.
+  darkMode: 'class',
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',

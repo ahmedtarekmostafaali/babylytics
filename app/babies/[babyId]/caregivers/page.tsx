@@ -43,15 +43,27 @@ function initials(s: string) {
 export default async function CaregiversPage({ params }: { params: { babyId: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: baby } = await supabase.from('babies').select('id,name').eq('id', params.babyId).single();
+  const { data: baby } = await supabase.from('babies')
+    .select('id,name,lifecycle_stage,dob')
+    .eq('id', params.babyId).single();
   if (!baby) notFound();
   const userPrefs = await loadUserPrefs(supabase);
   const t = tFor(userPrefs.language);
 
-  type Row = { baby_id: string; user_id: string; role: Role; created_at: string };
+  // 050 batch: pass stage to InviteForm + CaregiverRowActions so the
+  // AreaPicker only shows areas relevant to this profile (cycle items
+  // for planning, prenatal for pregnancy, baby trackers for born).
+  const { stageBucket: bucketFor } = await import('@/lib/areas');
+  const { effectiveStage: effStg } = await import('@/lib/lifecycle');
+  const stage = bucketFor(effStg(
+    baby.lifecycle_stage as 'planning'|'pregnancy'|'newborn'|'infant'|'toddler'|'child'|'archived'|null,
+    baby.dob as string | null,
+  ));
+
+  type Row = { baby_id: string; user_id: string; role: Role; created_at: string; allowed_areas: string[] | null };
   const { data: rowsRaw } = await supabase
     .from('baby_users')
-    .select('baby_id,user_id,role,created_at')
+    .select('baby_id,user_id,role,created_at,allowed_areas')
     .eq('baby_id', params.babyId)
     .order('created_at', { ascending: true });
   const rows = (rowsRaw ?? []) as Row[];
@@ -139,10 +151,13 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                         <span className="text-[11px] text-ink-muted whitespace-nowrap">{fmtDate(r.created_at)}</span>
                       </div>
 
-                      {/* Actions menu — always at the end */}
+                      {/* Actions menu — always at the end. Includes the
+                          new "Edit visibility" option that opens the
+                          AreaPicker scoped to this profile's stage. */}
                       <div className="shrink-0">
                         <CaregiverRowActions babyId={params.babyId} userId={r.user_id}
-                          currentRole={r.role} canManage={canManage} isSelf={isSelf} />
+                          currentRole={r.role} canManage={canManage} isSelf={isSelf}
+                          stage={stage} currentAreas={r.allowed_areas} />
                       </div>
                     </div>
                   </li>
@@ -170,7 +185,7 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                   </div>
                 </div>
                 <div className="mt-4">
-                  <InviteForm babyId={params.babyId} />
+                  <InviteForm babyId={params.babyId} stage={stage} />
                 </div>
               </div>
             </section>

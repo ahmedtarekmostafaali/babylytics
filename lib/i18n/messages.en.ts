@@ -9,7 +9,7 @@ export const en = {
     tagline: 'Care, captured.',
   },
   nav: {
-    my_babies: 'My babies',
+    my_babies: 'My profiles',
     overview: 'Overview',
     add_baby: 'Add profile',
     sign_out: 'Sign out',

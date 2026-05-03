@@ -22,7 +22,12 @@ const ROLE_META: { value: CaregiverRole; icon: React.ComponentType<{ className?:
   { value: 'viewer',   icon: Eye,         tint: 'bg-slate-100 text-ink'           },
 ];
 
-export function InviteForm({ babyId }: { babyId: string }) {
+export function InviteForm({ babyId, stage }: {
+  babyId: string;
+  /** 050 batch: filters the AreaPicker to areas relevant to the profile's
+   *  current stage (cycle vs pregnancy vs born baby). Omit for all areas. */
+  stage?: 'planning' | 'pregnancy' | 'baby';
+}) {
   const router = useRouter();
   const t = useT();
   const ROLE_LABEL: Record<CaregiverRole, string> = {
@@ -185,7 +190,8 @@ export function InviteForm({ babyId }: { babyId: string }) {
                   : `Restricted to ${allowedAreas.length} area${allowedAreas.length === 1 ? '' : 's'} — change`}
               </summary>
               <div className="mt-3">
-                <AreaPicker value={allowedAreas} onChange={setAllowedAreas} />
+                {/* stage-filtered: only areas relevant to this profile show. */}
+                <AreaPicker value={allowedAreas} onChange={setAllowedAreas} stage={stage} />
               </div>
             </details>
           )}

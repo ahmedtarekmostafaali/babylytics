@@ -8,7 +8,7 @@ export const ar: Messages = {
     tagline: 'رعاية موثّقة.',
   },
   nav: {
-    my_babies: 'أطفالي',
+    my_babies: 'ملفاتي',
     overview: 'نظرة عامة',
     add_baby: 'إضافة ملف',
     sign_out: 'تسجيل الخروج',

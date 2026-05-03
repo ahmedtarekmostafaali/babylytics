@@ -4,9 +4,10 @@ import { useEffect, useLayoutEffect, useRef, useState, useTransition } from 'rea
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { MoreHorizontal, Trash2, ChevronRight, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, ChevronRight, Loader2, Eye, X, Save } from 'lucide-react';
+import { AreaPicker } from '@/components/AreaPicker';
 
-type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor';
+type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor' | 'pharmacy';
 
 const ROLES: { value: Exclude<Role, 'editor' | 'caregiver'>; label: string }[] = [
   { value: 'owner',   label: 'Owner' },
@@ -24,13 +25,18 @@ const ROLES: { value: Exclude<Role, 'editor' | 'caregiver'>; label: string }[] =
  * gets clipped by the list container.
  */
 export function CaregiverRowActions({
-  babyId, userId, currentRole, canManage, isSelf,
+  babyId, userId, currentRole, canManage, isSelf, stage, currentAreas,
 }: {
   babyId: string;
   userId: string;
   currentRole: Role;
   canManage: boolean;
   isSelf: boolean;
+  /** Stage of the profile this caregiver belongs to — drives the AreaPicker
+   *  filter so we don't offer baby-only areas on a pregnancy profile. */
+  stage?: 'planning' | 'pregnancy' | 'baby';
+  /** Current allowed_areas for this caregiver (null = full access). */
+  currentAreas?: string[] | null;
 }) {
   const router = useRouter();
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -38,6 +44,10 @@ export function CaregiverRowActions({
   const [coords, setCoords] = useState<{ top: number; left: number; flipRight: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
+  // 050 batch: visibility editor modal state.
+  const [visOpen, setVisOpen] = useState(false);
+  const [visAreas, setVisAreas] = useState<string[] | null>(currentAreas ?? null);
+  const [visBusy, setVisBusy] = useState(false);
 
   // Position the floating menu below-right of the button.
   useLayoutEffect(() => {
@@ -90,6 +100,18 @@ export function CaregiverRowActions({
     });
   }
 
+  async function saveVisibility() {
+    setVisBusy(true); setErr(null);
+    const supabase = createClient();
+    const { error } = await supabase.rpc('set_caregiver_areas', {
+      p_baby: babyId, p_user: userId, p_areas: visAreas,
+    });
+    setVisBusy(false);
+    if (error) { setErr(error.message); return; }
+    setVisOpen(false);
+    router.refresh();
+  }
+
   if (!canManage || isSelf) {
     return (
       <button aria-label="More" disabled
@@ -126,6 +148,15 @@ export function CaregiverRowActions({
               </button>
             ))}
             <div className="h-px bg-slate-100 my-1" />
+            {/* Pharmacy is server-locked to medication areas, so the edit
+                option is hidden — they can't be widened or narrowed. */}
+            {currentRole !== 'pharmacy' && (
+              <button onClick={() => { setOpen(false); setVisOpen(true); }}
+                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-slate-50 flex items-center gap-2">
+                <Eye className="h-3.5 w-3.5 text-ink-muted" />
+                Edit visibility
+              </button>
+            )}
             <button onClick={revoke}
               className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-coral-50 text-coral-700 flex items-center gap-2">
               <Trash2 className="h-3.5 w-3.5" />
@@ -133,6 +164,38 @@ export function CaregiverRowActions({
             </button>
           </div>
         </>,
+        document.body,
+      )}
+
+      {/* Visibility editor modal */}
+      {visOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={() => setVisOpen(false)}>
+          <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-white shadow-2xl p-6 relative"
+            onClick={e => e.stopPropagation()}>
+            <button type="button" onClick={() => setVisOpen(false)}
+              className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-slate-100 text-ink-muted">
+              <X className="h-4 w-4" />
+            </button>
+            <h3 className="text-lg font-bold text-ink-strong mb-1">Edit visibility</h3>
+            <p className="text-xs text-ink-muted mb-4">
+              Pick which areas this caregiver can see. They keep their existing role
+              ({currentRole}) — these toggles only narrow what's visible. Tap "All" to
+              clear restrictions.
+            </p>
+            <AreaPicker value={visAreas} onChange={setVisAreas} stage={stage} />
+            <div className="mt-4 flex items-center justify-end gap-2">
+              {err && <span className="text-xs text-coral-600 mr-auto">{err}</span>}
+              <button type="button" onClick={() => setVisOpen(false)}
+                className="text-sm text-ink-muted hover:text-ink-strong px-3 py-1.5">Cancel</button>
+              <button type="button" onClick={saveVisibility} disabled={visBusy}
+                className="inline-flex items-center gap-1.5 rounded-full bg-mint-500 hover:bg-mint-600 text-white text-sm font-semibold px-4 py-1.5">
+                {visBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Save
+              </button>
+            </div>
+          </div>
+        </div>,
         document.body,
       )}
 

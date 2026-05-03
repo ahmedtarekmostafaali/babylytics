@@ -37,9 +37,29 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const guestLang: Lang = cookieLang === 'ar' ? 'ar' : 'en';
   const lang: Lang = user ? prefs.language : guestLang;
   const dir = isRtl(lang) ? 'rtl' : 'ltr';
+  // 050 batch: theme. 'system' is resolved client-side via the inline
+  // boot script below — for SSR we emit no .dark class and let the script
+  // add it before paint to avoid the wrong-theme flash.
+  const theme = user ? prefs.theme : 'system';
+  const initialDarkAttr = theme === 'dark' ? 'dark' : '';
 
   return (
-    <html lang={lang} dir={dir}>
+    <html lang={lang} dir={dir} className={initialDarkAttr}>
+      <head>
+        {/* Pre-paint theme resolver. Reads the user's pref (passed via the
+            html.className on SSR for explicit dark, otherwise blank), then
+            consults prefers-color-scheme for 'system'. Inline so the user
+            never sees a light flash before the dark theme kicks in. */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function () {
+            try {
+              var t = ${JSON.stringify(theme)};
+              var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+              document.documentElement.classList.toggle('dark', dark);
+            } catch (e) {}
+          })();
+        `}} />
+      </head>
       <body className="font-sans min-h-full antialiased">
         <I18nProvider lang={lang}>
           <AppShell>{children}</AppShell>
