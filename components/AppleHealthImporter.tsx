@@ -350,7 +350,11 @@ function bucketRecords(records: AppleRecord[]): ParseResult {
   for (const r of records) {
     switch (r.type) {
       case 'HKCategoryTypeIdentifierMenstrualFlow': {
-        const flow = (r.value && APPLE_FLOW_TO_OUR[r.value]) ?? null;
+        // Use a ternary instead of `&&` — `&&` returns `""` when r.value is
+        // an empty string, polluting the resulting union type. The ternary
+        // gives us a clean `flow_intensity | null`.
+        const flow: CycleRecord['flow_intensity'] =
+          r.value ? (APPLE_FLOW_TO_OUR[r.value] ?? null) : null;
         // Apple stores dates as 'YYYY-MM-DD HH:MM:SS +ZZZZ'; we only need
         // the calendar date in the user's locale at the time it was
         // recorded, so trim to the first 10 chars.
