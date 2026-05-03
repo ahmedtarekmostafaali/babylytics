@@ -5,7 +5,7 @@ import { ProfileFeaturesCard } from '@/components/ProfileFeaturesCard';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { BabyAvatar } from '@/components/BabyAvatar';
 import { signAvatarUrl } from '@/lib/baby-avatar';
-import { fmtGestationalAge, gestationalAge } from '@/lib/lifecycle';
+import { fmtGestationalAge } from '@/lib/lifecycle';
 import { Heart, Calendar, Stethoscope, Eye } from 'lucide-react';
 import Link from 'next/link';
 import type { LifecycleStage } from '@/lib/lifecycle';
@@ -31,8 +31,9 @@ export default async function PregnancyProfilePage({ params }: { params: { babyI
   const enabledFeatures = (featRow as { enabled_features?: string[] | null } | null)?.enabled_features ?? null;
 
   const avatarUrl = await signAvatarUrl(supabase, baby.avatar_path);
-  const ga = gestationalAge(baby.edd, baby.lmp);
-  const gaLabel = ga ? fmtGestationalAge(ga) : null;
+  // fmtGestationalAge takes (edd, lmp) directly and returns the formatted
+  // label or empty string when neither is set.
+  const gaLabel = fmtGestationalAge(baby.edd, baby.lmp) || null;
 
   return (
     <PageShell max="5xl">
