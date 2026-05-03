@@ -1946,6 +1946,10 @@ export const en = {
     recent_visibility_x: "Pick which sections show in the sidebar for each profile. Cycle, pregnancy and baby each have their own list.",
     recent_areas_t:    'Per-area caregiver perms',
     recent_areas_x:    "Narrow what each invited caregiver sees — share only feedings + sleep with the nurse, only meds with the pharmacy.",
+    recent_cycleos_t:  'Cycle modes & pattern checks',
+    recent_cycleos_x:  'Standard, PCOS, Endometriosis, Irregular, Athlete, Postpartum — each tunes Daily Ideas + flags long cycles, missed periods, and repeated severe pain.',
+    recent_apple_t:    'Apple Health import',
+    recent_apple_x:    'Drop your export.zip — your cycle history backfills in seconds. Parsed locally in your browser; only the cycle subset leaves your device.',
 
     // Coming-soon row — surface what's next so users know the roadmap.
     soon_eyebrow:      'Coming soon',
@@ -1953,6 +1957,8 @@ export const en = {
     soon_consult_x:    'Invite a verified Babylytics doctor as a caregiver, share the relevant areas, and chat privately — same place, no separate app.',
     soon_native_t:     'Native iOS + Android apps',
     soon_native_x:     'Web app works on every phone today. Native apps with push notifications and offline support are next.',
+    soon_integrations_t: 'More health-app integrations',
+    soon_integrations_x: 'Google Fit, Fitbit, Withings, Garmin — file import first, then live sync via the native apps.',
 
     // App-store badge eyebrow when the link is disabled.
     app_coming_soon:   'Coming soon',

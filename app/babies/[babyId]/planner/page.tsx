@@ -10,6 +10,9 @@ import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
 import { SuggestionsCard } from '@/components/SuggestionsCard';
 import { cyclePhaseFor } from '@/lib/suggestions';
 import { loadUserPrefs } from '@/lib/user-prefs';
+import { CycleModeCard, type CycleMode } from '@/components/CycleModeCard';
+import { CycleRedFlagsCard, type CycleRedFlag } from '@/components/CycleRedFlagsCard';
+import { Download } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'My cycle' };
@@ -58,9 +61,10 @@ export default async function PlannerPage({
   await assertRole(params.babyId, { requireLogs: true });
 
   const { data: baby } = await supabase.from('babies')
-    .select('id,name,lifecycle_stage')
+    .select('id,name,lifecycle_stage,cycle_mode')
     .eq('id', params.babyId).single();
   if (!baby) notFound();
+  const cycleMode = ((baby as { cycle_mode?: CycleMode | null }).cycle_mode ?? null);
 
   // Default to current month in user's locale (server is UTC; close enough).
   const month = (searchParams.month && /^\d{4}-\d{2}$/.test(searchParams.month))
@@ -68,7 +72,7 @@ export default async function PlannerPage({
     : isoMonth(new Date());
   const monthStart = month + '-01';
 
-  const [{ data: calData, error: calErr }, { data: cycleData }, userPrefs] = await Promise.all([
+  const [{ data: calData, error: calErr }, { data: cycleData }, userPrefs, { data: redFlagsRaw }] = await Promise.all([
     supabase.rpc('cycle_calendar', { p_baby: params.babyId, p_month: monthStart }),
     supabase.from('menstrual_cycles')
       .select('id,period_start,period_end,cycle_length,flow_intensity,symptoms,notes')
@@ -76,7 +80,11 @@ export default async function PlannerPage({
       .order('period_start', { ascending: false })
       .limit(12),
     loadUserPrefs(supabase),
+    // Wave 12: anomaly detection from your own historical cycles. Returns
+    // empty when there's no signal to act on (which is the common case).
+    supabase.rpc('cycle_red_flags', { p_baby: params.babyId }),
   ]);
+  const redFlags = (redFlagsRaw ?? []) as CycleRedFlag[];
   const calendar = (calData ?? []) as CalRow[];
   const cycles   = (cycleData ?? []) as Cycle[];
 
@@ -137,6 +145,11 @@ export default async function PlannerPage({
               className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-coral-500 to-coral-600 text-white text-sm font-semibold px-4 py-2 shadow-sm">
               <Plus className="h-4 w-4" /> Log period
             </Link>
+            {/* Wave 15: Apple Health import — open the import wizard. */}
+            <Link href={`/babies/${params.babyId}/import/apple-health`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-ink text-sm font-semibold px-4 py-2 shadow-sm">
+              <Download className="h-4 w-4" /> Import from Apple Health
+            </Link>
             {/* "I'm pregnant!" → transitions stage to 'pregnancy', preserving
                 cycle history. Only meaningful when the profile is still in
                 planning mode, which is the only place this page is reachable. */}
@@ -144,6 +157,12 @@ export default async function PlannerPage({
           </div>
         }
       />
+
+      {/* Wave 12: cycle mode picker + red flags. Mode picker is always
+          visible (small, tap-to-edit). Red flags only render when there's
+          something detected from the user's own historical patterns. */}
+      <CycleModeCard babyId={params.babyId} initialMode={cycleMode} />
+      <CycleRedFlagsCard flags={redFlags} babyId={params.babyId} />
 
       {/* Top insight strip */}
       <section className="grid sm:grid-cols-3 gap-3">
@@ -228,6 +247,7 @@ export default async function PlannerPage({
         stage="cycle"
         marker={cycleMarker}
         phase={cyclePhase}
+        mode={cycleMode}
         lang={userPrefs.language}
       />
 

@@ -16,6 +16,9 @@
 
 export type SuggestionStage = 'baby' | 'pregnancy' | 'cycle';
 export type CyclePhase     = 'menstrual' | 'follicular' | 'ovulatory' | 'luteal';
+// Wave 12: cycle mode tags suggestions to specific conditions/contexts so
+// the daily ideas feel personal. Standard items have no mode tag.
+export type CycleMode      = 'standard' | 'pcos' | 'endometriosis' | 'irregular' | 'athlete' | 'postpartum';
 
 export interface Suggestion {
   id: string;
@@ -41,6 +44,10 @@ export interface Suggestion {
   week_max?: number;
   // Cycle-only: phase, or undefined = applies to all phases.
   phase?: CyclePhase;
+  // Cycle-only: restrict to specific cycle modes. Undefined = applies to
+  // every mode. Used to surface PCOS-/postpartum-/athlete-specific tips
+  // only to those users.
+  modes?: CycleMode[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -329,6 +336,82 @@ const CYCLE: Suggestion[] = [
     body_en: 'Sweet potato, brown rice, oats. Steady serotonin overnight = fewer PMS mood swings tomorrow.',
     title_ar: 'عشاء كربوهيدرات معقدة',
     body_ar: 'بطاطا، أرز بني، شوفان. سيروتونين ثابت بالليل = تقلب مزاج أقل بكرة.' },
+
+  // ── Mode-specific suggestions (Wave 12) ─────────────────────────────
+  // PCOS — insulin sensitivity, inositol, lower-glycemic eating.
+  { id: 'c_pcos_inositol', stage: 'cycle', icon: 'pill', tint: 'mint', duration_min: 1, modes: ['pcos'],
+    title_en: 'Myo-inositol, twice daily',
+    body_en: '2 g morning + 2 g evening (with food) is the most-studied PCOS supplement — improves insulin sensitivity and ovulation regularity over 3 months.',
+    title_ar: 'ميو-إينوزيتول مرتين يوميًا',
+    body_ar: '٢ جرام صباحًا و٢ مساءً مع الطعام — أكثر مكمل مدروس لـ PCOS، يحسن حساسية الإنسولين وانتظام التبويض خلال ٣ أشهر.' },
+  { id: 'c_pcos_low_gi', stage: 'cycle', icon: 'apple', tint: 'mint', duration_min: 5, modes: ['pcos'],
+    title_en: 'Lower-glycemic plate',
+    body_en: 'Half the plate non-starchy vegetables, quarter protein, quarter whole grains. Insulin spikes worsen PCOS symptoms — gentler glucose curves help.',
+    title_ar: 'طبق منخفض الجلايسيمي',
+    body_ar: 'نصف الطبق خضار غير نشوية، ربع بروتين، ربع حبوب كاملة. ارتفاع الإنسولين يزيد أعراض PCOS — منحنى جلوكوز أهدأ يساعد.' },
+  { id: 'c_pcos_strength', stage: 'cycle', icon: 'activity', tint: 'brand', duration_min: 30, modes: ['pcos'],
+    title_en: 'Strength training, 3×/week',
+    body_en: 'Resistance training improves insulin sensitivity faster than cardio for PCOS. Squats, push-ups, rows — bodyweight is fine.',
+    title_ar: 'تمارين قوة ٣ مرات أسبوعيًا',
+    body_ar: 'تمارين المقاومة تحسن حساسية الإنسولين أسرع من الكارديو لـ PCOS. سكوات، بوش-أب، تجديف — وزن الجسم كافٍ.' },
+
+  // Endometriosis — anti-inflammatory, omega-3, heat, gentle movement.
+  { id: 'c_endo_omega3', stage: 'cycle', icon: 'pill', tint: 'lavender', duration_min: 1, modes: ['endometriosis'],
+    title_en: 'Omega-3, 1–2 g daily',
+    body_en: 'EPA + DHA reduce prostaglandin-driven pain in endometriosis. Take with a meal containing fat for absorption.',
+    title_ar: 'أوميجا-٣ ١-٢ جرام يوميًا',
+    body_ar: 'EPA + DHA يقللان الألم المرتبط بالبروستاجلاندين في الانتباذ البطاني. خذيها مع وجبة فيها دهون للامتصاص.' },
+  { id: 'c_endo_anti_inflam', stage: 'cycle', icon: 'leaf', tint: 'lavender', duration_min: 5, modes: ['endometriosis'],
+    title_en: 'Anti-inflammatory swap',
+    body_en: 'Less red meat + processed sugar this week, more leafy greens, berries, fatty fish. The endo evidence here is real, not just folk wisdom.',
+    title_ar: 'استبدال مضاد للالتهاب',
+    body_ar: 'لحم أحمر وسكر معالج أقل هذا الأسبوع، خضار ورقي وتوت وسمك دهني أكثر. الأدلة على الانتباذ البطاني حقيقية وليست مجرد حكمة شعبية.' },
+  { id: 'c_endo_pelvic_yoga', stage: 'cycle', icon: 'stretch', tint: 'lavender', duration_min: 15, modes: ['endometriosis'],
+    title_en: 'Pelvic-release yoga, 15 min',
+    body_en: "Happy baby, supported child's pose, supine twist. Eases pelvic-floor tension that worsens endo cramping.",
+    title_ar: 'يوجا إرخاء الحوض ١٥ دقيقة',
+    body_ar: 'وضعية الطفل السعيد، وضعية الطفل المدعومة، اللف المستلقي. تخفف توتر قاع الحوض الذي يزيد تقلصات الانتباذ.' },
+
+  // Athlete — recovery awareness, fueling, iron, BBT/cycle-load matching.
+  { id: 'c_athlete_recovery', stage: 'cycle', icon: 'moon', tint: 'mint', duration_min: 1, modes: ['athlete'], phase: 'luteal',
+    title_en: 'Lower training intensity',
+    body_en: 'Core temp is up ~0.3°C, perceived exertion higher, recovery slower. Drop one hard session this week and add 8h sleep.',
+    title_ar: 'قللي شدة التدريب',
+    body_ar: 'حرارة الجسم أعلى ~٠.٣°م، الإحساس بالمجهود أعلى، التعافي أبطأ. اسقطي جلسة شاقة هذا الأسبوع وأضيفي ٨ ساعات نوم.' },
+  { id: 'c_athlete_iron', stage: 'cycle', icon: 'apple', tint: 'coral', duration_min: 5, modes: ['athlete'],
+    title_en: 'Track iron status',
+    body_en: 'Female athletes lose iron through both periods AND foot-strike hemolysis. Annual ferritin lab + iron-rich meals weekly = steady performance.',
+    title_ar: 'راقبي مستوى الحديد',
+    body_ar: 'الرياضيات يفقدن الحديد من الدورة + انحلال الدم بالجري. تحليل فيريتين سنوي + وجبات غنية بالحديد أسبوعيًا = أداء ثابت.' },
+  { id: 'c_athlete_carbload', stage: 'cycle', icon: 'utensils', tint: 'brand', duration_min: 5, modes: ['athlete'], phase: 'follicular',
+    title_en: 'Higher-carb training week',
+    body_en: 'Estrogen rising = better carb utilization. Push the heavy lifts and intervals now; use the energy.',
+    title_ar: 'أسبوع تدريب عالي الكربوهيدرات',
+    body_ar: 'ارتفاع الإستروجين = استخدام أفضل للكربوهيدرات. ادفعي الأوزان الثقيلة والتدريب البيني الآن.' },
+
+  // Postpartum — gentle return, pelvic floor, breastfeeding-aware.
+  { id: 'c_pp_kegels', stage: 'cycle', icon: 'activity', tint: 'coral', duration_min: 5, modes: ['postpartum'],
+    title_en: 'Kegels — 3 sets of 10',
+    body_en: 'Daily pelvic-floor work for at least 6 months postpartum. Squeeze 5 sec, release 5 sec. Do during a feed for built-in routine.',
+    title_ar: 'تمارين كيجل — ٣ مجموعات × ١٠',
+    body_ar: 'تمارين قاع الحوض يوميًا لمدة ٦ أشهر على الأقل بعد الولادة. اضغطي ٥ ثوانٍ، استرخي ٥. مارسيها أثناء الرضاعة كروتين تلقائي.' },
+  { id: 'c_pp_ferritin', stage: 'cycle', icon: 'pill', tint: 'mint', duration_min: 1, modes: ['postpartum'],
+    title_en: 'Check ferritin at 6 weeks',
+    body_en: 'Post-birth iron stores are often depleted. A quick ferritin lab catches deficiency before it tanks energy and milk supply.',
+    title_ar: 'افحصي الفيريتين بعد ٦ أسابيع',
+    body_ar: 'مخزون الحديد بعد الولادة يكون منخفضًا. تحليل فيريتين سريع يكتشف النقص قبل أن يضعف الطاقة وإدرار الحليب.' },
+  { id: 'c_pp_first_period', stage: 'cycle', icon: 'sparkles', tint: 'lavender', duration_min: 5, modes: ['postpartum'],
+    title_en: 'First period back?',
+    body_en: 'Post-birth cycles often arrive heavier and irregular for 3–6 months — completely normal. Track flow and pain so you have a baseline if it doesn\'t settle.',
+    title_ar: 'أول دورة بعد الولادة؟',
+    body_ar: 'الدورات بعد الولادة غالبًا أغزر وغير منتظمة لـ ٣-٦ أشهر — طبيعي تمامًا. سجلي الغزارة والألم لتكون عندك مرجعية لو ما استقرت.' },
+
+  // Irregular — gentler tone, no fertility predictions over-confidence.
+  { id: 'c_irreg_journal', stage: 'cycle', icon: 'book', tint: 'peach', duration_min: 10, modes: ['irregular'],
+    title_en: 'Add a quick journal note',
+    body_en: 'Stress, travel, sleep changes, illness, weight changes — all shift cycles. Journaling these helps spot what affects yours.',
+    title_ar: 'دوّني ملاحظة سريعة',
+    body_ar: 'الإجهاد، السفر، تغيرات النوم، المرض، تغير الوزن — كلها تؤثر على الدورة. تدوين هذه يساعدك على معرفة ما يؤثر عليك.' },
 ];
 
 const ALL: Suggestion[] = [...BABY, ...PREGNANCY, ...CYCLE];
@@ -373,6 +456,11 @@ export interface PickContext {
   marker: number | null;
   /** Cycle phase, only used when stage='cycle'. */
   phase?: CyclePhase;
+  /** Wave 12: cycle mode. When provided we surface mode-specific items
+   *  (and still mix in the unrestricted ones). When null/'standard' we
+   *  filter out mode-specific items so standard users don't see PCOS
+   *  copy etc. */
+  mode?: CycleMode | null;
 }
 
 /** Filter suggestions to those that match the profile's stage + marker. */
@@ -392,11 +480,22 @@ function eligible(ctx: PickContext): Suggestion[] {
       (s.week_max == null || ctx.marker! <= s.week_max),
     );
   }
-  // cycle
-  if (ctx.phase) {
-    return pool.filter(s => s.phase == null || s.phase === ctx.phase);
+  // cycle — filter by phase first, then mode.
+  let filtered = ctx.phase
+    ? pool.filter(s => s.phase == null || s.phase === ctx.phase)
+    : pool.filter(s => s.phase == null);
+  // Mode filter:
+  //   - standard / null: drop anything tagged with a mode (PCOS-only,
+  //     postpartum-only, athlete-only, etc.) so the average user doesn't
+  //     get clinical copy that doesn't apply to them.
+  //   - specific mode: keep untagged items + items tagged with this mode.
+  const mode = ctx.mode ?? 'standard';
+  if (mode === 'standard') {
+    filtered = filtered.filter(s => !s.modes || s.modes.length === 0);
+  } else {
+    filtered = filtered.filter(s => !s.modes || s.modes.length === 0 || s.modes.includes(mode));
   }
-  return pool.filter(s => s.phase == null);
+  return filtered;
 }
 
 /** Deterministic 3-pick for today. Same trio all day; rotates at midnight. */

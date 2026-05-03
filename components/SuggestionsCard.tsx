@@ -13,7 +13,7 @@ import {
   Sparkles, Heart, Baby, Droplet, Milk, Apple, Moon, Activity, BookOpen,
   Music, Sun, Leaf, Smile, Flame, Pill, Utensils, Wind, Check, RefreshCw,
 } from 'lucide-react';
-import { pickToday, doneKey, type Suggestion, type CyclePhase, type SuggestionStage } from '@/lib/suggestions';
+import { pickToday, doneKey, type Suggestion, type CyclePhase, type SuggestionStage, type CycleMode } from '@/lib/suggestions';
 
 const ICON: Record<Suggestion['icon'], React.ComponentType<{ className?: string }>> = {
   sparkles: Sparkles, heart: Heart, baby: Baby, droplet: Droplet, milk: Milk,
@@ -31,7 +31,7 @@ const TINT: Record<Suggestion['tint'], { bg: string; iconBg: string; iconFg: str
 };
 
 export function SuggestionsCard({
-  babyId, stage, marker, phase, lang = 'en', heading,
+  babyId, stage, marker, phase, mode, lang = 'en', heading,
 }: {
   babyId: string;
   stage: SuggestionStage;
@@ -40,6 +40,9 @@ export function SuggestionsCard({
   marker: number | null;
   /** Cycle phase, computed from cycle data. Only used when stage='cycle'. */
   phase?: CyclePhase;
+  /** Wave 12: cycle mode for tagged suggestion filtering. Passed only
+   *  when stage='cycle'. */
+  mode?: CycleMode | null;
   lang?: 'en' | 'ar';
   /** Override the section heading. Defaults to a stage-appropriate one. */
   heading?: string;
@@ -48,8 +51,8 @@ export function SuggestionsCard({
   // given day + profile. (pickToday hashes today's date key internally so a
   // page reload after midnight rotates the picks.)
   const todays = useMemo(
-    () => pickToday({ babyId, stage, marker, phase }),
-    [babyId, stage, marker, phase],
+    () => pickToday({ babyId, stage, marker, phase, mode }),
+    [babyId, stage, marker, phase, mode],
   );
 
   // Per-id done state. Hydrated from localStorage on mount; updates persist

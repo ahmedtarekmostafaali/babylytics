@@ -311,18 +311,20 @@ export default async function Landing() {
           <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">{t('landing.recent_h2')}</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <SmallSpotlight tint="lavender" Icon={MessagesSquare}  title={t('landing.recent_chat_t')}       body={t('landing.recent_chat_x')} />
-          <SmallSpotlight tint="coral"    Icon={Heart}            title={t('landing.recent_cycle_t')}      body={t('landing.recent_cycle_x')} />
+          <SmallSpotlight tint="coral"    Icon={Heart}            title={t('landing.recent_cycleos_t')}    body={t('landing.recent_cycleos_x')} />
+          <SmallSpotlight tint="brand"    Icon={Apple}            title={t('landing.recent_apple_t')}      body={t('landing.recent_apple_x')} />
+          <SmallSpotlight tint="lavender" Icon={MessagesSquare}   title={t('landing.recent_chat_t')}       body={t('landing.recent_chat_x')} />
           <SmallSpotlight tint="mint"     Icon={Sparkles}         title={t('landing.recent_ideas_t')}      body={t('landing.recent_ideas_x')} />
-          <SmallSpotlight tint="brand"    Icon={Moon}             title={t('landing.recent_dark_t')}       body={t('landing.recent_dark_x')} />
           <SmallSpotlight tint="peach"    Icon={LayoutDashboard}  title={t('landing.recent_visibility_t')} body={t('landing.recent_visibility_x')} />
           <SmallSpotlight tint="mint"     Icon={ShieldCheck}      title={t('landing.recent_areas_t')}      body={t('landing.recent_areas_x')} />
         </div>
 
         {/* Coming soon row — what's next, kept honest. */}
-        <div className="mt-6 grid md:grid-cols-2 gap-4">
+        <div className="mt-6 grid md:grid-cols-3 gap-4">
           <ComingSoonTile tint="lavender" Icon={Stethoscope} eyebrow={t('landing.soon_eyebrow')}
             title={t('landing.soon_consult_t')} body={t('landing.soon_consult_x')} />
+          <ComingSoonTile tint="mint" Icon={HeartPulse} eyebrow={t('landing.soon_eyebrow')}
+            title={t('landing.soon_integrations_t')} body={t('landing.soon_integrations_x')} />
           <ComingSoonTile tint="brand" Icon={Smartphone} eyebrow={t('landing.soon_eyebrow')}
             title={t('landing.soon_native_t')} body={t('landing.soon_native_x')} />
         </div>
