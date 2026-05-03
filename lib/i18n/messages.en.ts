@@ -1946,8 +1946,10 @@ export const en = {
     recent_visibility_x: "Pick which sections show in the sidebar for each profile. Cycle, pregnancy and baby each have their own list.",
     recent_areas_t:    'Per-area caregiver perms',
     recent_areas_x:    "Narrow what each invited caregiver sees — share only feedings + sleep with the nurse, only meds with the pharmacy.",
-    recent_cycleos_t:  'Cycle modes & pattern checks',
-    recent_cycleos_x:  'Standard, PCOS, Endometriosis, Irregular, Athlete, Postpartum — each tunes Daily Ideas + flags long cycles, missed periods, and repeated severe pain.',
+    recent_cycleos_t:  'Cycle OS — modes, forecasts, pattern checks',
+    recent_cycleos_x:  'Pick a mode (Standard / PCOS / Endo / Irregular / Athlete / Postpartum). Each tunes Daily Ideas, an energy-forecast card per phase, and flags long cycles, missed periods, repeated severe pain.',
+    recent_lifestyle_t: 'Cycle-based lifestyle engine',
+    recent_lifestyle_x: 'Phase-tuned nutrition, workouts, sleep + work tips — MENA-relevant (ful + lentil for menstrual, za\'atar bread for follicular). Today\'s energy/focus/social forecast on the cycle dashboard.',
     recent_apple_t:    'Apple Health import',
     recent_apple_x:    'Drop your export.zip — your cycle history backfills in seconds. Parsed locally in your browser; only the cycle subset leaves your device.',
 

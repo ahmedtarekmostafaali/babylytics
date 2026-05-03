@@ -12,6 +12,7 @@ import { cyclePhaseFor } from '@/lib/suggestions';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { CycleModeCard, type CycleMode } from '@/components/CycleModeCard';
 import { CycleRedFlagsCard, type CycleRedFlag } from '@/components/CycleRedFlagsCard';
+import { CycleEnergyForecast } from '@/components/CycleEnergyForecast';
 import { Download } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -238,6 +239,11 @@ export default async function PlannerPage({
           </div>
         </div>
       </section>
+
+      {/* Wave 13 — Today's forecast. Phase-derived energy/focus/social
+          baseline, with a one-line hint. Renders even before the first
+          cycle is logged (shows neutral baseline + "log a period" prompt). */}
+      <CycleEnergyForecast phase={cyclePhase ?? null} daysSincePeriodStart={cycleMarker} />
 
       {/* Wave 5 — "Ideas for today" — three cycle-phase-aware self-care
           suggestions (iron in menstrual, cardio in follicular, etc.). Only

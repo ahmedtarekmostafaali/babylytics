@@ -23,6 +23,10 @@ export type CycleMode      = 'standard' | 'pcos' | 'endometriosis' | 'irregular'
 export interface Suggestion {
   id: string;
   stage: SuggestionStage;
+  /** Wave 13: rough bucket so the UI can group / filter / show specific
+   *  categories on the lifestyle engine page. Backwards-compatible —
+   *  omitted on older suggestions, treated as 'general'. */
+  category?: 'nutrition' | 'movement' | 'sleep' | 'mental' | 'work' | 'general';
   /** Lucide-react icon name. Renderer maps string → component. */
   icon: 'sparkles' | 'heart' | 'baby' | 'droplet' | 'milk' | 'apple' | 'moon'
       | 'activity' | 'book' | 'music' | 'sun' | 'leaf' | 'smile' | 'flame'
@@ -412,6 +416,143 @@ const CYCLE: Suggestion[] = [
     body_en: 'Stress, travel, sleep changes, illness, weight changes — all shift cycles. Journaling these helps spot what affects yours.',
     title_ar: 'دوّني ملاحظة سريعة',
     body_ar: 'الإجهاد، السفر، تغيرات النوم، المرض، تغير الوزن — كلها تؤثر على الدورة. تدوين هذه يساعدك على معرفة ما يؤثر عليك.' },
+
+  // ── Wave 13 lifestyle engine — MENA-relevant nutrition, workouts,
+  // sleep + work focus tips. Many tagged with `category` so the lifestyle
+  // page (future) can group them. Phase-specific where biology calls
+  // for it; mode-agnostic unless explicitly tagged.
+  // ────────────────────────────────────────────────────────────────────
+
+  // ── Nutrition — menstrual (replenish iron, magnesium, gentle digestion)
+  { id: 'c_nut_ful_lentil', stage: 'cycle', category: 'nutrition', icon: 'utensils', tint: 'coral', duration_min: 5, phase: 'menstrual',
+    title_en: 'Ful + lentil bowl, lemon on top',
+    body_en: 'Both are iron-rich; lemon\'s vitamin C boosts absorption ~3x. Replenishes what the period takes.',
+    title_ar: 'فول + عدس بالليمون',
+    body_ar: 'الاثنان غنيان بالحديد؛ فيتامين C في الليمون يضاعف الامتصاص ٣ مرات. يعوض ما تفقدينه بالدورة.' },
+  { id: 'c_nut_dates_walnut', stage: 'cycle', category: 'nutrition', icon: 'apple', tint: 'peach', duration_min: 2, phase: 'menstrual',
+    title_en: '3 dates + 5 walnuts',
+    body_en: 'Magnesium-rich snack — eases period cramps and the energy dip. Quick mid-afternoon save.',
+    title_ar: '٣ تمرات + ٥ جوزات',
+    body_ar: 'وجبة خفيفة غنية بالماغنسيوم — تخفف تقلصات الدورة وهبوط الطاقة. حل سريع للعصاريات.' },
+  { id: 'c_nut_warm_food', stage: 'cycle', category: 'nutrition', icon: 'flame', tint: 'coral', duration_min: 1, phase: 'menstrual',
+    title_en: 'Warm food, not cold',
+    body_en: 'Soups, stewed vegetables, warm tea — easier on the gut than cold/raw food during the period. Most cultures know this; the science backs it.',
+    title_ar: 'طعام دافئ بدل البارد',
+    body_ar: 'شوربات، خضار مطهية، شاي دافئ — أسهل على المعدة من البارد أو النيء وقت الدورة. كل الثقافات تعرف ذلك والعلم يؤكده.' },
+
+  // ── Nutrition — follicular (energy + estrogen support)
+  { id: 'c_nut_eggs_zaatar', stage: 'cycle', category: 'nutrition', icon: 'utensils', tint: 'mint', duration_min: 5, phase: 'follicular',
+    title_en: 'Two eggs + za\'atar bread',
+    body_en: 'Choline + B vitamins fuel the rising estrogen. Fast breakfast that keeps energy steady till lunch.',
+    title_ar: 'بيضتان + عيش بالزعتر',
+    body_ar: 'كولين وفيتامينات B تدعم ارتفاع الإستروجين. فطار سريع يثبّت طاقتك حتى الغداء.' },
+  { id: 'c_nut_fermented', stage: 'cycle', category: 'nutrition', icon: 'leaf', tint: 'mint', duration_min: 1, phase: 'follicular',
+    title_en: 'Add a fermented food today',
+    body_en: 'Yogurt, labneh, pickled turnips, sauerkraut. Estrogen + gut health are linked; happier gut = better mood + skin.',
+    title_ar: 'أضيفي طعامًا مخمّرًا اليوم',
+    body_ar: 'زبادي، لبنة، لفت مخلل، ملفوف. الإستروجين والأمعاء مرتبطان؛ أمعاء أفضل = مزاج وبشرة أفضل.' },
+
+  // ── Nutrition — ovulatory (light, anti-inflammatory, water-rich)
+  { id: 'c_nut_salad_tahini', stage: 'cycle', category: 'nutrition', icon: 'leaf', tint: 'mint', duration_min: 10, phase: 'ovulatory',
+    title_en: 'Big salad, tahini dressing',
+    body_en: 'Watery + leafy greens + sesame fats. Supports the ovulation surge and the mild bloating that comes with it.',
+    title_ar: 'سلطة كبيرة بصلصة الطحينة',
+    body_ar: 'خضار ورقية مائية + دهون السمسم. تدعم ذروة التبويض والانتفاخ الخفيف المصاحب.' },
+
+  // ── Nutrition — luteal (steady serotonin, magnesium, less salt)
+  { id: 'c_nut_low_salt', stage: 'cycle', category: 'nutrition', icon: 'leaf', tint: 'lavender', duration_min: 1, phase: 'luteal',
+    title_en: 'Cut the salt this week',
+    body_en: 'Sodium worsens PMS bloat and breast tenderness. Skip pickles, processed snacks, soy sauce — just for these 7 days.',
+    title_ar: 'قللي الملح هذا الأسبوع',
+    body_ar: 'الصوديوم يزيد الانتفاخ وألم الثدي قبل الدورة. ابتعدي عن المخللات والوجبات المصنعة وصوص الصويا — فقط ٧ أيام.' },
+  { id: 'c_nut_dark_choc', stage: 'cycle', category: 'nutrition', icon: 'sparkles', tint: 'lavender', duration_min: 2, phase: 'luteal',
+    title_en: '2 squares dark chocolate (70%+)',
+    body_en: 'Real magnesium + a small dopamine hit. Healthier than the family-size milk-chocolate bar your luteal brain wants.',
+    title_ar: 'مربعان شوكولاتة داكنة ٧٠٪+',
+    body_ar: 'ماغنسيوم حقيقي + دفعة دوبامين خفيفة. أصح من لوح الشوكولاتة باللبن اللي دماغك في الطور الأصفر بيريده.' },
+  { id: 'c_nut_pumpkin_seeds', stage: 'cycle', category: 'nutrition', icon: 'apple', tint: 'mint', duration_min: 1, phase: 'luteal',
+    title_en: 'Handful of pumpkin seeds',
+    body_en: 'Zinc + magnesium + B6 — the trio that softens PMS mood swings. Easy to keep in your bag.',
+    title_ar: 'حفنة بذور قرع',
+    body_ar: 'زنك + ماغنسيوم + B6 — الثلاثي الذي يخفف تقلب مزاج ما قبل الدورة. سهل تحميلها في الشنطة.' },
+
+  // ── Movement — phase-tuned beyond the existing items
+  { id: 'c_mv_walk_hard', stage: 'cycle', category: 'movement', icon: 'sun', tint: 'mint', duration_min: 30, phase: 'follicular',
+    title_en: 'Long walk, brisk pace',
+    body_en: 'Estrogen makes cardio feel easier. 30–45 min outside today gives you sun + serotonin + better sleep tonight.',
+    title_ar: 'مشية طويلة بإيقاع سريع',
+    body_ar: 'الإستروجين يخلي الكارديو أسهل. ٣٠-٤٥ دقيقة برّه اليوم = شمس + سيروتونين + نوم أفضل بالليل.' },
+  { id: 'c_mv_dance', stage: 'cycle', category: 'movement', icon: 'music', tint: 'coral', duration_min: 20, phase: 'ovulatory',
+    title_en: '20-min dance break',
+    body_en: 'Coordination + verbal fluency peak right around ovulation. Music + movement now feels disproportionately good.',
+    title_ar: 'استراحة رقص ٢٠ دقيقة',
+    body_ar: 'التنسيق والطلاقة اللفظية في الذروة وقت التبويض. الموسيقى والحركة الآن إحساسها رائع.' },
+  { id: 'c_mv_swim', stage: 'cycle', category: 'movement', icon: 'droplet', tint: 'brand', duration_min: 30, phase: 'menstrual',
+    title_en: 'Swim or warm-pool walk',
+    body_en: 'Buoyancy decompresses the lower back and pelvis. The warm water relaxes cramping muscles in a way no land workout does.',
+    title_ar: 'سباحة أو مشي في حمام دافئ',
+    body_ar: 'الطفو يخفف ضغط أسفل الظهر والحوض. الماء الدافئ يرخي عضلات التقلصات بطريقة لا توفرها التمارين على اليابسة.' },
+  { id: 'c_mv_pilates', stage: 'cycle', category: 'movement', icon: 'stretch', tint: 'lavender', duration_min: 20, phase: 'luteal',
+    title_en: '20 min mat pilates',
+    body_en: 'Core + glutes + breath control without taxing the cardio system. Matches the lower-energy luteal phase well.',
+    title_ar: '٢٠ دقيقة بيلاتس على الأرض',
+    body_ar: 'تقوية الجذع والأرداف والتحكم في النفس بدون إجهاد القلب. يناسب طاقة الطور الأصفر المنخفضة.' },
+
+  // ── Sleep — phase-aware
+  { id: 'c_sl_cool_room', stage: 'cycle', category: 'sleep', icon: 'moon', tint: 'brand', duration_min: 1, phase: 'luteal',
+    title_en: 'Drop the bedroom temp',
+    body_en: 'Core body temp is up ~0.3 °C in the luteal phase. Sleeping in a cooler room (~18 °C) helps you fall asleep faster.',
+    title_ar: 'خفّضي حرارة غرفة النوم',
+    body_ar: 'حرارة الجسم أعلى ~٠.٣°م في الطور الأصفر. غرفة أبرد (~١٨°م) تساعدك على النوم أسرع.' },
+  { id: 'c_sl_glycine', stage: 'cycle', category: 'sleep', icon: 'pill', tint: 'lavender', duration_min: 1, phase: 'luteal',
+    title_en: 'Magnesium glycinate, 200 mg',
+    body_en: 'Take it 30 min before bed — improves sleep depth and reduces night-time leg cramps that show up before your period.',
+    title_ar: 'ماغنسيوم جلايسينات ٢٠٠ ملج',
+    body_ar: 'خذيها قبل النوم بنصف ساعة — تحسن عمق النوم وتقلل تقلصات الساق الليلية اللي بتجي قبل الدورة.' },
+  { id: 'c_sl_morning_light', stage: 'cycle', category: 'sleep', icon: 'sun', tint: 'peach', duration_min: 10,
+    title_en: '10 min morning sunlight',
+    body_en: 'Single biggest lever for cycle regularity beyond food/sleep itself. Sets your circadian clock, which sets your hormone clock.',
+    title_ar: '١٠ دقائق شمس الصباح',
+    body_ar: 'أهم عامل لانتظام الدورة بعد الطعام والنوم نفسهما. يضبط ساعتك البيولوجية، اللي بدورها تضبط ساعة الهرمونات.' },
+
+  // ── Mental + work focus
+  { id: 'c_mw_deep_work', stage: 'cycle', category: 'work', icon: 'sparkles', tint: 'mint', duration_min: 60, phase: 'follicular',
+    title_en: 'Block 90 min for deep work',
+    body_en: 'Estrogen rising → better verbal memory + faster pattern recognition. Save the hard creative thinking for now.',
+    title_ar: 'احجزي ٩٠ دقيقة للعمل العميق',
+    body_ar: 'الإستروجين بيرتفع → ذاكرة لفظية أفضل وتمييز أنماط أسرع. وفّري التفكير الإبداعي الصعب لهذا الوقت.' },
+  { id: 'c_mw_present', stage: 'cycle', category: 'work', icon: 'smile', tint: 'coral', duration_min: 30, phase: 'ovulatory',
+    title_en: 'Schedule the hard meeting',
+    body_en: 'Confidence, charisma, and reading-the-room peak around ovulation. Deliver the pitch / negotiate the raise / have the conversation today.',
+    title_ar: 'حدّدي الاجتماع الصعب اليوم',
+    body_ar: 'الثقة والكاريزما وقراءة الموقف في الذروة وقت التبويض. قدّمي العرض، فاوضي على الراتب، أجري المحادثة اليوم.' },
+  { id: 'c_mw_admin_tasks', stage: 'cycle', category: 'work', icon: 'book', tint: 'lavender', duration_min: 60, phase: 'luteal',
+    title_en: 'Detail-work day',
+    body_en: 'Luteal attention is great for finishing, editing, organizing. Save big new ideas for follicular; clear backlog now.',
+    title_ar: 'يوم تفاصيل وإنهاء',
+    body_ar: 'الانتباه في الطور الأصفر ممتاز للإنهاء والتحرير والتنظيم. وفّري الأفكار الجديدة الكبيرة للطور الجريبي وصفّي المتأخرات الآن.' },
+  { id: 'c_mw_no_decisions', stage: 'cycle', category: 'mental', icon: 'wind', tint: 'lavender', duration_min: 1, phase: 'menstrual',
+    title_en: 'Postpone big decisions',
+    body_en: "Day 1–2 estrogen is at a low. Brain feels foggier; outlook tilts negative. Sleep on it — Wednesday-you will see clearer.",
+    title_ar: 'أجّلي القرارات الكبيرة',
+    body_ar: 'إستروجين أيام ١-٢ منخفض. الدماغ مشوّش والمزاج متقلب. ناميها — الأسبوع الجاي رؤيتك ستكون أوضح.' },
+
+  // ── Mental health (cross-phase)
+  { id: 'c_mh_2min_breath', stage: 'cycle', category: 'mental', icon: 'wind', tint: 'lavender', duration_min: 2,
+    title_en: 'Box breathing, 2 min',
+    body_en: '4 in, 4 hold, 4 out, 4 hold. Repeat 8 times. Resets the stress response in under 2 min — useful any phase, especially PMS.',
+    title_ar: 'تنفس الصندوق ٢ دقيقة',
+    body_ar: '٤ شهيق، ٤ احبسي، ٤ زفير، ٤ احبسي. كرّري ٨ مرات. يعيد ضبط الاستجابة للتوتر في أقل من دقيقتين.' },
+  { id: 'c_mh_say_no', stage: 'cycle', category: 'mental', icon: 'heart', tint: 'coral', duration_min: 1, phase: 'menstrual',
+    title_en: 'Permission to say no',
+    body_en: 'Your body is doing visible work right now. Cancel one optional thing this week. The world keeps spinning.',
+    title_ar: 'مسموح ترفضي',
+    body_ar: 'جسمك بيعمل شغل ملحوظ دلوقتي. الغي حاجة اختيارية واحدة هذا الأسبوع. الدنيا هتفضل بتلف.' },
+  { id: 'c_mh_one_friend', stage: 'cycle', category: 'mental', icon: 'smile', tint: 'mint', duration_min: 15, phase: 'follicular',
+    title_en: 'Voice-note one friend',
+    body_en: 'Verbal fluency + social motivation peak now. A 5-min voice note maintains 10x more closeness than a text reply.',
+    title_ar: 'سجّلي رسالة صوتية لصديقة',
+    body_ar: 'الطلاقة اللفظية والدافع الاجتماعي في الذروة. رسالة صوتية ٥ دقائق تحافظ على القرب أكتر من رد نصّي بـ١٠ مرات.' },
 ];
 
 const ALL: Suggestion[] = [...BABY, ...PREGNANCY, ...CYCLE];

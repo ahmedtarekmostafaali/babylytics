@@ -312,9 +312,9 @@ export default async function Landing() {
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <SmallSpotlight tint="coral"    Icon={Heart}            title={t('landing.recent_cycleos_t')}    body={t('landing.recent_cycleos_x')} />
+          <SmallSpotlight tint="mint"     Icon={Activity}         title={t('landing.recent_lifestyle_t')}  body={t('landing.recent_lifestyle_x')} />
           <SmallSpotlight tint="brand"    Icon={Apple}            title={t('landing.recent_apple_t')}      body={t('landing.recent_apple_x')} />
           <SmallSpotlight tint="lavender" Icon={MessagesSquare}   title={t('landing.recent_chat_t')}       body={t('landing.recent_chat_x')} />
-          <SmallSpotlight tint="mint"     Icon={Sparkles}         title={t('landing.recent_ideas_t')}      body={t('landing.recent_ideas_x')} />
           <SmallSpotlight tint="peach"    Icon={LayoutDashboard}  title={t('landing.recent_visibility_t')} body={t('landing.recent_visibility_x')} />
           <SmallSpotlight tint="mint"     Icon={ShieldCheck}      title={t('landing.recent_areas_t')}      body={t('landing.recent_areas_x')} />
         </div>
