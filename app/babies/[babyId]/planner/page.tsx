@@ -13,6 +13,8 @@ import { loadUserPrefs } from '@/lib/user-prefs';
 import { CycleModeCard, type CycleMode } from '@/components/CycleModeCard';
 import { CycleRedFlagsCard, type CycleRedFlag } from '@/components/CycleRedFlagsCard';
 import { CycleEnergyForecast } from '@/components/CycleEnergyForecast';
+import { CycleBaselineCard, type CycleBaseline } from '@/components/CycleBaselineCard';
+import { type DoctorQuestion } from '@/components/SendToDoctorButton';
 import { Download } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -73,7 +75,14 @@ export default async function PlannerPage({
     : isoMonth(new Date());
   const monthStart = month + '-01';
 
-  const [{ data: calData, error: calErr }, { data: cycleData }, userPrefs, { data: redFlagsRaw }] = await Promise.all([
+  const [
+    { data: calData, error: calErr },
+    { data: cycleData },
+    userPrefs,
+    { data: redFlagsRaw },
+    { data: baselineRaw },
+    { data: questionsRaw },
+  ] = await Promise.all([
     supabase.rpc('cycle_calendar', { p_baby: params.babyId, p_month: monthStart }),
     supabase.from('menstrual_cycles')
       .select('id,period_start,period_end,cycle_length,flow_intensity,symptoms,notes')
@@ -81,11 +90,16 @@ export default async function PlannerPage({
       .order('period_start', { ascending: false })
       .limit(12),
     loadUserPrefs(supabase),
-    // Wave 12: anomaly detection from your own historical cycles. Returns
-    // empty when there's no signal to act on (which is the common case).
+    // Wave 12: anomaly detection from your own historical cycles.
     supabase.rpc('cycle_red_flags', { p_baby: params.babyId }),
+    // Wave 14: personal baseline + doctor-ready questions. Both RPCs run
+    // in parallel — they read the same table but compute different angles.
+    supabase.rpc('cycle_personal_baseline', { p_baby: params.babyId }).maybeSingle(),
+    supabase.rpc('cycle_doctor_questions', { p_baby: params.babyId }),
   ]);
   const redFlags = (redFlagsRaw ?? []) as CycleRedFlag[];
+  const baseline = (baselineRaw as CycleBaseline | null) ?? null;
+  const doctorQuestions = (questionsRaw ?? []) as DoctorQuestion[];
   const calendar = (calData ?? []) as CalRow[];
   const cycles   = (cycleData ?? []) as Cycle[];
 
@@ -161,9 +175,12 @@ export default async function PlannerPage({
 
       {/* Wave 12: cycle mode picker + red flags. Mode picker is always
           visible (small, tap-to-edit). Red flags only render when there's
-          something detected from the user's own historical patterns. */}
+          something detected from the user's own historical patterns.
+          Wave 14: red flags now includes the SendToDoctorButton, and the
+          new BaselineCard shows your personal numbers above. */}
       <CycleModeCard babyId={params.babyId} initialMode={cycleMode} />
-      <CycleRedFlagsCard flags={redFlags} babyId={params.babyId} />
+      <CycleBaselineCard baseline={baseline} babyId={params.babyId} />
+      <CycleRedFlagsCard flags={redFlags} babyId={params.babyId} questions={doctorQuestions} />
 
       {/* Top insight strip */}
       <section className="grid sm:grid-cols-3 gap-3">

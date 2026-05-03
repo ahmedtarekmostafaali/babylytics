@@ -1,10 +1,12 @@
-// CycleRedFlagsCard — surfaces results from the cycle_red_flags RPC
-// (sql/055). Pure display component, takes the rows server-side. Hidden
-// when there are no flags. The RPC uses only the user's own historical
-// data — no model training, no external lookups.
+// CycleRedFlagsCard — surfaces results from cycle_red_flags + the
+// Wave-14 cycle_doctor_questions RPCs. Pure display component; the rows
+// come pre-computed from the server. Embeds SendToDoctorButton so the
+// user can one-tap-send the questions to a doctor caregiver as a
+// private 1:1 chat message.
 
 import { AlertTriangle, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
+import { SendToDoctorButton, type DoctorQuestion } from '@/components/SendToDoctorButton';
 
 export interface CycleRedFlag {
   flag: string;
@@ -31,10 +33,14 @@ const SEVERITY_LABEL: Record<CycleRedFlag['severity'], string> = {
 };
 
 export function CycleRedFlagsCard({
-  flags, babyId,
+  flags, babyId, questions,
 }: {
   flags: CycleRedFlag[];
   babyId: string;
+  /** Wave 14: doctor-ready phrasing of each flag with evidence. When
+   *  provided, drives the "Send to my doctor" button. Omit to keep the
+   *  old red-flags-only behaviour. */
+  questions?: DoctorQuestion[];
 }) {
   if (flags.length === 0) return null;
 
@@ -73,10 +79,14 @@ export function CycleRedFlagsCard({
       </p>
 
       <div className="flex flex-wrap gap-2 pt-1">
-        <Link href={`/babies/${babyId}/chat`}
-          className="inline-flex items-center gap-1.5 rounded-full bg-coral-500 hover:bg-coral-600 text-white text-xs font-semibold px-3 py-1.5">
-          <MessageCircle className="h-3.5 w-3.5" /> Message my doctor
-        </Link>
+        {questions && questions.length > 0
+          ? <SendToDoctorButton babyId={babyId} questions={questions} />
+          : (
+            <Link href={`/babies/${babyId}/chat`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-coral-500 hover:bg-coral-600 text-white text-xs font-semibold px-3 py-1.5">
+              <MessageCircle className="h-3.5 w-3.5" /> Message my doctor
+            </Link>
+          )}
         <Link href={`/babies/${babyId}/medical-profile`}
           className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-ink text-xs font-semibold px-3 py-1.5">
           Open medical profile

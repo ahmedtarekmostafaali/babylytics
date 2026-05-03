@@ -1950,6 +1950,8 @@ export const en = {
     recent_cycleos_x:  'Pick a mode (Standard / PCOS / Endo / Irregular / Athlete / Postpartum). Each tunes Daily Ideas, an energy-forecast card per phase, and flags long cycles, missed periods, repeated severe pain.',
     recent_lifestyle_t: 'Cycle-based lifestyle engine',
     recent_lifestyle_x: 'Phase-tuned nutrition, workouts, sleep + work tips — MENA-relevant (ful + lentil for menstrual, za\'atar bread for follicular). Today\'s energy/focus/social forecast on the cycle dashboard.',
+    recent_pattern_t:   'Personal pattern engine',
+    recent_pattern_x:   'Your baseline (median cycle, regularity, top symptoms) computed from your own data. Pattern checks become ready-to-send doctor questions — one tap delivers them privately to your doctor caregiver.',
     recent_apple_t:    'Apple Health import',
     recent_apple_x:    'Drop your export.zip — your cycle history backfills in seconds. Parsed locally in your browser; only the cycle subset leaves your device.',
 
