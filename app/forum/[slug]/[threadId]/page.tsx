@@ -6,6 +6,7 @@ import { fmtRelative, fmtDateTime } from '@/lib/dates';
 import { EyeOff } from 'lucide-react';
 import { ForumReplyCompose } from '@/components/ForumReplyCompose';
 import { ForumReportButton } from '@/components/ForumReportButton';
+import { ForumReactions, type ReactionKind } from '@/components/ForumReactions';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,10 +26,10 @@ export default async function ForumThreadPage({
     supabase.from('forum_categories').select('id,slug,title_en,title_ar')
       .eq('slug', params.slug).maybeSingle(),
     supabase.from('forum_thread_with_meta')
-      .select('id,title,body,author_display,anonymous,created_at,edited_at,reply_count,author_id')
+      .select('id,title,body,author_display,anonymous,created_at,edited_at,reply_count,author_id,reaction_counts,my_reactions')
       .eq('id', params.threadId).maybeSingle(),
     supabase.from('forum_reply_with_meta')
-      .select('id,body,author_display,anonymous,created_at,author_id')
+      .select('id,body,author_display,anonymous,created_at,author_id,reaction_counts,my_reactions')
       .eq('thread_id', params.threadId)
       .order('created_at', { ascending: true })
       .limit(500),
@@ -64,13 +65,26 @@ export default async function ForumThreadPage({
         <p className="mt-3 text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">
           {thread.body}
         </p>
-        {/* Report button hidden when you're the author — you can't report
-            yourself; deleting your own thread happens elsewhere. */}
-        {thread.author_id !== user.id && (
-          <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end">
-            <ForumReportButton targetType="thread" targetId={thread.id} lang={userPrefs.language} />
-          </div>
-        )}
+
+        {/* Wave 24: reactions row. Always shown — even the author can
+            see who's reacting (counts) but obviously can't react to
+            themselves… well, actually they can; harmless self-hug. */}
+        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-3 flex-wrap">
+          <ForumReactions
+            targetType="thread"
+            targetId={thread.id}
+            initialCounts={(thread.reaction_counts ?? {}) as Record<ReactionKind, number>}
+            initialMine={(thread.my_reactions ?? []) as ReactionKind[]}
+            lang={userPrefs.language}
+          />
+          {/* Report button hidden when you're the author — you can't
+              report yourself; deleting your own thread happens elsewhere. */}
+          {thread.author_id !== user.id && (
+            <div className="ms-auto">
+              <ForumReportButton targetType="thread" targetId={thread.id} lang={userPrefs.language} />
+            </div>
+          )}
+        </div>
       </article>
 
       {/* Replies */}
@@ -97,11 +111,20 @@ export default async function ForumThreadPage({
               <p className="mt-2 text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">
                 {r.body}
               </p>
-              {r.author_id !== user.id && (
-                <div className="mt-2 flex justify-end">
-                  <ForumReportButton targetType="reply" targetId={r.id} lang={userPrefs.language} />
-                </div>
-              )}
+              <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-3 flex-wrap">
+                <ForumReactions
+                  targetType="reply"
+                  targetId={r.id}
+                  initialCounts={(r.reaction_counts ?? {}) as Record<ReactionKind, number>}
+                  initialMine={(r.my_reactions ?? []) as ReactionKind[]}
+                  lang={userPrefs.language}
+                />
+                {r.author_id !== user.id && (
+                  <div className="ms-auto">
+                    <ForumReportButton targetType="reply" targetId={r.id} lang={userPrefs.language} />
+                  </div>
+                )}
+              </div>
             </article>
           ))
         )}
