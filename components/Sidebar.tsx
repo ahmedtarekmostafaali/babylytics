@@ -10,6 +10,7 @@ import { Wordmark } from '@/components/Wordmark';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import { ageInDays } from '@/lib/dates';
 import { effectiveStage, fmtGestationalAge } from '@/lib/lifecycle';
+import { stageBucket } from '@/lib/areas';
 import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
@@ -47,6 +48,10 @@ export function Sidebar() {
   // Platform-admin flag — drives the "Admin" link rendering. Default false so
   // non-admins never see the link even for a moment during the auth check.
   const [isAdmin, setIsAdmin] = useState(false);
+  // 049 batch: per-area visibility (caregiver-level) + per-stage feature
+  // visibility (user-level). Both null = no restriction.
+  const [allowedAreas,    setAllowedAreas]    = useState<string[] | null>(null);
+  const [enabledFeatures, setEnabledFeatures] = useState<string[] | null>(null);
   // Per-category collapse state, persisted to localStorage so it survives
   // page navigation. Default: every category open.
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({});
@@ -145,13 +150,17 @@ export function Sidebar() {
     }
   }, [pathname]);
 
-  // Fetch the caller's role for the current baby so we can hide nav items
-  // that they can't access. Re-runs whenever the baby in the URL changes.
+  // Fetch the caller's role + per-area visibility for the current baby and
+  // the user's per-stage feature preference. Combines both into a single
+  // visible-areas Set used by every NavItem below. null = no restriction.
   useEffect(() => {
-    if (!currentBabyId) { setRole(null); return; }
+    if (!currentBabyId) { setRole(null); setAllowedAreas(null); setEnabledFeatures(null); return; }
     const supabase = createClient();
     supabase.rpc('my_baby_role', { b: currentBabyId })
       .then(({ data }) => setRole((data as string | null) ?? null));
+    supabase.rpc('my_allowed_areas', { p_baby: currentBabyId })
+      .then(({ data }) => setAllowedAreas((data as string[] | null) ?? null))
+      .catch(() => setAllowedAreas(null));
   }, [currentBabyId]);
 
   const isViewer = role === 'viewer';
@@ -168,6 +177,25 @@ export function Sidebar() {
     : null;
   const stage = currentBaby ? effectiveStage(currentBaby.lifecycle_stage ?? null, currentBaby.dob) : null;
   const isPregnancy = stage === 'pregnancy';
+
+  // Load the user's per-stage enabled_features once we know which stage
+  // bucket we're rendering for.
+  useEffect(() => {
+    if (!stage) return;
+    const supabase = createClient();
+    supabase.rpc('my_enabled_features', { p_stage: stageBucket(stage) })
+      .then(({ data }) => setEnabledFeatures((data as string[] | null) ?? null))
+      .catch(() => setEnabledFeatures(null));
+  }, [stage]);
+
+  // Combined visibility predicate. Returns true if the area is visible
+  // under BOTH the caregiver gate AND the user-pref gate. Parents are
+  // never narrowed by their own user prefs (they see everything they own).
+  function canSee(area: string): boolean {
+    if (allowedAreas !== null && !allowedAreas.includes(area)) return false;
+    if (!isParent && enabledFeatures !== null && !enabledFeatures.includes(area)) return false;
+    return true;
+  }
   // 044 batch: 'planning' is a new pre-pregnancy stage. effectiveStage() doesn't
   // know about it (stale), so check the raw column directly. Drives the
   // Planner-only sidebar surface.
@@ -356,16 +384,16 @@ export function Sidebar() {
               <>
                 <NavCategory id="baby_vital" label={t('nav.cat_vital_signs')} icon={HeartPulse} collapsed={collapsed}
                   open={isCatOpen('baby_vital')} onToggle={() => toggleCat('baby_vital')}>
-                  <NavItem href={`/babies/${currentBabyId}/feedings`}      icon={Milk}        label={t('nav.feedings')}     active={pathname?.startsWith(`/babies/${currentBabyId}/feedings`) ?? false} collapsed={collapsed} tint="coral" />
-                  <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}     label={t('nav.stool')}        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />
-                  <NavItem href={`/babies/${currentBabyId}/sleep`}         icon={Moon}        label={t('nav.sleep')}        active={pathname?.startsWith(`/babies/${currentBabyId}/sleep`) ?? false} collapsed={collapsed} tint="lavender" />
-                  <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label={t('nav.temperature')}  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />
-                  <NavItem href={`/babies/${currentBabyId}/vitals`}        icon={Activity}    label={t('nav.vitals')}       active={pathname?.startsWith(`/babies/${currentBabyId}/vitals`) ?? false}    collapsed={collapsed} tint="coral" />
-                  <NavItem href={`/babies/${currentBabyId}/blood-sugar`}   icon={Droplet}     label={t('nav.blood_sugar')}  active={pathname?.startsWith(`/babies/${currentBabyId}/blood-sugar`) ?? false} collapsed={collapsed} tint="coral" />
-                  <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}       label={t('nav.measurements')} active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />
-                  {/* New in 044 batch — sits with the other vital-signs because
-                      vomit is a symptom-tracker, not a feed/care thing. */}
-                  <NavItem href={`/babies/${currentBabyId}/vomiting`}      icon={Activity}    label="Vomiting"            active={pathname?.startsWith(`/babies/${currentBabyId}/vomiting`) ?? false} collapsed={collapsed} tint="coral" />
+                  {/* Each item is gated by the combined area-visibility check
+                      (caregiver allowed_areas + user enabled_features). */}
+                  {canSee('feedings')     && <NavItem href={`/babies/${currentBabyId}/feedings`}      icon={Milk}        label={t('nav.feedings')}     active={pathname?.startsWith(`/babies/${currentBabyId}/feedings`) ?? false} collapsed={collapsed} tint="coral" />}
+                  {canSee('stool')        && <NavItem href={`/babies/${currentBabyId}/stool`}         icon={Droplet}     label={t('nav.stool')}        active={pathname?.startsWith(`/babies/${currentBabyId}/stool`) ?? false}    collapsed={collapsed} tint="mint" />}
+                  {canSee('sleep')        && <NavItem href={`/babies/${currentBabyId}/sleep`}         icon={Moon}        label={t('nav.sleep')}        active={pathname?.startsWith(`/babies/${currentBabyId}/sleep`) ?? false} collapsed={collapsed} tint="lavender" />}
+                  {canSee('temperature')  && <NavItem href={`/babies/${currentBabyId}/temperature`}   icon={Thermometer} label={t('nav.temperature')}  active={pathname?.startsWith(`/babies/${currentBabyId}/temperature`) ?? false} collapsed={collapsed} tint="peach" />}
+                  {canSee('vitals')       && <NavItem href={`/babies/${currentBabyId}/vitals`}        icon={Activity}    label={t('nav.vitals')}       active={pathname?.startsWith(`/babies/${currentBabyId}/vitals`) ?? false}    collapsed={collapsed} tint="coral" />}
+                  {canSee('blood_sugar')  && <NavItem href={`/babies/${currentBabyId}/blood-sugar`}   icon={Droplet}     label={t('nav.blood_sugar')}  active={pathname?.startsWith(`/babies/${currentBabyId}/blood-sugar`) ?? false} collapsed={collapsed} tint="coral" />}
+                  {canSee('measurements') && <NavItem href={`/babies/${currentBabyId}/measurements`}  icon={Ruler}       label={t('nav.measurements')} active={pathname?.startsWith(`/babies/${currentBabyId}/measurements`) ?? false} collapsed={collapsed} tint="brand" />}
+                  {canSee('vomiting')     && <NavItem href={`/babies/${currentBabyId}/vomiting`}      icon={Activity}    label="Vomiting"              active={pathname?.startsWith(`/babies/${currentBabyId}/vomiting`) ?? false} collapsed={collapsed} tint="coral" />}
                 </NavCategory>
 
                 <NavCategory id="baby_care" label={t('nav.cat_care')} icon={Stethoscope} collapsed={collapsed}

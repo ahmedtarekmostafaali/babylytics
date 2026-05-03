@@ -80,6 +80,13 @@ export default async function BabyOverview({
 
   // Stage-aware fork — pregnancy gets a completely different dashboard.
   const stage = effectiveStage(baby.lifecycle_stage as 'planning'|'pregnancy'|'newborn'|'infant'|'toddler'|'child'|'archived'|null, baby.dob);
+
+  // Planning ('My cycle') stage uses the planner page as its overview —
+  // there's no DOB / feedings / sleep to summarise yet, just the cycle
+  // calendar and the consultation tile, which already live there.
+  if (stage === 'planning') {
+    redirect(`/babies/${babyId}/planner`);
+  }
   if (stage === 'pregnancy') {
     const [{ data: m }, { data: summaryRow }, { data: lastUs }, { data: nextAppt }, { data: pregProf }, hiddenPregnancy, { data: recentSymptoms }] = await Promise.all([
       supabase.from('baby_users').select('role').eq('baby_id', babyId).eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '').maybeSingle(),

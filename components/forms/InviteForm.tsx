@@ -7,6 +7,7 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { Mail, Shield, Stethoscope, Heart, Eye, Check, Link2, Copy, Share2, Pill } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/client';
+import { AreaPicker } from '@/components/AreaPicker';
 
 // 046 batch added 'pharmacy' as a caregiver role with read-only access to
 // medication stock + dose history (RLS enforced server-side).
@@ -42,6 +43,10 @@ export function InviteForm({ babyId }: { babyId: string }) {
   const [email, setEmail] = useState('');
   const [role, setRole]   = useState<CaregiverRole>('nurse');
   const [message, setMessage] = useState('');
+  // 049 batch: per-area visibility. null = unrestricted (default). Pharmacy
+  // is locked server-side regardless of what we pass, so the picker is
+  // hidden when role === 'pharmacy'.
+  const [allowedAreas, setAllowedAreas] = useState<string[] | null>(null);
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const [copied, setCopied]   = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -54,11 +59,16 @@ export function InviteForm({ babyId }: { babyId: string }) {
     if (!email) return;
     setSaving(true);
     const supabase = createClient();
-    const { error } = await supabase.rpc('invite_caregiver', { p_baby: babyId, p_email: email, p_role: role });
+    // 049 batch: 4-arg overload accepts p_areas in one trip. Null = full
+    // access (default). Pharmacy role is overridden server-side.
+    const { error } = await supabase.rpc('invite_caregiver', {
+      p_baby: babyId, p_email: email, p_role: role, p_areas: allowedAreas,
+    });
     setSaving(false);
     if (error) { setErr(error.message); return; }
     setMsg(t('forms.invite_email_added', { email, role: ROLE_LABEL[role] }));
     setEmail('');
+    setAllowedAreas(null);
     router.refresh();
   }
 
@@ -163,6 +173,23 @@ export function InviteForm({ babyId }: { babyId: string }) {
             </div>
             <p className="mt-1 text-xs text-ink-muted">{t('forms.invite_email_help')}</p>
           </div>
+
+          {/* Per-area visibility (049 batch). Hidden for pharmacy because
+              their scope is forced server-side. Collapsed by default; tap
+              to expand and narrow what this caregiver will see. */}
+          {role !== 'pharmacy' && (
+            <details className="rounded-2xl border border-slate-200 bg-slate-50/40 p-3">
+              <summary className="text-xs font-semibold text-ink cursor-pointer hover:text-ink-strong">
+                {allowedAreas == null
+                  ? '✓ Full access — narrow what this caregiver sees'
+                  : `Restricted to ${allowedAreas.length} area${allowedAreas.length === 1 ? '' : 's'} — change`}
+              </summary>
+              <div className="mt-3">
+                <AreaPicker value={allowedAreas} onChange={setAllowedAreas} />
+              </div>
+            </details>
+          )}
+
           {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
           {msg && <p className="text-sm text-mint-700 font-medium">{msg}</p>}
           <Button type="submit" disabled={saving || !email}
