@@ -9,8 +9,8 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
-import { Heart, MessageCircle, Sparkles, Calendar, ArrowRight } from 'lucide-react';
-import { fmtDate, fmtRelative } from '@/lib/dates';
+import { Heart, MessageCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { fmtDate } from '@/lib/dates';
 import { cyclePhaseFor, pickToday, type CyclePhase, type CycleMode } from '@/lib/suggestions';
 import { forecastFor, CycleEnergyForecast } from '@/components/CycleEnergyForecast';
 import { tFor, type Lang } from '@/lib/i18n';
@@ -25,33 +25,38 @@ export async function PartnerCycleView({
   const supabase = createClient();
   const t = tFor(lang);
 
-  // Pull JUST what the curated view needs — no symptoms, no flags. The
-  // partner role's RLS still permits everything, but we choose not to
-  // expose detail in the UI by default.
-  const [{ data: baby }, { data: cycles }] = await Promise.all([
-    supabase.from('babies').select('cycle_mode').eq('id', babyId).single(),
-    supabase.from('menstrual_cycles')
-      .select('period_start,cycle_length')
-      .eq('baby_id', babyId).is('deleted_at', null)
-      .order('period_start', { ascending: false })
-      .limit(1),
-  ]);
-  const cycleMode = (baby as { cycle_mode?: CycleMode | null } | null)?.cycle_mode ?? null;
-  const last = cycles?.[0];
+  // Wave 23: pull the curated payload via partner_cycle_summary — a
+  // SECURITY DEFINER RPC that returns only the safe fields. Direct
+  // selects on menstrual_cycles are now blocked for the partner role
+  // by RLS, so the previous flat-select pattern would 401. The RPC
+  // returns one row with cycle_mode + last_period_start + cycle_length
+  // + next_period_est.
+  const { data: summaryRows } = await supabase
+    .rpc('partner_cycle_summary', { p_baby: babyId });
+  type Summary = {
+    cycle_mode: CycleMode | null;
+    last_period_start: string | null;
+    last_cycle_length: number | null;
+    next_period_est:   string | null;
+  };
+  const summary = ((summaryRows ?? []) as Summary[])[0] ?? null;
+  const cycleMode = summary?.cycle_mode ?? null;
 
-  // Phase + forecast + next-period from the most recent log.
+  // Phase + forecast + next-period derived from the curated payload.
   let phase: CyclePhase | null = null;
   let daysSince: number | null = null;
   let nextPeriod: string | null = null;
   let daysUntilPeriod: number | null = null;
-  if (last) {
-    const start = new Date(last.period_start + 'T00:00:00Z');
-    const len = last.cycle_length ?? 28;
+  if (summary?.last_period_start) {
+    const start = new Date(summary.last_period_start + 'T00:00:00Z');
+    const len = summary.last_cycle_length ?? 28;
     daysSince = Math.max(0, Math.floor((Date.now() - start.getTime()) / 86400000));
     phase = cyclePhaseFor(daysSince, len);
-    const next = new Date(start.getTime() + len * 86400000);
-    nextPeriod = next.toISOString().slice(0, 10);
-    daysUntilPeriod = Math.max(0, Math.round((next.getTime() - Date.now()) / 86400000));
+    nextPeriod = summary.next_period_est;
+    if (nextPeriod) {
+      const next = new Date(nextPeriod + 'T00:00:00Z');
+      daysUntilPeriod = Math.max(0, Math.round((next.getTime() - Date.now()) / 86400000));
+    }
   }
   const fcast = forecastFor(phase, daysSince);
 
