@@ -285,6 +285,10 @@ export function Sidebar() {
             active={pathname === '/dashboard'} collapsed={collapsed} tint="brand" />
           <NavItem href="/updates" icon={Megaphone} label={t('nav.updates')}
             active={pathname?.startsWith('/updates') ?? false} collapsed={collapsed} tint="mint" />
+          {/* Wave 19: community forum, top-level since it's not scoped to
+              one baby — talks across users with similar profile categories. */}
+          <NavItem href="/forum" icon={MessageSquare} label="Forum"
+            active={pathname?.startsWith('/forum') ?? false} collapsed={collapsed} tint="brand" />
           <NavItem href="/feedback" icon={MessageSquare} label={t('nav.feedback')}
             active={pathname?.startsWith('/feedback') ?? false} collapsed={collapsed} tint="coral" />
           {/* Platform admin entry — only renders for platform_admins (the
