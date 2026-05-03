@@ -16,10 +16,8 @@ export default async function PreferencesPage() {
   const prefs = await loadUserPrefs(supabase);
   const t = tFor(prefs.language);
 
-  // 050 batch: load per-stage feature visibility for the new Features card.
-  const { data: prefRow } = await supabase.from('user_preferences')
-    .select('enabled_features').eq('user_id', user.id).maybeSingle();
-  const features = (prefRow?.enabled_features as Record<string, string[]> | null) ?? {};
+  // 051 batch: per-stage features moved to each profile's edit page —
+  // no longer loaded here.
 
   return (
     <PageShell max="3xl">
@@ -27,7 +25,7 @@ export default async function PreferencesPage() {
         eyebrow={t('nav.preferences').toUpperCase()} eyebrowTint="brand"
         title={t('prefs.title')}
         subtitle={t('prefs.subtitle')} />
-      <PreferencesForm initial={prefs} initialFeatures={features} />
+      <PreferencesForm initial={prefs} />
     </PageShell>
   );
 }

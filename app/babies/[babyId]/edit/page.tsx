@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { tFor, type TFunc } from '@/lib/i18n';
+import { ProfileFeaturesCard } from '@/components/ProfileFeaturesCard';
+import type { LifecycleStage } from '@/lib/lifecycle';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Baby profile' };
@@ -83,7 +85,7 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
 
   const { data: baby } = await supabase
     .from('babies')
-    .select('id,name,dob,gender,birth_weight_kg,birth_height_cm,feeding_factor_ml_per_kg_per_day,notes,avatar_path,blood_type,doctor_name,doctor_phone,doctor_clinic,next_appointment_at,next_appointment_notes')
+    .select('id,name,dob,gender,birth_weight_kg,birth_height_cm,feeding_factor_ml_per_kg_per_day,notes,avatar_path,blood_type,doctor_name,doctor_phone,doctor_clinic,next_appointment_at,next_appointment_notes,lifecycle_stage,enabled_features')
     .eq('id', params.babyId)
     .is('deleted_at', null)
     .single();
@@ -220,6 +222,17 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
               {t('edit_baby.view_growth_chart')} <ExternalLink className="h-3 w-3" />
             </Link>
           </section>
+
+          {/* Per-profile features (051 batch) — moved from /preferences.
+              Each profile owns its own enabled_features list, automatically
+              filtered by its own stage. Read-only for non-parents (RPC
+              rejects, but better UX to disable). */}
+          <ProfileFeaturesCard
+            babyId={params.babyId}
+            stage={(baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null}
+            initial={(baby as { enabled_features?: string[] | null }).enabled_features ?? null}
+            canEdit={canEditHealth}
+          />
 
           {/* Quick actions */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">

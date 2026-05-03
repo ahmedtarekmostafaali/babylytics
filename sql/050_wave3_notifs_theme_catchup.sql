@@ -56,47 +56,49 @@ commit;
 --    Each call is idempotent thanks to the (title, published_at) unique
 --    index seeded in 029. Re-running this file is safe.
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Bodies use $tag$...$tag$ dollar-quoting so apostrophes need no escaping
+-- — bulletproof against any copy-paste mangling of `''` into `'`.
 select public.publish_app_update(
-  p_title    => 'Stool diaper photo + dosage units + formula autofill',
-  p_body     => 'Three quality-of-life upgrades: (1) Add a diaper photo to any stool log — useful when colour or texture is hard to describe. (2) Medication dosage now uses an Amount + Unit picker (Drop, Tablet, Teaspoon 5 ml, Tablespoon 15 ml, ml, mg, Puff, Sachet, Application, Suppository, IU, Other). (3) Bottle feedings auto-fill the formula brand from your last entry — type "Similac Advance" once, every refill is one tap.',
+  p_title    => $t1$Stool diaper photo + dosage units + formula autofill$t1$,
+  p_body     => $b1$Three quality-of-life upgrades: (1) Add a diaper photo to any stool log — useful when colour or texture is hard to describe. (2) Medication dosage now uses an Amount + Unit picker (Drop, Tablet, Teaspoon 5 ml, Tablespoon 15 ml, ml, mg, Puff, Sachet, Application, Suppository, IU, Other). (3) Bottle feedings auto-fill the formula brand from your last entry — type "Similac Advance" once, every refill is one tap.$b1$,
   p_category => 'enhancement',
   p_date     => current_date,
-  p_title_ar => 'صورة الحفاضة + وحدات الجرعات + تعبئة تلقائية لاسم الحليب',
-  p_body_ar  => 'ثلاث تحسينات: (١) أضيفي صورة للحفاضة مع تسجيل البراز — مفيد عند صعوبة وصف اللون أو القوام. (٢) جرعة الدواء الآن "كمية + وحدة" (نقطة، قرص، ملعقة ٥ مل، ملعقة ١٥ مل، مل، ملج، إلخ). (٣) رضعات الزجاجة تعبّئ اسم الحليب الصناعي تلقائيًا من آخر إدخال.'
+  p_title_ar => $ta1$صورة الحفاضة + وحدات الجرعات + تعبئة تلقائية لاسم الحليب$ta1$,
+  p_body_ar  => $ba1$ثلاث تحسينات: (١) أضيفي صورة للحفاضة مع تسجيل البراز — مفيد عند صعوبة وصف اللون أو القوام. (٢) جرعة الدواء الآن "كمية + وحدة" (نقطة، قرص، ملعقة ٥ مل، ملعقة ١٥ مل، مل، ملج، إلخ). (٣) رضعات الزجاجة تعبّئ اسم الحليب الصناعي تلقائيًا من آخر إدخال.$ba1$
 );
 
 select public.publish_app_update(
-  p_title    => 'Pharmacy caregiver role + planner unlocks meds & labs',
-  p_body     => 'Two changes: (1) Invite a pharmacy as a caregiver — they only see your medication stock and dose history, nothing else. Useful for refill coordination. (2) The pre-pregnancy planner now opens medications, labs/scans, and your medical profile, so you can track folic acid, AMH bloodwork, HSG scans, etc. before conception.',
+  p_title    => $t2$Pharmacy caregiver role + planner unlocks meds & labs$t2$,
+  p_body     => $b2$Two changes: (1) Invite a pharmacy as a caregiver — they only see your medication stock and dose history, nothing else. Useful for refill coordination. (2) The pre-pregnancy planner now opens medications, labs/scans, and your medical profile, so you can track folic acid, AMH bloodwork, HSG scans, etc. before conception.$b2$,
   p_category => 'new_feature',
   p_date     => current_date,
-  p_title_ar => 'دور الصيدلية + فتح الأدوية والتحاليل في المخطط',
-  p_body_ar  => 'تغييران: (١) ادعي صيدلية كمقدم رعاية — تشاهد فقط مخزون الأدوية وسجل الجرعات. (٢) مرحلة "تخطيط الحمل" أصبحت تشمل الأدوية والتحاليل والأشعة والملف الطبي.'
+  p_title_ar => $ta2$دور الصيدلية + فتح الأدوية والتحاليل في المخطط$ta2$,
+  p_body_ar  => $ba2$تغييران: (١) ادعي صيدلية كمقدم رعاية — تشاهد فقط مخزون الأدوية وسجل الجرعات. (٢) مرحلة "تخطيط الحمل" أصبحت تشمل الأدوية والتحاليل والأشعة والملف الطبي.$ba2$
 );
 
 select public.publish_app_update(
-  p_title    => 'Shopping list: Medication refills + one-tap add',
-  p_body     => 'New "Medication refills" tab on the shopping list. From the medications page or the stock page, tap "Refill" to drop the medication into your shopping list with one tap. Pharmacy caregivers see only this tab, never the rest of your shopping plans.',
+  p_title    => $t3$Shopping list: Medication refills + one-tap add$t3$,
+  p_body     => $b3$New "Medication refills" tab on the shopping list. From the medications page or the stock page, tap "Refill" to drop the medication into your shopping list with one tap. Pharmacy caregivers see only this tab, never the rest of your shopping plans.$b3$,
   p_category => 'new_feature',
   p_date     => current_date,
-  p_title_ar => 'قائمة التسوق: تبويبة "إعادة صرف الأدوية" بضغطة',
-  p_body_ar  => 'تبويبة جديدة "إعادة صرف الأدوية" في قائمة التسوق. من صفحة الأدوية أو المخزون، اضغطي "إعادة صرف" لإضافة الدواء بضغطة واحدة. الصيدلية ترى هذه التبويبة فقط.'
+  p_title_ar => $ta3$قائمة التسوق: تبويبة "إعادة صرف الأدوية" بضغطة$ta3$,
+  p_body_ar  => $ba3$تبويبة جديدة "إعادة صرف الأدوية" في قائمة التسوق. من صفحة الأدوية أو المخزون، اضغطي "إعادة صرف" لإضافة الدواء بضغطة واحدة. الصيدلية ترى هذه التبويبة فقط.$ba3$
 );
 
 select public.publish_app_update(
-  p_title    => 'My cycle (was Planning) + I''m pregnant transition + Doctor consultation coming soon',
-  p_body     => 'The "Planning" stage is now called "My cycle" — use it before pregnancy, postpartum, or just for personal cycle tracking. New "I''m pregnant!" button transitions a cycle profile into a pregnancy without losing any history. Doctor consultation tile teased on every overview — book a verified specialist directly inside Babylytics, coming soon.',
+  p_title    => $t4$My cycle (was Planning) + I'm pregnant transition + Doctor consultation coming soon$t4$,
+  p_body     => $b4$The "Planning" stage is now called "My cycle" — use it before pregnancy, postpartum, or just for personal cycle tracking. New "I'm pregnant!" button transitions a cycle profile into a pregnancy without losing any history. Doctor consultation tile teased on every overview — book a verified specialist directly inside Babylytics, coming soon.$b4$,
   p_category => 'new_feature',
   p_date     => current_date,
-  p_title_ar => 'دورتي (كان: تخطيط) + زر "أنا حامل" + استشارة طبية قريبًا',
-  p_body_ar  => 'مرحلة "تخطيط" أصبحت "دورتي" — للاستخدام قبل الحمل أو بعد الولادة أو لمتابعة شخصية. زر "أنا حامل!" ينقل ملف الدورة إلى مرحلة الحمل بدون فقد أي سجلات. استشارة طبية مع متخصصين معتمدين قريبًا داخل التطبيق.'
+  p_title_ar => $ta4$دورتي (كان: تخطيط) + زر "أنا حامل" + استشارة طبية قريبًا$ta4$,
+  p_body_ar  => $ba4$مرحلة "تخطيط" أصبحت "دورتي" — للاستخدام قبل الحمل أو بعد الولادة أو لمتابعة شخصية. زر "أنا حامل!" ينقل ملف الدورة إلى مرحلة الحمل بدون فقد أي سجلات. استشارة طبية مع متخصصين معتمدين قريبًا داخل التطبيق.$ba4$
 );
 
 select public.publish_app_update(
-  p_title    => 'Per-area caregiver visibility + user feature picker',
-  p_body     => 'Two privacy improvements: (1) When you invite a caregiver, you can now narrow what areas they see (Feedings, Stool, Sleep, Medications, etc.) — they get only what you tick. (2) Per-stage feature visibility lets each user hide categories they don''t need. Both edit-able later in Caregivers and Preferences.',
+  p_title    => $t5$Per-area caregiver visibility + user feature picker$t5$,
+  p_body     => $b5$Two privacy improvements: (1) When you invite a caregiver, you can now narrow what areas they see (Feedings, Stool, Sleep, Medications, etc.) — they get only what you tick. (2) Per-stage feature visibility lets each user hide categories they don't need. Both edit-able later in Caregivers and Preferences.$b5$,
   p_category => 'new_feature',
   p_date     => current_date,
-  p_title_ar => 'صلاحيات مخصصة لمقدمي الرعاية + اختيار الميزات لكل مستخدم',
-  p_body_ar  => 'تحسينان للخصوصية: (١) عند دعوة مقدم رعاية، يمكنك تحديد ما يراه (الرضعات، البراز، النوم، الأدوية، إلخ). (٢) إخفاء الفئات لكل مستخدم. قابل للتعديل لاحقًا.'
+  p_title_ar => $ta5$صلاحيات مخصصة لمقدمي الرعاية + اختيار الميزات لكل مستخدم$ta5$,
+  p_body_ar  => $ba5$تحسينان للخصوصية: (١) عند دعوة مقدم رعاية، يمكنك تحديد ما يراه (الرضعات، البراز، النوم، الأدوية، إلخ). (٢) إخفاء الفئات لكل مستخدم. قابل للتعديل لاحقًا.$ba5$
 );

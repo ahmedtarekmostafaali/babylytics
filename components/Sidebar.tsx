@@ -10,7 +10,6 @@ import { Wordmark } from '@/components/Wordmark';
 import { signAvatarUrl } from '@/lib/baby-avatar';
 import { ageInDays } from '@/lib/dates';
 import { effectiveStage, fmtGestationalAge } from '@/lib/lifecycle';
-import { stageBucket } from '@/lib/areas';
 import {
   LayoutDashboard, Clock, Milk, Droplet, Pill, Ruler, FileText, BarChart3, Users, UserCog,
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
@@ -180,24 +179,27 @@ export function Sidebar() {
   const stage = currentBaby ? effectiveStage(currentBaby.lifecycle_stage ?? null, currentBaby.dob) : null;
   const isPregnancy = stage === 'pregnancy';
 
-  // Load the user's per-stage enabled_features once we know which stage
-  // bucket we're rendering for.
+  // 051 batch: per-PROFILE feature visibility (was per-user-per-stage). The
+  // profile owns its own enabled_features list; we look it up by babyId.
+  // Reset the previous baby's list when switching profiles so we don't
+  // briefly render the wrong set.
   useEffect(() => {
-    if (!stage) return;
+    if (!currentBabyId) { setEnabledFeatures(null); return; }
     const supabase = createClient();
-    supabase.rpc('my_enabled_features', { p_stage: stageBucket(stage) })
+    supabase.rpc('baby_enabled_features', { p_baby: currentBabyId })
       .then(
         ({ data }) => setEnabledFeatures((data as string[] | null) ?? null),
         () => setEnabledFeatures(null),
       );
-  }, [stage]);
+  }, [currentBabyId]);
 
   // Combined visibility predicate. Returns true if the area is visible
-  // under BOTH the caregiver gate AND the user-pref gate. Parents are
-  // never narrowed by their own user prefs (they see everything they own).
+  // under BOTH the caregiver gate AND the per-profile feature gate.
+  // Per-profile features apply to EVERYONE (including parents) — that's
+  // the whole point of moving them onto the profile in 051.
   function canSee(area: string): boolean {
     if (allowedAreas !== null && !allowedAreas.includes(area)) return false;
-    if (!isParent && enabledFeatures !== null && !enabledFeatures.includes(area)) return false;
+    if (enabledFeatures !== null && !enabledFeatures.includes(area)) return false;
     return true;
   }
   // 044 batch: 'planning' is a new pre-pregnancy stage. effectiveStage() doesn't
