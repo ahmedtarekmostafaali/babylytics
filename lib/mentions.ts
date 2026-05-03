@@ -35,8 +35,10 @@ export function mentionLabel(m: MentionMember): string {
 }
 
 /** Filter the member list by an @-query. Empty query returns the full list.
- *  Excludes the current user (you can't mention yourself meaningfully). */
-export function filterMembers(members: MentionMember[], query: string, currentUserId: string): MentionMember[] {
+ *  Excludes the current user (you can't mention yourself meaningfully).
+ *  Generic so callers (BabyChat passes ChatMember which has role) keep
+ *  their richer type instead of being narrowed to MentionMember. */
+export function filterMembers<M extends MentionMember>(members: M[], query: string, currentUserId: string): M[] {
   const q = query.trim().toLowerCase();
   return members.filter(m => {
     if (m.user_id === currentUserId) return false;
@@ -47,8 +49,8 @@ export function filterMembers(members: MentionMember[], query: string, currentUs
 }
 
 /** Insert a mention into the textarea body, replacing the @query with @name + space. */
-export function applyMention(
-  body: string, ctx: { start: number; end: number }, member: MentionMember,
+export function applyMention<M extends MentionMember>(
+  body: string, ctx: { start: number; end: number }, member: M,
 ): { body: string; caret: number } {
   // Use the first word of the display name to keep mention tokens short
   // (so the @-detection regex matches them later for highlighting).
