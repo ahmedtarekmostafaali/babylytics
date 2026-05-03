@@ -304,6 +304,30 @@ export default async function Landing() {
         </div>
       </section>
 
+      {/* ======= Recently added — compact summary of latest waves ======= */}
+      <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-4 pb-12">
+        <div className="text-center mb-8">
+          <div className="text-xs font-semibold tracking-wider text-coral-500 uppercase">{t('landing.recent_eyebrow')}</div>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">{t('landing.recent_h2')}</h2>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <SmallSpotlight tint="lavender" Icon={MessagesSquare}  title={t('landing.recent_chat_t')}       body={t('landing.recent_chat_x')} />
+          <SmallSpotlight tint="coral"    Icon={Heart}            title={t('landing.recent_cycle_t')}      body={t('landing.recent_cycle_x')} />
+          <SmallSpotlight tint="mint"     Icon={Sparkles}         title={t('landing.recent_ideas_t')}      body={t('landing.recent_ideas_x')} />
+          <SmallSpotlight tint="brand"    Icon={Moon}             title={t('landing.recent_dark_t')}       body={t('landing.recent_dark_x')} />
+          <SmallSpotlight tint="peach"    Icon={LayoutDashboard}  title={t('landing.recent_visibility_t')} body={t('landing.recent_visibility_x')} />
+          <SmallSpotlight tint="mint"     Icon={ShieldCheck}      title={t('landing.recent_areas_t')}      body={t('landing.recent_areas_x')} />
+        </div>
+
+        {/* Coming soon row — what's next, kept honest. */}
+        <div className="mt-6 grid md:grid-cols-2 gap-4">
+          <ComingSoonTile tint="lavender" Icon={Stethoscope} eyebrow={t('landing.soon_eyebrow')}
+            title={t('landing.soon_consult_t')} body={t('landing.soon_consult_x')} />
+          <ComingSoonTile tint="brand" Icon={Smartphone} eyebrow={t('landing.soon_eyebrow')}
+            title={t('landing.soon_native_t')} body={t('landing.soon_native_x')} />
+        </div>
+      </section>
+
       {/* ======= What's new strip ======= */}
       <section className="max-w-6xl mx-auto px-4 lg:px-8 pb-16">
         <Link href="/updates"
@@ -343,8 +367,8 @@ export default async function Landing() {
             <p className="mt-2 text-xs text-ink-muted">{t('landing.cta_no_card')}</p>
 
             <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
-              <StoreBadge platform="apple" />
-              <StoreBadge platform="google" />
+              <StoreBadge platform="apple" comingSoonLabel={t('landing.app_coming_soon')} />
+              <StoreBadge platform="google" comingSoonLabel={t('landing.app_coming_soon')} />
             </div>
           </div>
         </div>
@@ -656,17 +680,61 @@ function OcrRow({ time, Icon, tint, title, sub }: {
   );
 }
 
-function StoreBadge({ platform }: { platform: 'apple'|'google' }) {
-  const Icon = platform === 'apple' ? Apple : Smartphone;
-  const top = platform === 'apple' ? 'Download on the' : 'GET IT ON';
-  const bottom = platform === 'apple' ? 'App Store' : 'Google Play';
+function ComingSoonTile({
+  tint, Icon, eyebrow, title, body,
+}: {
+  tint: 'lavender' | 'brand' | 'mint' | 'coral' | 'peach';
+  Icon: React.ComponentType<{ className?: string }>;
+  eyebrow: string; title: string; body: string;
+}) {
+  const ring = {
+    lavender: 'border-lavender-200 from-lavender-50 to-brand-50',
+    brand:    'border-brand-200    from-brand-50    to-lavender-50',
+    mint:     'border-mint-200     from-mint-50     to-coral-50',
+    coral:    'border-coral-200    from-coral-50    to-peach-50',
+    peach:    'border-peach-200    from-peach-50    to-coral-50',
+  }[tint];
+  const iconCls = {
+    lavender: 'bg-lavender-100 text-lavender-700',
+    brand:    'bg-brand-100    text-brand-700',
+    mint:     'bg-mint-100     text-mint-700',
+    coral:    'bg-coral-100    text-coral-700',
+    peach:    'bg-peach-100    text-peach-700',
+  }[tint];
   return (
-    <a href="#" className="inline-flex items-center gap-3 rounded-lg bg-ink-strong text-white px-4 py-2.5 hover:bg-black">
-      <Icon className="h-6 w-6" />
+    <div className={`rounded-2xl border bg-gradient-to-br p-5 ${ring}`}>
+      <div className="flex items-start gap-3">
+        <span className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${iconCls}`}>
+          <Icon className="h-5 w-5" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-bold text-ink-strong">{title}</h3>
+            <span className="inline-flex items-center rounded-full bg-coral-100 text-coral-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
+              {eyebrow}
+            </span>
+          </div>
+          <p className="text-xs text-ink leading-relaxed mt-1">{body}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StoreBadge({ platform, comingSoonLabel }: { platform: 'apple'|'google'; comingSoonLabel: string }) {
+  const Icon = platform === 'apple' ? Apple : Smartphone;
+  const bottom = platform === 'apple' ? 'App Store' : 'Google Play';
+  // Wave 11: native apps not shipped yet — render as a static badge with
+  // a "Coming soon" eyebrow instead of a link. Disabled visual state so
+  // visitors know it's not interactive.
+  return (
+    <span aria-disabled
+      className="inline-flex items-center gap-3 rounded-lg bg-ink-strong/85 text-white px-4 py-2.5 cursor-not-allowed select-none">
+      <Icon className="h-6 w-6 opacity-90" />
       <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wider opacity-80">{top}</span>
+        <span className="block text-[10px] uppercase tracking-wider opacity-80">{comingSoonLabel}</span>
         <span className="block text-sm font-semibold">{bottom}</span>
       </span>
-    </a>
+    </span>
   );
 }

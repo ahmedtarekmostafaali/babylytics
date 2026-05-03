@@ -1926,9 +1926,36 @@ export const en = {
     how_s3_x:        'Caregivers stay in sync via comments & audit trail. Save a PDF for the paediatrician in one tap.',
 
     whats_new_eyebrow: 'Recently shipped',
-    whats_new_title:   "Daily fetal-size card · Maternal symptoms tracker · Audit trail by name · Cow's-milk allergy guide · Voice logging",
+    whats_new_title:   'Caregiver chat with @mentions · 1:1 private threads · Cycle / period tracking · Daily ideas · Dark mode · Per-profile feature picker',
     whats_new_sub:     'See the full changelog and turn on notifications for new updates.',
     whats_new_cta:     "What’s new",
+
+    // Recently-added strip — six tile summary of the latest waves so the
+    // homepage reflects what's actually in the product.
+    recent_eyebrow:    'Recently added',
+    recent_h2:         'Built for the whole family.',
+    recent_chat_t:     'Caregiver chat',
+    recent_chat_x:     'Group chat per profile + private 1:1 threads. @mention people and they get highlighted in the bubble.',
+    recent_cycle_t:    'Cycle / period tracking',
+    recent_cycle_x:    'Track your cycle before pregnancy — phase calendar, fertile-window prediction, period log.',
+    recent_ideas_t:    'Daily ideas',
+    recent_ideas_x:    'Three age-aware activities for babies, trimester-aware tips for pregnancy, phase-aware self-care for cycle.',
+    recent_dark_t:     'Dark mode',
+    recent_dark_x:     'System / Light / Dark — chosen in Preferences. RTL-aware. No flash on load.',
+    recent_visibility_t: 'Per-profile features',
+    recent_visibility_x: "Pick which sections show in the sidebar for each profile. Cycle, pregnancy and baby each have their own list.",
+    recent_areas_t:    'Per-area caregiver perms',
+    recent_areas_x:    "Narrow what each invited caregiver sees — share only feedings + sleep with the nurse, only meds with the pharmacy.",
+
+    // Coming-soon row — surface what's next so users know the roadmap.
+    soon_eyebrow:      'Coming soon',
+    soon_consult_t:    'In-app doctor consultations',
+    soon_consult_x:    'Invite a verified Babylytics doctor as a caregiver, share the relevant areas, and chat privately — same place, no separate app.',
+    soon_native_t:     'Native iOS + Android apps',
+    soon_native_x:     'Web app works on every phone today. Native apps with push notifications and offline support are next.',
+
+    // App-store badge eyebrow when the link is disabled.
+    app_coming_soon:   'Coming soon',
 
     cta_h2:          "Start tracking your baby’s journey today.",
     cta_p:           "It’s free, easy and made with love.",
