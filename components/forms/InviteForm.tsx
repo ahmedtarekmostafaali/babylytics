@@ -156,9 +156,13 @@ export function InviteForm({ babyId, stage }: {
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block font-semibold text-ink-strong text-sm">{ROLE_LABEL[o.value]}</span>
-                  <span className="block text-xs text-ink-muted truncate">{ROLE_DESC[o.value]}</span>
+                  {/* No `truncate` — long descriptions like "Full access —
+                      write every log, upload files, invite caregivers" were
+                      getting clipped on narrow phones. Wrap to as many
+                      lines as needed; tile auto-grows. */}
+                  <span className="block text-xs text-ink-muted leading-snug">{ROLE_DESC[o.value]}</span>
                 </span>
-                {active && <Check className="h-4 w-4 text-brand-600 shrink-0" />}
+                {active && <Check className="h-4 w-4 text-brand-600 shrink-0 self-start mt-1" />}
               </button>
             );
           })}

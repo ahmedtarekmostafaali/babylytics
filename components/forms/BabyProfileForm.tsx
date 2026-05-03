@@ -39,7 +39,7 @@ export type BabyProfileValue = {
 // the global /preferences page so we don't surface a duplicate empty tab here.
 type Tab = 'basic' | 'birth' | 'health' | 'notes';
 type TabMeta = { key: Tab; tkey: string; icon: React.ComponentType<{ className?: string }> };
-const TABS: TabMeta[] = [
+const ALL_TABS: TabMeta[] = [
   { key: 'basic',  tkey: 'forms.bp_tab_basic',  icon: Info },
   { key: 'birth',  tkey: 'forms.bp_tab_birth',  icon: Gift },
   { key: 'health', tkey: 'forms.bp_tab_health', icon: Stethoscope },
@@ -50,7 +50,7 @@ const AVATAR_BUCKET = 'medical-files';
 function sanitize(name: string): string { return name.replace(/[^a-zA-Z0-9._-]+/g, '_'); }
 
 export function BabyProfileForm({
-  baby, currentWeightKg, canDelete, canEditHealth, avatarUrl,
+  baby, currentWeightKg, canDelete, canEditHealth, avatarUrl, stage,
 }: {
   baby: BabyProfileValue;
   currentWeightKg: number | null;
@@ -58,7 +58,16 @@ export function BabyProfileForm({
   /** Parent/owner only — controls doctor + appointment visibility & edit. */
   canEditHealth: boolean;
   avatarUrl: string | null;
+  /** Profile stage. 'planning' (cycle) hides the Birth tab and the DOB field
+   *  on Basic. 'pregnancy' also hides Birth. Anything else (newborn/infant/
+   *  toddler/child/null) shows the full baby form. */
+  stage?: 'planning' | 'pregnancy' | 'newborn' | 'infant' | 'toddler' | 'child' | 'archived' | null;
 }) {
+  // Tabs available for this stage. Cycle/pregnancy profiles never had a
+  // DOB or birth weight — hide the Birth tab so the form isn't littered
+  // with blank baby-specific fields they can't fill.
+  const isCycleOrPreg = stage === 'planning' || stage === 'pregnancy';
+  const TABS: TabMeta[] = ALL_TABS.filter(t => !(isCycleOrPreg && t.key === 'birth'));
   const router = useRouter();
   const t = useT();
   const [tab, setTab] = useState<Tab>('basic');
@@ -134,30 +143,64 @@ export function BabyProfileForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null); setMsg(null);
-    const parsed = BabySchema.safeParse({
-      name, dob, gender,
-      birth_weight_kg: bw || null,
-      birth_height_cm: bh || null,
-      feeding_factor: factor,
-      blood_type: blood || 'unknown',
-      doctor_name:  canEditHealth ? (docName || null)   : undefined,
-      doctor_phone: canEditHealth ? (docPhone || null)  : undefined,
-      doctor_clinic:canEditHealth ? (docClinic || null) : undefined,
-      next_appointment_at: canEditHealth ? (appt ? localInputToIso(appt) : null) : undefined,
-      next_appointment_notes: canEditHealth ? (apptNotes || null) : undefined,
-    });
-    if (!parsed.success) { setErr(parsed.error.errors[0]?.message ?? 'invalid'); return; }
+    // 051 follow-up: cycle (planning) profiles legitimately have no DOB yet,
+    // so BabySchema's `dob: min(1)` blocks them from saving anything. Detect
+    // the empty-dob case and build a relaxed payload that updates only the
+    // fields they CAN provide right now — name, blood type, notes, doctor
+    // info, etc. Once they advance to pregnancy/baby they'll set DOB on the
+    // transition flow.
+    const isCycle = !dob || dob.trim() === '';
+    type Parsed = {
+      name: string; dob: string; gender: 'male' | 'female';
+      birth_weight_kg: number | null; birth_height_cm: number | null;
+      feeding_factor: number; blood_type: string;
+      doctor_name?: string | null; doctor_phone?: string | null; doctor_clinic?: string | null;
+      next_appointment_at?: string | null; next_appointment_notes?: string | null;
+    };
+    let parsedData: Parsed;
+    if (!isCycle) {
+      const parsed = BabySchema.safeParse({
+        name, dob, gender,
+        birth_weight_kg: bw || null,
+        birth_height_cm: bh || null,
+        feeding_factor: factor,
+        blood_type: blood || 'unknown',
+        doctor_name:  canEditHealth ? (docName || null)   : undefined,
+        doctor_phone: canEditHealth ? (docPhone || null)  : undefined,
+        doctor_clinic:canEditHealth ? (docClinic || null) : undefined,
+        next_appointment_at: canEditHealth ? (appt ? localInputToIso(appt) : null) : undefined,
+        next_appointment_notes: canEditHealth ? (apptNotes || null) : undefined,
+      });
+      if (!parsed.success) { setErr(parsed.error.errors[0]?.message ?? 'invalid'); return; }
+      parsedData = parsed.data as Parsed;
+    } else {
+      // Minimal validation for cycle: name only.
+      if (!name || name.trim().length === 0) { setErr('Name is required'); return; }
+      parsedData = {
+        name: name.trim(), dob: '', gender,
+        birth_weight_kg: null, birth_height_cm: null,
+        feeding_factor: Number(factor) || 150,
+        blood_type: blood || 'unknown',
+        doctor_name:  canEditHealth ? (docName || null)   : undefined,
+        doctor_phone: canEditHealth ? (docPhone || null)  : undefined,
+        doctor_clinic:canEditHealth ? (docClinic || null) : undefined,
+        next_appointment_at: canEditHealth ? (appt ? localInputToIso(appt) : null) : undefined,
+        next_appointment_notes: canEditHealth ? (apptNotes || null) : undefined,
+      };
+    }
     setSaving(true);
     const supabase = createClient();
     const payload: Record<string, unknown> = {
-      name: parsed.data.name,
-      dob: localInputToIso(parsed.data.dob),
-      gender: parsed.data.gender,
-      birth_weight_kg: parsed.data.birth_weight_kg ?? null,
-      birth_height_cm: parsed.data.birth_height_cm ?? null,
-      feeding_factor_ml_per_kg_per_day: parsed.data.feeding_factor,
+      name: parsedData.name,
+      // Cycle profiles save dob: null. Database column allows null since
+      // the pregnancy/planning lifecycle was added.
+      dob: isCycle ? null : localInputToIso(parsedData.dob),
+      gender: parsedData.gender,
+      birth_weight_kg: parsedData.birth_weight_kg ?? null,
+      birth_height_cm: parsedData.birth_height_cm ?? null,
+      feeding_factor_ml_per_kg_per_day: parsedData.feeding_factor,
       notes: notes || null,
-      blood_type: parsed.data.blood_type ?? 'unknown',
+      blood_type: parsedData.blood_type ?? 'unknown',
     };
     if (canEditHealth) {
       payload.doctor_name  = parsed.data.doctor_name  ?? null;
@@ -258,9 +301,14 @@ export function BabyProfileForm({
             <Field label={t('forms.bp_nickname')}>
               <Input value={nick} onChange={e => setNick(e.target.value)} placeholder={t('forms.bp_nickname_ph')} />
             </Field>
-            <Field label={t('forms.bp_dob')}>
-              <Input type="datetime-local" value={dob} onChange={e => setDob(e.target.value)} required />
-            </Field>
+            {/* DOB only applies to actual babies. Hide for cycle and
+                pregnancy profiles — they collect dates elsewhere (LMP/EDD
+                in pregnancy onboarding; period_start in cycles). */}
+            {!isCycleOrPreg && (
+              <Field label={t('forms.bp_dob')}>
+                <Input type="datetime-local" value={dob} onChange={e => setDob(e.target.value)} required />
+              </Field>
+            )}
             <Field label={t('forms.bp_gender')}>
               <div className="grid grid-cols-2 gap-2">
                 {[

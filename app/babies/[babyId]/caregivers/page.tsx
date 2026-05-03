@@ -15,7 +15,7 @@ import { tFor, type TFunc } from '@/lib/i18n';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Caregivers' };
 
-type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor';
+type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor' | 'pharmacy';
 
 const ROLE_META: Record<Role, { tkey: string; tint: string; icon: React.ComponentType<{ className?: string }> }> = {
   owner:     { tkey: 'caregivers.label_owner',  tint: 'bg-brand-100    text-brand-700',    icon: Shield },
@@ -25,13 +25,17 @@ const ROLE_META: Record<Role, { tkey: string; tint: string; icon: React.Componen
   nurse:     { tkey: 'caregivers.label_nurse',  tint: 'bg-coral-100    text-coral-700',    icon: Heart },
   caregiver: { tkey: 'caregivers.label_nurse',  tint: 'bg-coral-100    text-coral-700',    icon: Heart }, // legacy → nurse
   viewer:    { tkey: 'caregivers.label_viewer', tint: 'bg-slate-100    text-ink',          icon: Eye },
+  // 046 batch — pharmacy role. Not yet i18n-keyed; falls back to literal
+  // strings so the legend stays accurate when a pharmacy caregiver exists.
+  pharmacy:  { tkey: 'Pharmacy',                tint: 'bg-mint-100     text-mint-700',     icon: Heart },
 };
 
 const ROLE_DEFS: { role: Role; titleKey: string; permsKey: string }[] = [
-  { role: 'parent', titleKey: 'caregivers.role_parent_t', permsKey: 'caregivers.role_parent_p' },
-  { role: 'doctor', titleKey: 'caregivers.role_doctor_t', permsKey: 'caregivers.role_doctor_p' },
-  { role: 'nurse',  titleKey: 'caregivers.role_nurse_t',  permsKey: 'caregivers.role_nurse_p' },
-  { role: 'viewer', titleKey: 'caregivers.role_viewer_t', permsKey: 'caregivers.role_viewer_p' },
+  { role: 'parent',   titleKey: 'caregivers.role_parent_t', permsKey: 'caregivers.role_parent_p' },
+  { role: 'doctor',   titleKey: 'caregivers.role_doctor_t', permsKey: 'caregivers.role_doctor_p' },
+  { role: 'nurse',    titleKey: 'caregivers.role_nurse_t',  permsKey: 'caregivers.role_nurse_p' },
+  { role: 'pharmacy', titleKey: 'Pharmacy',                  permsKey: 'Sees medication stock + dose history only — useful for refill coordination.' },
+  { role: 'viewer',   titleKey: 'caregivers.role_viewer_t', permsKey: 'caregivers.role_viewer_p' },
 ];
 
 function initials(s: string) {
@@ -79,7 +83,7 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
   const canManage = myRole === 'owner' || myRole === 'parent' || myRole === 'editor';
 
   return (
-    <PageShell max="3xl">
+    <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
         eyebrow={t('caregivers.eyebrow')} eyebrowTint="mint"
         title={<>{t('caregivers.title')} <span className="inline-flex items-center gap-1 text-mint-600 ml-1"><Users className="h-5 w-5" /></span></>}
@@ -198,8 +202,11 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
           )}
         </div>
 
-        {/* RIGHT — 1/3: About + role cards */}
-        <div className="space-y-6">
+        {/* RIGHT — 1/3: About + role cards. Sticky on lg+ so the panels
+            stay visible while the user scrolls the long caregiver list /
+            invite form — fixes the "right rail floating in white space"
+            look on tall screens. */}
+        <div className="space-y-6 lg:sticky lg:top-4 self-start">
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <h3 className="text-sm font-bold text-ink-strong mb-3">{t('caregivers.about_h')}</h3>
             <div className="space-y-4">

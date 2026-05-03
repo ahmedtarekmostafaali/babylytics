@@ -146,6 +146,7 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
           canDelete={canDelete}
           canEditHealth={canEditHealth}
           avatarUrl={avatarUrl}
+          stage={(baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null}
         />
 
         {/* Right rail — At a Glance / Growth / Quick Actions */}
@@ -234,17 +235,6 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
             </Link>
           </section>
 
-          {/* Per-profile features (051 batch) — moved from /preferences.
-              Each profile owns its own enabled_features list, automatically
-              filtered by its own stage. Read-only for non-parents (RPC
-              rejects, but better UX to disable). */}
-          <ProfileFeaturesCard
-            babyId={params.babyId}
-            stage={(baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null}
-            initial={enabledFeatures}
-            canEdit={canEditHealth}
-          />
-
           {/* Quick actions */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
             <h3 className="text-sm font-bold text-ink-strong mb-3">{t('edit_baby.quick_actions')}</h3>
@@ -257,6 +247,17 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
           </section>
         </aside>
       </div>
+
+      {/* Per-profile features — moved from the right rail to a full-width
+          section so the 6-group AreaPicker has room to breathe and so the
+          card has the same visual weight as the form sections above. Shown
+          for every stage (cycle / pregnancy / baby). */}
+      <ProfileFeaturesCard
+        babyId={params.babyId}
+        stage={(baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null}
+        initial={enabledFeatures}
+        canEdit={canEditHealth}
+      />
     </PageShell>
   );
 }

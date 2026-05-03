@@ -431,9 +431,12 @@ export function Sidebar() {
               </>
             )}
 
-            {/* Hide the "Family" category in planning mode — settings page
-                is reachable below as a single nav item. */}
-            {isParent && !isPlanning && (
+            {/* "Family" category — Profile, Caregivers, Doctors, Preferences.
+                Available to parents/owners on every stage (cycle, pregnancy,
+                baby). 051 follow-up: cycle profiles previously skipped this
+                whole category and so couldn't reach their own Profile or
+                Caregivers — fixed by dropping the !isPlanning gate. */}
+            {isParent && (
               <NavCategory id="settings_family" label={t('nav.cat_family')} icon={Users} collapsed={collapsed}
                 open={isCatOpen('settings_family')} onToggle={() => toggleCat('settings_family')}>
                 {isPregnancy && (
@@ -444,7 +447,8 @@ export function Sidebar() {
                 {/* "Profile" → /edit is the BabyProfileForm (DOB, birth weight,
                     blood type…) which doesn't apply to pregnancy profiles, so
                     hide it there — "Pregnancy profile" right above is the
-                    equivalent destination. */}
+                    equivalent destination. Cycle profiles still get it for
+                    naming + per-profile feature visibility. */}
                 {!isPregnancy && (
                   <NavItem href={`/babies/${currentBabyId}/edit`}       icon={UserCog}     label="Profile"             active={pathname?.startsWith(`/babies/${currentBabyId}/edit`) ?? false}       collapsed={collapsed} tint="brand" />
                 )}
@@ -452,9 +456,10 @@ export function Sidebar() {
               </NavCategory>
             )}
 
-            {/* Preferences is always reachable — even for non-parents on a baby,
-                AND for planning-stage parents (who skip the Family category). */}
-            {(!isParent || isPlanning) && (
+            {/* Preferences for non-parents on a baby (caregivers/doctors/etc.) —
+                they don't get the full Family category but still need their
+                own preferences. */}
+            {!isParent && (
               <NavGroup label="" collapsed={collapsed}>
                 <NavItem href="/preferences" icon={Settings} label={t('nav.preferences')}
                   active={pathname?.startsWith('/preferences') ?? false} collapsed={collapsed} tint="brand" />
