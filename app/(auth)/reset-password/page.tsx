@@ -152,7 +152,7 @@ export default function ResetPasswordPage() {
           <circle cx="60"  cy="720" r="60"  fill="#FFF" opacity="0.12" />
         </svg>
         <div className="relative z-10 flex flex-col justify-between text-white p-12 w-full">
-          <Wordmark size="md" variant="light" />
+          <Wordmark size="md" />
           <div>
             <h2 className="text-3xl font-bold leading-tight">Almost there.</h2>
             <p className="mt-3 text-white/80">Pick a new password and you&apos;re back in.</p>

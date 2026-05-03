@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
           <circle cx="60"  cy="720" r="60"  fill="#FFF" opacity="0.12" />
         </svg>
         <div className="relative z-10 flex flex-col justify-between text-white p-12 w-full">
-          <Wordmark size="md" variant="light" />
+          <Wordmark size="md" />
           <div>
             <h2 className="text-3xl font-bold leading-tight">A fresh start in two minutes.</h2>
             <p className="mt-3 text-white/80">Enter your email, click the link, set a new password. That&apos;s it.</p>
