@@ -9,13 +9,15 @@ import { ageInDays } from '@/lib/dates';
 import { fmtKg, fmtCm } from '@/lib/units';
 import {
   Cake, Flag, Droplet, Star, Eye, TrendingUp, ExternalLink,
-  UserPlus, Camera, Share2, Stethoscope,
+  UserPlus, Camera, Share2, Stethoscope, Heart, Baby, CalendarDays,
 } from 'lucide-react';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { tFor, type TFunc } from '@/lib/i18n';
 import { ProfileFeaturesCard } from '@/components/ProfileFeaturesCard';
 import type { LifecycleStage } from '@/lib/lifecycle';
+import { gestationalAge, eddDistanceDays, trimester } from '@/lib/lifecycle';
 import { stageBucket } from '@/lib/areas';
+import { fmtDate } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Baby profile' };
@@ -86,7 +88,7 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
 
   const { data: baby } = await supabase
     .from('babies')
-    .select('id,name,dob,gender,birth_weight_kg,birth_height_cm,feeding_factor_ml_per_kg_per_day,notes,avatar_path,blood_type,doctor_name,doctor_phone,doctor_clinic,next_appointment_at,next_appointment_notes,lifecycle_stage')
+    .select('id,name,dob,gender,birth_weight_kg,birth_height_cm,feeding_factor_ml_per_kg_per_day,notes,avatar_path,blood_type,doctor_name,doctor_phone,doctor_clinic,next_appointment_at,next_appointment_notes,lifecycle_stage,edd,lmp')
     .eq('id', params.babyId)
     .is('deleted_at', null)
     .single();
@@ -127,15 +129,51 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
   const heightSpark = ((heightRows ?? []) as { height_cm: number | null }[]).filter(r => r.height_cm != null).map(r => Number(r.height_cm));
   const currentHeight = heightSpark.length ? heightSpark[heightSpark.length - 1] : null;
 
-  // Wave 22: gate right-rail baby-only KPIs by stage. Cycle (planning)
-  // profiles still reach this page via the Family > Profile sidebar link
-  // (since the page handles the profile name, avatar, blood type, and
-  // features picker for them too) — but Age, Next milestone, Zodiac, and
-  // Growth Summary are all baby-mode concepts that read as nonsense on a
-  // cycle profile (Age: 0 days, Next milestone: 1 month, height/weight
-  // sparklines empty). Show only Blood type for non-baby stages.
-  const stage = (baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null;
-  const isBabyStage = stageBucket(stage) === 'baby';
+  // Wave 22: gate right-rail baby-only KPIs by stage. Wave 26: instead
+  // of a blank rail for cycle/pregnancy, render stage-relevant KPIs —
+  // gestational age + EDD countdown for pregnancy, current cycle day +
+  // next-period estimate for cycle.
+  const stage  = (baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null;
+  const bucket = stageBucket(stage);
+  const isBabyStage      = bucket === 'baby';
+  const isPregnancyStage = bucket === 'pregnancy';
+  const isPlanningStage  = bucket === 'planning';
+
+  // Pregnancy KPIs come straight off the babies row via lifecycle.ts
+  // helpers — no extra round-trip needed.
+  const edd = (baby as { edd?: string | null }).edd ?? null;
+  const lmp = (baby as { lmp?: string | null }).lmp ?? null;
+  const ga  = isPregnancyStage ? gestationalAge(edd, lmp)         : null;
+  const eddDays = isPregnancyStage ? eddDistanceDays(edd)          : null;
+  const tri = isPregnancyStage && ga ? trimester(ga.total_days)    : null;
+
+  // Cycle (planning) KPIs need the latest period — owners have full RLS
+  // access, partners are blocked at the SQL level by Wave 23 but they
+  // shouldn't reach this page anyway. Fetch the most recent row only,
+  // and only when actually on a cycle profile.
+  let cycleDay: number | null = null;
+  let nextPeriodIso: string | null = null;
+  let daysToNextPeriod: number | null = null;
+  if (isPlanningStage) {
+    const { data: lastCycle } = await supabase
+      .from('menstrual_cycles')
+      .select('period_start,cycle_length')
+      .eq('baby_id', params.babyId)
+      .is('deleted_at', null)
+      .order('period_start', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const lc = lastCycle as { period_start: string; cycle_length: number | null } | null;
+    if (lc?.period_start) {
+      const start  = new Date(lc.period_start + 'T00:00:00Z');
+      const length = lc.cycle_length ?? 28;
+      const sinceMs = Date.now() - start.getTime();
+      cycleDay = Math.max(1, Math.floor(sinceMs / 86400000) + 1);
+      const next      = new Date(start.getTime() + length * 86400000);
+      nextPeriodIso   = next.toISOString().slice(0, 10);
+      daysToNextPeriod = Math.max(0, Math.round((next.getTime() - Date.now()) / 86400000));
+    }
+  }
 
   return (
     <PageShell max="5xl">
@@ -203,6 +241,74 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
                   </li>
                 </>
               )}
+
+              {/* Wave 26: pregnancy KPIs — gestational age + countdown to EDD
+                  + trimester. Only show if we have either EDD or LMP. */}
+              {isPregnancyStage && ga && (
+                <>
+                  <li className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-2 text-ink-muted"><Baby className="h-4 w-4" /> {userPrefs.language === 'ar' ? 'عمر الحمل' : 'Gestational age'}</span>
+                    <span className="font-semibold text-ink-strong">{ga.weeks}w {ga.days}d</span>
+                  </li>
+                  {tri && (
+                    <li className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-2 text-ink-muted"><Flag className="h-4 w-4" /> {userPrefs.language === 'ar' ? 'الثلث' : 'Trimester'}</span>
+                      <span className="font-semibold text-ink-strong">{userPrefs.language === 'ar' ? ['الأول','الثاني','الثالث'][tri - 1] : `${tri}${tri === 1 ? 'st' : tri === 2 ? 'nd' : 'rd'}`}</span>
+                    </li>
+                  )}
+                  {edd && (
+                    <li>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-2 text-ink-muted"><CalendarDays className="h-4 w-4" /> {userPrefs.language === 'ar' ? 'الموعد المتوقع' : 'Due date'}</span>
+                        <span className="font-semibold text-ink-strong">{fmtDate(edd)}</span>
+                      </div>
+                      {eddDays != null && (
+                        <div className="mt-0.5 text-[10px] text-ink-muted text-right">
+                          {eddDays > 0
+                            ? (userPrefs.language === 'ar' ? `بعد ${eddDays} يوم` : `in ${eddDays} day${eddDays === 1 ? '' : 's'}`)
+                            : eddDays === 0
+                              ? (userPrefs.language === 'ar' ? 'اليوم' : 'today')
+                              : (userPrefs.language === 'ar' ? `متأخر ${-eddDays} يوم` : `${-eddDays} day${eddDays === -1 ? '' : 's'} overdue`)}
+                        </div>
+                      )}
+                    </li>
+                  )}
+                </>
+              )}
+
+              {/* Wave 26: cycle (planning) KPIs — current cycle day + next
+                  predicted period. Hidden gracefully when no cycles logged
+                  yet (the user lands on the planner to add their first). */}
+              {isPlanningStage && (
+                cycleDay != null ? (
+                  <>
+                    <li className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-2 text-ink-muted"><Heart className="h-4 w-4" /> {userPrefs.language === 'ar' ? 'يوم الدورة' : 'Cycle day'}</span>
+                      <span className="font-semibold text-ink-strong">{userPrefs.language === 'ar' ? `يوم ${cycleDay}` : `Day ${cycleDay}`}</span>
+                    </li>
+                    <li>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-2 text-ink-muted"><CalendarDays className="h-4 w-4" /> {userPrefs.language === 'ar' ? 'الدورة القادمة' : 'Next period'}</span>
+                        <span className="font-semibold text-ink-strong">
+                          {daysToNextPeriod === 0
+                            ? (userPrefs.language === 'ar' ? 'اليوم' : 'today')
+                            : (userPrefs.language === 'ar' ? `بعد ${daysToNextPeriod} يوم` : `in ${daysToNextPeriod} day${daysToNextPeriod === 1 ? '' : 's'}`)}
+                        </span>
+                      </div>
+                      {nextPeriodIso && (
+                        <div className="mt-0.5 text-[10px] text-ink-muted text-right">{fmtDate(nextPeriodIso)}</div>
+                      )}
+                    </li>
+                  </>
+                ) : (
+                  <li className="text-xs text-ink-muted">
+                    {userPrefs.language === 'ar'
+                      ? 'لم تسجلي أي دورة بعد. افتحي المخطط لتسجيل أول دورة.'
+                      : 'No cycles logged yet. Open the planner to add your first.'}
+                  </li>
+                )
+              )}
+
               <li className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-ink-muted"><Droplet className="h-4 w-4" /> {t('edit_baby.blood_type')}</span>
                 <span className="font-semibold text-ink-strong">{baby.blood_type && baby.blood_type !== 'unknown' ? baby.blood_type : t('edit_baby.not_set')}</span>
