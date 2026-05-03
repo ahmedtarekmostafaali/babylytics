@@ -28,15 +28,20 @@ interface CycleRecord {
   flow_intensity: 'light' | 'medium' | 'heavy' | null;
   source_uuid: string;
 }
-interface WeightRecord { measured_at: string; weight_kg: number; source_uuid: string; }
-interface BbtRecord    { measured_at: string; celsius:  number; source_uuid: string; }
-interface SleepRecord  { start_at: string;   end_at: string | null; source_uuid: string; }
+interface WeightRecord  { measured_at: string; weight_kg: number;            source_uuid: string; }
+interface BbtRecord     { measured_at: string; celsius:  number;             source_uuid: string; }
+interface SleepRecord   { start_at: string;   end_at: string | null;         source_uuid: string; }
+interface BpRecord      { measured_at: string; systolic: number | null;
+                          diastolic: number | null;                          source_uuid: string; }
+interface GlucoseRecord { measured_at: string; value_mgdl: number;           source_uuid: string; }
 
 interface ParseResult {
-  cycles: CycleRecord[];
-  weights: WeightRecord[];
-  bbts:    BbtRecord[];
-  sleeps:  SleepRecord[];
+  cycles:   CycleRecord[];
+  weights:  WeightRecord[];
+  bbts:     BbtRecord[];
+  sleeps:   SleepRecord[];
+  bps:      BpRecord[];
+  glucoses: GlucoseRecord[];
   detected: {
     cycle_days: number;
     sleep_nights: number;
@@ -61,10 +66,11 @@ export function AppleHealthImporter({ babyId }: { babyId: string }) {
   const [parsed, setParsed] = useState<ParseResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [importedCount, setImportedCount] = useState(0);
-  // Wave 20: per-category opt-in. Default all four importable categories
-  // ON (cycles, weight, BBT, sleep) — user can untick any before commit.
+  // Wave 21: per-category opt-in. All six importable categories default
+  // ON (cycles, weight, BBT, sleep, BP, glucose) — user can untick any
+  // before commit.
   const [selected, setSelected] = useState({
-    cycles: true, weights: true, bbts: true, sleeps: true,
+    cycles: true, weights: true, bbts: true, sleeps: true, bps: true, glucoses: true,
   });
 
   async function handleFile(file: File) {
@@ -140,6 +146,10 @@ export function AppleHealthImporter({ babyId }: { babyId: string }) {
       jobs.push({ rows: parsed.bbts,    rpc: 'import_apple_bbt',        label: 'BBT' });
     if (selected.sleeps && parsed.sleeps.length)
       jobs.push({ rows: parsed.sleeps,  rpc: 'import_apple_sleep',      label: 'sleep' });
+    if (selected.bps && parsed.bps.length)
+      jobs.push({ rows: parsed.bps,     rpc: 'import_apple_bp',         label: 'BP' });
+    if (selected.glucoses && parsed.glucoses.length)
+      jobs.push({ rows: parsed.glucoses, rpc: 'import_apple_glucose',   label: 'glucose' });
 
     if (jobs.length === 0) {
       setStage('preview');
@@ -173,8 +183,8 @@ export function AppleHealthImporter({ babyId }: { babyId: string }) {
         <div className="mx-auto h-14 w-14 rounded-full bg-mint-500 text-white grid place-items-center mb-3">
           <Check className="h-7 w-7" />
         </div>
-        <h3 className="text-xl font-bold text-ink-strong">Imported {importedCount} period entries</h3>
-        <p className="mt-2 text-sm text-ink-muted">Your cycle history is now live. Open the planner to see the calendar updated with everything Apple Health knew.</p>
+        <h3 className="text-xl font-bold text-ink-strong">Imported {importedCount} entries</h3>
+        <p className="mt-2 text-sm text-ink-muted">Periods, weight, BBT, sleep, BP and glucose — whatever you ticked is now live across the planner, vital signs, and sugar log.</p>
         <a href={`/babies/${babyId}/planner`}
           className="mt-5 inline-flex items-center gap-2 rounded-full bg-coral-500 hover:bg-coral-600 text-white font-semibold px-5 py-2.5">
           Back to my cycle <ArrowRight className="h-4 w-4" />
@@ -216,7 +226,17 @@ export function AppleHealthImporter({ babyId }: { babyId: string }) {
       {stage === 'importing' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
           <Loader2 className="mx-auto h-8 w-8 text-coral-600 animate-spin mb-3" />
-          <p className="text-sm text-ink">Saving {importedCount} of {parsed?.cycles.length} entries…</p>
+          <p className="text-sm text-ink">
+            Saving {importedCount} of{' '}
+            {parsed
+              ? (selected.cycles   ? parsed.cycles.length   : 0)
+              + (selected.weights  ? parsed.weights.length  : 0)
+              + (selected.bbts     ? parsed.bbts.length     : 0)
+              + (selected.sleeps   ? parsed.sleeps.length   : 0)
+              + (selected.bps      ? parsed.bps.length      : 0)
+              + (selected.glucoses ? parsed.glucoses.length : 0)
+              : 0} entries…
+          </p>
         </div>
       )}
 
@@ -286,17 +306,19 @@ function PreviewCard({
   parsed, selected, onToggle, onCommit, onCancel,
 }: {
   parsed: ParseResult;
-  selected: { cycles: boolean; weights: boolean; bbts: boolean; sleeps: boolean };
-  onToggle: (k: 'cycles' | 'weights' | 'bbts' | 'sleeps', v: boolean) => void;
+  selected: { cycles: boolean; weights: boolean; bbts: boolean; sleeps: boolean; bps: boolean; glucoses: boolean };
+  onToggle: (k: 'cycles' | 'weights' | 'bbts' | 'sleeps' | 'bps' | 'glucoses', v: boolean) => void;
   onCommit: () => void;
   onCancel: () => void;
 }) {
   // Total selected count for the button label.
   const total =
-    (selected.cycles  ? parsed.cycles.length  : 0) +
-    (selected.weights ? parsed.weights.length : 0) +
-    (selected.bbts    ? parsed.bbts.length    : 0) +
-    (selected.sleeps  ? parsed.sleeps.length  : 0);
+    (selected.cycles   ? parsed.cycles.length   : 0) +
+    (selected.weights  ? parsed.weights.length  : 0) +
+    (selected.bbts     ? parsed.bbts.length     : 0) +
+    (selected.sleeps   ? parsed.sleeps.length   : 0) +
+    (selected.bps      ? parsed.bps.length      : 0) +
+    (selected.glucoses ? parsed.glucoses.length : 0);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-card overflow-hidden">
@@ -330,24 +352,18 @@ function PreviewCard({
           checked={selected.sleeps} disabled={parsed.sleeps.length === 0}
           onChange={v => onToggle('sleeps', v)}
           note='Each "asleep" segment from Apple becomes one sleep_log row. In-bed-only segments are skipped to avoid double-counting.' />
-
-        {/* Still-deferred categories — show counts so users know they were
-            detected, but no import option yet. */}
-        {(parsed.detected.bp_entries > 0 || parsed.detected.glucose_entries > 0) && (
-          <div className="pt-3 mt-3 border-t border-slate-100 space-y-2">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Coming next wave</div>
-            {parsed.detected.bp_entries > 0 && (
-              <ToggleRow icon={Heart} tint="coral" label="Blood pressure entries"
-                value={`${parsed.detected.bp_entries}`}
-                checked={false} disabled note="Detected — needs source_uuid on vitals first." />
-            )}
-            {parsed.detected.glucose_entries > 0 && (
-              <ToggleRow icon={Droplet} tint="coral" label="Blood glucose entries"
-                value={`${parsed.detected.glucose_entries}`}
-                checked={false} disabled note="Detected — needs source_uuid on blood_sugar first." />
-            )}
-          </div>
-        )}
+        <ToggleRow
+          icon={Heart} tint="coral" label="Blood pressure"
+          value={`${parsed.bps.length} reading${parsed.bps.length === 1 ? '' : 's'}`}
+          checked={selected.bps} disabled={parsed.bps.length === 0}
+          onChange={v => onToggle('bps', v)}
+          note="Systolic + diastolic merged into one vital-signs row per reading time." />
+        <ToggleRow
+          icon={Droplet} tint="mint" label="Blood glucose"
+          value={`${parsed.glucoses.length} reading${parsed.glucoses.length === 1 ? '' : 's'}`}
+          checked={selected.glucoses} disabled={parsed.glucoses.length === 0}
+          onChange={v => onToggle('glucoses', v)}
+          note="Lands in your sugar log. mmol/L is auto-converted to mg/dL on the way in." />
       </div>
       <div className="p-5 border-t border-slate-100 bg-slate-50/40 flex items-center justify-end gap-2">
         <button type="button" onClick={onCancel}
@@ -410,43 +426,6 @@ function ToggleRow({
   );
 }
 
-function Row({
-  icon: Icon, tint, label, value, status, note,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  tint: 'coral' | 'lavender' | 'brand' | 'peach' | 'mint';
-  label: string;
-  value: string;
-  status: 'ready' | 'coming-soon';
-  note: string;
-}) {
-  const tintCls = {
-    coral:    'bg-coral-100 text-coral-700',
-    lavender: 'bg-lavender-100 text-lavender-700',
-    brand:    'bg-brand-100 text-brand-700',
-    peach:    'bg-peach-100 text-peach-700',
-    mint:     'bg-mint-100 text-mint-700',
-  }[tint];
-  return (
-    <div className="flex items-start gap-3">
-      <span className={`h-9 w-9 rounded-xl grid place-items-center shrink-0 ${tintCls}`}>
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-ink-strong text-sm">{label}</span>
-          <span className="text-xs text-ink-muted">·</span>
-          <span className="text-sm font-bold text-ink-strong">{value}</span>
-          {status === 'ready'
-            ? <span className="inline-flex items-center rounded-full bg-mint-100 text-mint-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">Ready</span>
-            : <span className="inline-flex items-center rounded-full bg-slate-100 text-ink-muted text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">Coming soon</span>}
-        </div>
-        <p className="text-[11px] text-ink-muted mt-0.5">{note}</p>
-      </div>
-    </div>
-  );
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Apple HealthKit XML record. Only the attributes we use.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -459,16 +438,20 @@ interface AppleRecord {
   HKMetadataKeyHealthKitUUID?: string;
 }
 
-/** Bucket Apple Health <Record> rows by category. Wave 20: now extracts
- *  weight + BBT + sleep records (not just counts). BP + glucose remain
- *  count-only — those drop in a follow-up wave once we extend the vitals
- *  / blood_sugar tables with source_uuid columns. */
+/** Bucket Apple Health <Record> rows by category. Wave 21: also extracts
+ *  BP pairs (merged by start time) and glucose readings (mmol/L → mg/dL).
+ *  Every importable category produces a typed record array; the
+ *  `detected` block keeps a count snapshot for the preview header. */
 function bucketRecords(records: AppleRecord[]): ParseResult {
-  const cycles:  CycleRecord[]  = [];
-  const weights: WeightRecord[] = [];
-  const bbts:    BbtRecord[]    = [];
-  const sleeps:  SleepRecord[]  = [];
-  let bp = 0, glucose = 0;
+  const cycles:   CycleRecord[]   = [];
+  const weights:  WeightRecord[]  = [];
+  const bbts:     BbtRecord[]     = [];
+  const sleeps:   SleepRecord[]   = [];
+  const glucoses: GlucoseRecord[] = [];
+  // BP pairs by (startDate) — Apple emits systolic and diastolic as two
+  // sibling Records that share a startDate. We merge them here so each
+  // upserted row carries both numbers when available.
+  const bpByTime = new Map<string, BpRecord>();
 
   // Apple BodyMass values can be in kg or lb depending on the source.
   // We normalise to kg for our schema. Almost all sources export in
@@ -485,6 +468,14 @@ function bucketRecords(records: AppleRecord[]): ParseResult {
     if (!unit) return value;
     const u = unit.toLowerCase();
     if (u.includes('degf') || u === 'f' || u === '°f') return (value - 32) * 5 / 9;
+    return value;
+  }
+  // Apple Blood Glucose comes in mg/dL (US) or mmol/L (most of the rest).
+  // Our schema stores mg/dL — multiply mmol/L by 18.0182 on the way in.
+  function mgdlFromAppleGlucose(value: number, unit?: string): number {
+    if (!unit) return value;
+    const u = unit.toLowerCase();
+    if (u.includes('mmol')) return value * 18.0182;
     return value;
   }
 
@@ -550,19 +541,64 @@ function bucketRecords(records: AppleRecord[]): ParseResult {
         break;
       }
       case 'HKQuantityTypeIdentifierBloodPressureSystolic':
-      case 'HKQuantityTypeIdentifierBloodPressureDiastolic': bp++;      break;
-      case 'HKQuantityTypeIdentifierBloodGlucose':           glucose++; break;
+      case 'HKQuantityTypeIdentifierBloodPressureDiastolic': {
+        const v = r.value ? Number(r.value) : NaN;
+        if (!Number.isFinite(v) || v <= 0) break;
+        const isoAt = appleDateToIso(r.startDate);
+        const existing = bpByTime.get(r.startDate);
+        const isSys = r.type === 'HKQuantityTypeIdentifierBloodPressureSystolic';
+        // Schema range: systolic 40–250, diastolic 20–180. Drop bad values.
+        if (isSys && (v < 40 || v > 250)) break;
+        if (!isSys && (v < 20 || v > 180)) break;
+        if (existing) {
+          if (isSys) existing.systolic = Math.round(v);
+          else       existing.diastolic = Math.round(v);
+        } else {
+          bpByTime.set(r.startDate, {
+            measured_at: isoAt,
+            systolic:  isSys ? Math.round(v) : null,
+            diastolic: isSys ? null : Math.round(v),
+            // The pair will share a derived UUID so re-imports stay
+            // idempotent. Apple's per-record HKMetadataKeyHealthKitUUID
+            // differs between sys + dia, so we use the start time as the
+            // pair key.
+            source_uuid: `derived:bp:${r.startDate}`,
+          });
+        }
+        break;
+      }
+      case 'HKQuantityTypeIdentifierBloodGlucose': {
+        const v = r.value ? Number(r.value) : NaN;
+        if (!Number.isFinite(v) || v <= 0) break;
+        const mgdl = mgdlFromAppleGlucose(v, r.unit);
+        // Schema range: 20–800 mg/dL. Drop wildly out of range.
+        if (mgdl < 20 || mgdl > 800) break;
+        glucoses.push({
+          measured_at: appleDateToIso(r.startDate),
+          value_mgdl:  Math.round(mgdl * 10) / 10,
+          source_uuid: uuidOr(r, `derived:glucose:${r.startDate}`),
+        });
+        break;
+      }
     }
   }
 
+  // Materialise the BP pair map into an array. Drop pairs where neither
+  // half landed in range (shouldn't happen, but defensive).
+  const bps: BpRecord[] = [];
+  for (const v of bpByTime.values()) {
+    if (v.systolic == null && v.diastolic == null) continue;
+    bps.push(v);
+  }
+
   return {
-    cycles, weights, bbts, sleeps,
+    cycles, weights, bbts, sleeps, bps, glucoses,
     detected: {
       cycle_days:     cycles.length,
       sleep_nights:   sleeps.length,
       weight_entries: weights.length,
-      bp_entries:     bp,
-      glucose_entries: glucose,
+      bp_entries:     bps.length,
+      glucose_entries: glucoses.length,
       bbt_entries:    bbts.length,
     },
   };
