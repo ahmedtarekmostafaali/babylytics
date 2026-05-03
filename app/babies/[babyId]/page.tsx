@@ -11,6 +11,7 @@ import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { VoiceCommander } from '@/components/VoiceCommander';
 import { GrowthInsights } from '@/components/GrowthInsights';
+import { SuggestionsCard } from '@/components/SuggestionsCard';
 import { MilestoneReferenceCard } from '@/components/MilestoneReference';
 import { FeedPaceCard } from '@/components/FeedPaceCard';
 import { compareTodayVsRollingAvg } from '@/lib/feed-kpis';
@@ -730,6 +731,16 @@ export default async function BabyOverview({
         }
         heightCm={(lastHeightRow.data?.height_cm as number | null) ?? null}
         headCm={(lastHeadRow.data?.head_circ_cm as number | null) ?? null}
+        lang={userPrefs.language}
+      />
+
+      {/* Wave 5 — "Ideas for today" — three age-appropriate developmental
+          activities. Same trio for the whole day per profile, rotates at
+          midnight. Marked-done state is local to today. */}
+      <SuggestionsCard
+        babyId={babyId}
+        stage="baby"
+        marker={age}
         lang={userPrefs.language}
       />
 

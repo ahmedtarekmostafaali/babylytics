@@ -7,6 +7,9 @@ import { fmtDate } from '@/lib/dates';
 import { Calendar, Heart, Plus, Sparkles, Edit3 } from 'lucide-react';
 import { MarkAsPregnantDialog } from '@/components/MarkAsPregnantDialog';
 import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
+import { SuggestionsCard } from '@/components/SuggestionsCard';
+import { cyclePhaseFor } from '@/lib/suggestions';
+import { loadUserPrefs } from '@/lib/user-prefs';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'My cycle' };
@@ -65,16 +68,30 @@ export default async function PlannerPage({
     : isoMonth(new Date());
   const monthStart = month + '-01';
 
-  const [{ data: calData, error: calErr }, { data: cycleData }] = await Promise.all([
+  const [{ data: calData, error: calErr }, { data: cycleData }, userPrefs] = await Promise.all([
     supabase.rpc('cycle_calendar', { p_baby: params.babyId, p_month: monthStart }),
     supabase.from('menstrual_cycles')
       .select('id,period_start,period_end,cycle_length,flow_intensity,symptoms,notes')
       .eq('baby_id', params.babyId).is('deleted_at', null)
       .order('period_start', { ascending: false })
       .limit(12),
+    loadUserPrefs(supabase),
   ]);
   const calendar = (calData ?? []) as CalRow[];
   const cycles   = (cycleData ?? []) as Cycle[];
+
+  // Wave 5: derive current cycle phase + days-since-period for the
+  // SuggestionsCard. Only meaningful once at least one cycle is logged.
+  const lastForPhase = cycles[0];
+  let cycleMarker: number | null = null;
+  let cyclePhase: ReturnType<typeof cyclePhaseFor> | undefined;
+  if (lastForPhase) {
+    const start = new Date(lastForPhase.period_start + 'T00:00:00Z');
+    const now = Date.now();
+    const days = Math.max(0, Math.floor((now - start.getTime()) / 86400000));
+    cycleMarker = days;
+    cyclePhase = cyclePhaseFor(days, lastForPhase.cycle_length ?? 28);
+  }
 
   // Project the next period: most recent cycle.start + cycle_length.
   const last = cycles[0];
@@ -202,6 +219,17 @@ export default async function PlannerPage({
           </div>
         </div>
       </section>
+
+      {/* Wave 5 — "Ideas for today" — three cycle-phase-aware self-care
+          suggestions (iron in menstrual, cardio in follicular, etc.). Only
+          renders once at least one cycle is logged so we know the phase. */}
+      <SuggestionsCard
+        babyId={params.babyId}
+        stage="cycle"
+        marker={cycleMarker}
+        phase={cyclePhase}
+        lang={userPrefs.language}
+      />
 
       {/* Doctor consultation upsell — placeholder for now. Same component
           shown across pregnancy + baby overviews so users see the roadmap. */}

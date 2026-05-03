@@ -15,6 +15,7 @@ import { weekInsight, gainStatus, dailySize, monthExpectations, trimesterOvervie
 import { fmtDate, fmtRelative } from '@/lib/dates';
 import { fmtKg } from '@/lib/units';
 import { tFor, type Lang } from '@/lib/i18n';
+import { SuggestionsCard } from '@/components/SuggestionsCard';
 
 const SYMPTOM_EMOJI: Record<string, string> = {
   nausea: '🤢', vomiting: '🤮', dizziness: '😵‍💫', headache: '🤕',
@@ -197,6 +198,18 @@ export function PregnancyDashboard({
           tint="coral" icon={HeartPulse}
           sub={t('pregd.kpi_fhr_sub')} />}
       </div>
+
+      {/* Wave 5 — "Ideas for today" — three trimester-aware wellness tips
+          (hydration, kegels, hospital prep, kick counts, etc.). Filtered
+          by gestational week. */}
+      {ga && (
+        <SuggestionsCard
+          babyId={babyId}
+          stage="pregnancy"
+          marker={ga.weeks}
+          lang={lang}
+        />
+      )}
 
       {/* Insight cards: week-by-week + IOM weight gain band */}
       {((insight && show('week_insight')) || (gain.band && show('iom_band'))) && (
