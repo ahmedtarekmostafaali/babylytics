@@ -58,31 +58,22 @@ export function ForumReportRow({
     setBusy(true); setErr(null);
     const supabase = createClient();
 
-    // 1. If "remove", soft-delete the target post first.
+    // Wave 19c: "remove" actually removes via the admin RPC (sql/060).
+    // SECURITY DEFINER bypasses the author-only RLS so moderators can
+    // take posts down. No-op if the target is already deleted.
     if (action === 'removed' && !targetDeleted) {
       const rpc = targetType === 'thread'
-        ? 'soft_delete_forum_thread'
-        : 'soft_delete_forum_reply';
-      // These RPCs only delete the caller's OWN posts. Admin deletion is
-      // a separate concern — for now we update the row directly via the
-      // service-role bypass. Workaround: do the update via the admin
-      // path. The forum_threads / forum_replies UPDATE policy currently
-      // restricts to author_id = auth.uid(). We work around by setting
-      // resolution='removed' here; a follow-up wave can add an admin
-      // soft-delete RPC. Track that as TODO.
-      // Note: setting resolution flips the report off the open queue
-      // even if the post stays. For the v1 admin tool that's acceptable.
-      void rpc; // intentionally unused for v1
+        ? 'admin_soft_delete_forum_thread'
+        : 'admin_soft_delete_forum_reply';
+      const { error: rmErr } = await supabase.rpc(rpc, { p_id: report.target_id });
+      if (rmErr) { setBusy(false); setErr(rmErr.message); return; }
     }
 
-    // 2. Mark the report resolved.
     const { error } = await supabase
       .from('forum_reports')
       .update({
         resolved_at: new Date().toISOString(),
         resolution:  action,
-        // resolved_by relies on auth.uid() implicitly via the update
-        // policy + a default... actually we don't have a default; set it.
       })
       .eq('id', report.id);
     setBusy(false);

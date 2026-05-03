@@ -36,6 +36,11 @@ export default async function ForumThreadPage({
 
   if (!cat || !thread) notFound();
 
+  // Wave 19c: opening a thread clears any unread forum_reply notifications
+  // for it. Server-side fire-and-forget — we don't await the promise of
+  // the response since the visible state doesn't depend on it.
+  void supabase.rpc('mark_thread_replies_read', { p_thread_id: thread.id });
+
   return (
     <PageShell max="3xl">
       <PageHeader

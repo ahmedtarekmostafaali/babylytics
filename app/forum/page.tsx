@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { Heart, Baby as BabyIcon, MessageCircle, Sparkles } from 'lucide-react';
+import { ForumUnreadBanner, type UnreadForumReply } from '@/components/ForumUnreadBanner';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Forum' };
@@ -34,6 +35,35 @@ export default async function ForumIndex() {
     .from('forum_categories')
     .select('id,slug,kind,title_en,title_ar,description_en,description_ar,sort_order')
     .order('sort_order', { ascending: true });
+
+  // Wave 19c: load unread forum_reply notifications for the banner.
+  // Resolve each thread's category slug so the banner can deep-link.
+  const { data: unreadRows } = await supabase.rpc('my_user_notifications');
+  type UN = { id: string; kind: string; payload: { thread_id?: string; thread_title?: string; is_op?: boolean }; read_at: string | null; created_at: string };
+  const unread = ((unreadRows ?? []) as UN[]).filter(n => n.kind === 'forum_reply' && !n.read_at);
+  const unreadThreadIds = Array.from(new Set(unread.map(n => n.payload.thread_id).filter(Boolean) as string[]));
+  const { data: unreadThreads } = unreadThreadIds.length
+    ? await supabase.from('forum_threads').select('id,category_id').in('id', unreadThreadIds)
+    : { data: [] as { id: string; category_id: string }[] };
+  const unreadCatIds = Array.from(new Set((unreadThreads ?? []).map(t => t.category_id)));
+  const { data: unreadCats } = unreadCatIds.length
+    ? await supabase.from('forum_categories').select('id,slug').in('id', unreadCatIds)
+    : { data: [] as { id: string; slug: string }[] };
+  const slugByThreadId = new Map<string, string>();
+  for (const t of (unreadThreads ?? [])) {
+    const c = (unreadCats ?? []).find(x => x.id === t.category_id);
+    if (c) slugByThreadId.set(t.id, c.slug);
+  }
+  const unreadItems: UnreadForumReply[] = unread
+    .filter(n => n.payload.thread_id && slugByThreadId.has(n.payload.thread_id))
+    .map(n => ({
+      id:           n.id,
+      thread_id:    n.payload.thread_id!,
+      thread_title: n.payload.thread_title ?? '(untitled)',
+      thread_slug:  slugByThreadId.get(n.payload.thread_id!)!,
+      is_op:        Boolean(n.payload.is_op),
+      created_at:   n.created_at,
+    }));
 
   // Per-category latest activity — single query then group client-side.
   // Limited to top-recent across all categories (cheap, since the threads
@@ -79,6 +109,9 @@ export default async function ForumIndex() {
           ? 'تحدثي مع غيرك من النساء في نفس مرحلتك. كل منشور لكِ تختارين هل يظهر باسمك أم باسم مستعار.'
           : 'Talk to other women going through the same stage. Every post is yours to share with your name or a pseudonym.'}
       />
+
+      {/* Wave 19c: unread reply notifications. Hidden when caught up. */}
+      <ForumUnreadBanner items={unreadItems} lang={userPrefs.language} />
 
       {kindOrder.map(kind => {
         const list = byKind.get(kind) ?? [];
