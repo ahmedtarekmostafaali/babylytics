@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { fmtRelative, fmtDateTime } from '@/lib/dates';
 import { BabyChat, type ChatMessage as GroupMessage, type ChatMember } from '@/components/BabyChat';
+import { tokenizeBody } from '@/lib/mentions';
 
 export interface ThreadSummary {
   id: string;
@@ -427,7 +428,15 @@ function ThreadChatPanel({
                       ? 'bg-gradient-to-br from-lavender-500 to-brand-500 text-white rounded-tr-sm'
                       : 'bg-slate-100 text-ink-strong rounded-tl-sm'
                   }`}>
-                    {m.body}
+                    {tokenizeBody(m.body).map((tok, i) =>
+                      tok.kind === 'mention' ? (
+                        <span key={i} className={mine
+                          ? 'font-semibold underline underline-offset-2'
+                          : 'font-semibold text-lavender-700 bg-lavender-50 rounded px-1'}>
+                          {tok.text}
+                        </span>
+                      ) : <span key={i}>{tok.text}</span>
+                    )}
                   </div>
                   {canDelete && (
                     <button type="button" onClick={() => remove(m.id)}

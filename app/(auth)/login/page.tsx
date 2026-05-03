@@ -51,7 +51,14 @@ function LoginForm() {
             className="h-12 w-full rounded-2xl bg-white border border-slate-200 px-4 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-ink mb-1">{t('auth.password')}</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-ink">{t('auth.password')}</label>
+            {/* Wave 9: forgot-password link inline with the password label
+                so users notice it the moment they hesitate. */}
+            <Link href="/forgot-password" className="text-xs text-coral-600 font-semibold hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <input type="password" required autoComplete="current-password" placeholder={t('auth.password_ph')}
             value={password} onChange={e => setPassword(e.target.value)}
             className="h-12 w-full rounded-2xl bg-white border border-slate-200 px-4 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30" />

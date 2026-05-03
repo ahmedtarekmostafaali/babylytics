@@ -7,8 +7,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Send, Trash2, Loader2, MessageCircle } from 'lucide-react';
+import { Send, Trash2, Loader2, MessageCircle, AtSign } from 'lucide-react';
 import { fmtRelative, fmtDateTime } from '@/lib/dates';
+import {
+  getMentionContext, filterMembers, applyMention, tokenizeBody, mentionLabel,
+} from '@/lib/mentions';
 
 export interface ChatMessage {
   id: string;
@@ -43,6 +46,15 @@ export function BabyChat({
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  // Wave 9: @mention picker state. Open whenever the caret sits inside an
+  // @<query> token; closes on selection / blur / non-matching keystroke.
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
+  const [mentionCtx, setMentionCtx] = useState<{ query: string; start: number; end: number } | null>(null);
+  const [mentionIdx, setMentionIdx] = useState(0);
+  const mentionMatches = useMemo(
+    () => mentionCtx ? filterMembers(members, mentionCtx.query, currentUserId).slice(0, 6) : [],
+    [mentionCtx, members, currentUserId],
+  );
 
   // Member lookup by user_id for the message header.
   const memberById = useMemo(() => {
@@ -114,11 +126,51 @@ export function BabyChat({
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Mention picker keyboard handling first — Up/Down navigate, Enter
+    // picks the highlighted member instead of sending the message.
+    if (mentionCtx && mentionMatches.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIdx(i => (i + 1) % mentionMatches.length); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); setMentionIdx(i => (i - 1 + mentionMatches.length) % mentionMatches.length); return; }
+      if (e.key === 'Escape')    { e.preventDefault(); setMentionCtx(null); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const member = mentionMatches[mentionIdx]!;
+        const result = applyMention(draft, mentionCtx, member);
+        setDraft(result.body);
+        setMentionCtx(null);
+        // Restore caret position after React re-render.
+        requestAnimationFrame(() => {
+          const t = taRef.current;
+          if (t) { t.selectionStart = t.selectionEnd = result.caret; t.focus(); }
+        });
+        return;
+      }
+    }
     // Enter sends, Shift+Enter inserts a newline.
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       void send();
     }
+  }
+
+  function onDraftChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const v = e.target.value;
+    setDraft(v);
+    const caret = e.target.selectionStart ?? v.length;
+    const ctx = getMentionContext(v, caret);
+    setMentionCtx(ctx);
+    setMentionIdx(0);
+  }
+
+  function pickMention(member: typeof members[number]) {
+    if (!mentionCtx) return;
+    const result = applyMention(draft, mentionCtx, member);
+    setDraft(result.body);
+    setMentionCtx(null);
+    requestAnimationFrame(() => {
+      const t = taRef.current;
+      if (t) { t.selectionStart = t.selectionEnd = result.caret; t.focus(); }
+    });
   }
 
   function nameFor(userId: string): string {
@@ -198,7 +250,15 @@ export function BabyChat({
                       ? 'bg-gradient-to-br from-mint-500 to-mint-600 text-white rounded-tr-sm'
                       : 'bg-slate-100 text-ink-strong rounded-tl-sm'
                   }`}>
-                    {m.body}
+                    {tokenizeBody(m.body).map((tok, i) =>
+                      tok.kind === 'mention' ? (
+                        <span key={i} className={mine
+                          ? 'font-semibold underline underline-offset-2'
+                          : 'font-semibold text-mint-700 bg-mint-50 rounded px-1'}>
+                          {tok.text}
+                        </span>
+                      ) : <span key={i}>{tok.text}</span>
+                    )}
                   </div>
                   {canDelete && (
                     <button type="button" onClick={() => remove(m.id)}
@@ -213,15 +273,42 @@ export function BabyChat({
         )}
       </div>
 
-      <div className="border-t border-slate-100 bg-slate-50/40 p-3">
+      <div className="border-t border-slate-100 bg-slate-50/40 p-3 relative">
         {err && <p className="text-xs text-coral-600 mb-2">{err}</p>}
+
+        {/* Mention picker — anchored above the textarea. Click or
+            keyboard (↑/↓ + Enter/Tab) to insert. */}
+        {mentionCtx && mentionMatches.length > 0 && (
+          <div className="absolute left-3 right-3 bottom-full mb-2 rounded-2xl border border-slate-200 bg-white shadow-panel overflow-hidden z-20">
+            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-ink-muted border-b border-slate-100 flex items-center gap-1.5">
+              <AtSign className="h-3 w-3" /> Mention someone
+            </div>
+            {mentionMatches.map((m, i) => (
+              <button
+                key={m.user_id} type="button"
+                onMouseDown={e => { e.preventDefault(); pickMention(m); }}
+                className={`w-full text-left px-3 py-2 flex items-center gap-2 text-sm ${
+                  i === mentionIdx ? 'bg-mint-50' : 'hover:bg-slate-50'
+                }`}>
+                <span className={`h-6 w-6 rounded-full grid place-items-center text-[10px] font-bold ${tintFor(m.user_id)}`}>
+                  {initialsFor(m.user_id)}
+                </span>
+                <span className="flex-1 min-w-0 truncate">{mentionLabel(m)}</span>
+                {m.role && <span className="text-[10px] text-ink-muted">{m.role}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-end gap-2">
           <textarea
+            ref={taRef}
             value={draft}
-            onChange={e => setDraft(e.target.value)}
+            onChange={onDraftChange}
             onKeyDown={onKeyDown}
+            onBlur={() => setTimeout(() => setMentionCtx(null), 100)}
             rows={1}
-            placeholder="Write a message… (Enter sends, Shift+Enter for newline)"
+            placeholder="Write a message… (type @ to mention, Enter sends)"
             className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm resize-none focus:border-mint-500 focus:ring-2 focus:ring-mint-500/30 max-h-32"
             style={{ minHeight: 44 }}
           />

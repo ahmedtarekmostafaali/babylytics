@@ -234,6 +234,31 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
               {t('caregivers.no_perm')}
             </div>
           )}
+
+          {/* Wave 9: doctor-consultant placeholder. Foundation announcement
+              for the upcoming verified doctor consultation feature so users
+              start seeing it surface in the product. The schema is already
+              prepared (chat_threads.kind='consult' in sql/053). */}
+          <section className="rounded-2xl border border-lavender-200 bg-gradient-to-br from-lavender-50 via-white to-brand-50 p-5">
+            <div className="flex items-start gap-3">
+              <span className="h-10 w-10 rounded-xl bg-gradient-to-br from-lavender-500 to-brand-500 text-white grid place-items-center shrink-0">
+                <Stethoscope className="h-5 w-5" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold text-ink-strong">In-app doctor consultation</h3>
+                  <span className="inline-flex items-center rounded-full bg-coral-100 text-coral-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
+                    Coming soon
+                  </span>
+                </div>
+                <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+                  Soon you&apos;ll be able to invite a verified Babylytics doctor as a caregiver,
+                  share the relevant areas with them, and chat privately — same place, no
+                  separate app. Built on the same caregiver-access model you&apos;re using here.
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
 
         {/* RIGHT — 1/3: About + role cards. Sticky on lg+ so the panels

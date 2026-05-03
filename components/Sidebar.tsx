@@ -333,22 +333,34 @@ export function Sidebar() {
             {/* Mom is trying to conceive. Show meds (folic acid, prenatal
                 vitamins), labs (AMH, hormone panels), scans (HSG, follicle
                 tracking), files, doctors. Skips pregnancy-specific stuff
-                like kicks / fetal symptoms. */}
+                like kicks / fetal symptoms.
+                Wave 9: vital-signs category added so the items the user
+                ticked in the Features tab actually surface in the nav. */}
             {isPlanning && canViewLogs && (
               <>
+                {(canSee('vitals') || canSee('blood_sugar') || canSee('maternal_vitals') || canSee('symptoms')) && (
+                  <NavCategory id="plan_vital" label={t('nav.cat_vital_signs')} icon={Heart} collapsed={collapsed}
+                    open={isCatOpen('plan_vital')} onToggle={() => toggleCat('plan_vital')}>
+                    {canSee('vitals')          && <NavItem href={`/babies/${currentBabyId}/vitals`}                   icon={Activity}   label={t('nav.vitals')}      active={pathname?.startsWith(`/babies/${currentBabyId}/vitals`) ?? false}      collapsed={collapsed} tint="coral" />}
+                    {canSee('blood_sugar')     && <NavItem href={`/babies/${currentBabyId}/blood-sugar`}              icon={Droplet}    label={t('nav.blood_sugar')} active={pathname?.startsWith(`/babies/${currentBabyId}/blood-sugar`) ?? false} collapsed={collapsed} tint="coral" />}
+                    {canSee('maternal_vitals') && <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}      label="Maternal vitals"      active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />}
+                    {canSee('symptoms')        && <NavItem href={`/babies/${currentBabyId}/prenatal/symptoms`}        icon={HeartPulse} label={t('nav.symptoms')}    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/symptoms`) ?? false}        collapsed={collapsed} tint="lavender" />}
+                  </NavCategory>
+                )}
+
                 <NavCategory id="plan_care" label={t('nav.cat_care')} icon={Stethoscope} collapsed={collapsed}
                   open={isCatOpen('plan_care')} onToggle={() => toggleCat('plan_care')}>
-                  <NavItem href={`/babies/${currentBabyId}/labs`}                  icon={FlaskConical} label={t('nav.labs_scans')} active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
-                  <NavItem href={`/babies/${currentBabyId}/medications`}           icon={Pill}        label={t('nav.medications')} active={pathname === `/babies/${currentBabyId}/medications` || (pathname?.startsWith(`/babies/${currentBabyId}/medications/`) && !pathname.startsWith(`/babies/${currentBabyId}/medications/stock`))} collapsed={collapsed} tint="mint" />
-                  <NavItem href={`/babies/${currentBabyId}/medications/stock`}     icon={Pill}        label="Medication stock" active={pathname?.startsWith(`/babies/${currentBabyId}/medications/stock`) ?? false} collapsed={collapsed} tint="mint" />
-                  {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`}  icon={CalendarClock} label={t('nav.appointments')} active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
+                  {canSee('labs')             && <NavItem href={`/babies/${currentBabyId}/labs`}                  icon={FlaskConical} label={t('nav.labs_scans')} active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />}
+                  {canSee('medications')      && <NavItem href={`/babies/${currentBabyId}/medications`}           icon={Pill}        label={t('nav.medications')} active={pathname === `/babies/${currentBabyId}/medications` || (pathname?.startsWith(`/babies/${currentBabyId}/medications/`) && !pathname.startsWith(`/babies/${currentBabyId}/medications/stock`))} collapsed={collapsed} tint="mint" />}
+                  {canSee('medication_stock') && <NavItem href={`/babies/${currentBabyId}/medications/stock`}     icon={Pill}        label="Medication stock" active={pathname?.startsWith(`/babies/${currentBabyId}/medications/stock`) ?? false} collapsed={collapsed} tint="mint" />}
+                  {isParent && canSee('appointments') && <NavItem href={`/babies/${currentBabyId}/doctors`}  icon={CalendarClock} label={t('nav.appointments')} active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
                 </NavCategory>
 
                 <NavCategory id="plan_records" label={t('nav.cat_records')} icon={FileText} collapsed={collapsed}
                   open={isCatOpen('plan_records')} onToggle={() => toggleCat('plan_records')}>
-                  <NavItem href={`/babies/${currentBabyId}/ocr`}             icon={FileText}  label={t('nav.files')} active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />
-                  <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label={t('nav.medical_profile')} active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />
-                  <NavItem href={`/babies/${currentBabyId}/shopping`}        icon={ShoppingCart} label={t('nav.shopping')} active={pathname?.startsWith(`/babies/${currentBabyId}/shopping`) ?? false} collapsed={collapsed} tint="mint" />
+                  {canSee('files')            && <NavItem href={`/babies/${currentBabyId}/ocr`}             icon={FileText}   label={t('nav.files')} active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />}
+                  {canSee('medical_profile')  && <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label={t('nav.medical_profile')} active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />}
+                  {canSee('shopping')         && <NavItem href={`/babies/${currentBabyId}/shopping`}        icon={ShoppingCart} label={t('nav.shopping')} active={pathname?.startsWith(`/babies/${currentBabyId}/shopping`) ?? false} collapsed={collapsed} tint="mint" />}
                 </NavCategory>
               </>
             )}

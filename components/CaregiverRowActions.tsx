@@ -10,11 +10,12 @@ import { AreaPicker } from '@/components/AreaPicker';
 type Role = 'owner' | 'parent' | 'doctor' | 'nurse' | 'caregiver' | 'viewer' | 'editor' | 'pharmacy';
 
 const ROLES: { value: Exclude<Role, 'editor' | 'caregiver'>; label: string }[] = [
-  { value: 'owner',   label: 'Owner' },
-  { value: 'parent',  label: 'Parent / Guardian' },
-  { value: 'doctor',  label: 'Doctor' },
-  { value: 'nurse',   label: 'Nurse' },
-  { value: 'viewer',  label: 'Viewer' },
+  { value: 'owner',    label: 'Owner' },
+  { value: 'parent',   label: 'Parent / Guardian' },
+  { value: 'doctor',   label: 'Doctor' },
+  { value: 'nurse',    label: 'Nurse' },
+  { value: 'pharmacy', label: 'Pharmacy' },
+  { value: 'viewer',   label: 'Viewer' },
 ];
 
 /**
