@@ -159,8 +159,10 @@ export function Sidebar() {
     supabase.rpc('my_baby_role', { b: currentBabyId })
       .then(({ data }) => setRole((data as string | null) ?? null));
     supabase.rpc('my_allowed_areas', { p_baby: currentBabyId })
-      .then(({ data }) => setAllowedAreas((data as string[] | null) ?? null))
-      .catch(() => setAllowedAreas(null));
+      .then(
+        ({ data }) => setAllowedAreas((data as string[] | null) ?? null),
+        () => setAllowedAreas(null),
+      );
   }, [currentBabyId]);
 
   const isViewer = role === 'viewer';
@@ -184,8 +186,10 @@ export function Sidebar() {
     if (!stage) return;
     const supabase = createClient();
     supabase.rpc('my_enabled_features', { p_stage: stageBucket(stage) })
-      .then(({ data }) => setEnabledFeatures((data as string[] | null) ?? null))
-      .catch(() => setEnabledFeatures(null));
+      .then(
+        ({ data }) => setEnabledFeatures((data as string[] | null) ?? null),
+        () => setEnabledFeatures(null),
+      );
   }, [stage]);
 
   // Combined visibility predicate. Returns true if the area is visible
