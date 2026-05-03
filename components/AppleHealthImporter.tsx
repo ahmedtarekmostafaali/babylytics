@@ -28,9 +28,15 @@ interface CycleRecord {
   flow_intensity: 'light' | 'medium' | 'heavy' | null;
   source_uuid: string;
 }
+interface WeightRecord { measured_at: string; weight_kg: number; source_uuid: string; }
+interface BbtRecord    { measured_at: string; celsius:  number; source_uuid: string; }
+interface SleepRecord  { start_at: string;   end_at: string | null; source_uuid: string; }
 
 interface ParseResult {
   cycles: CycleRecord[];
+  weights: WeightRecord[];
+  bbts:    BbtRecord[];
+  sleeps:  SleepRecord[];
   detected: {
     cycle_days: number;
     sleep_nights: number;
@@ -55,6 +61,11 @@ export function AppleHealthImporter({ babyId }: { babyId: string }) {
   const [parsed, setParsed] = useState<ParseResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [importedCount, setImportedCount] = useState(0);
+  // Wave 20: per-category opt-in. Default all four importable categories
+  // ON (cycles, weight, BBT, sleep) — user can untick any before commit.
+  const [selected, setSelected] = useState({
+    cycles: true, weights: true, bbts: true, sleeps: true,
+  });
 
   async function handleFile(file: File) {
     setErr(null);
@@ -108,27 +119,49 @@ export function AppleHealthImporter({ babyId }: { babyId: string }) {
   }
 
   async function commit() {
-    if (!parsed || parsed.cycles.length === 0) return;
+    if (!parsed) return;
     setStage('importing');
     setErr(null);
     const supabase = createClient();
-    // Send in chunks of 200 so very large historical imports don't hit
-    // RPC payload limits.
     const CHUNK = 200;
-    let totalImported = 0;
-    for (let i = 0; i < parsed.cycles.length; i += CHUNK) {
-      const chunk = parsed.cycles.slice(i, i + CHUNK);
-      const { error } = await supabase.rpc('import_menstrual_cycles', {
-        p_baby: babyId,
-        p_records: chunk,
-      });
-      if (error) {
-        setErr(error.message);
-        setStage('preview');
-        return;
+
+    // Wave 20: import each enabled category through its own RPC, in
+    // chunks. Failure on one category aborts the whole commit and bounces
+    // back to preview so the user can retry. Imported counter aggregates
+    // across categories so the progress feels like one job.
+    let total = 0;
+    type Job = { rows: unknown[]; rpc: string; label: string };
+    const jobs: Job[] = [];
+    if (selected.cycles && parsed.cycles.length)
+      jobs.push({ rows: parsed.cycles, rpc: 'import_menstrual_cycles', label: 'cycles' });
+    if (selected.weights && parsed.weights.length)
+      jobs.push({ rows: parsed.weights, rpc: 'import_apple_weight',     label: 'weight' });
+    if (selected.bbts && parsed.bbts.length)
+      jobs.push({ rows: parsed.bbts,    rpc: 'import_apple_bbt',        label: 'BBT' });
+    if (selected.sleeps && parsed.sleeps.length)
+      jobs.push({ rows: parsed.sleeps,  rpc: 'import_apple_sleep',      label: 'sleep' });
+
+    if (jobs.length === 0) {
+      setStage('preview');
+      setErr('Pick at least one category to import.');
+      return;
+    }
+
+    for (const job of jobs) {
+      for (let i = 0; i < job.rows.length; i += CHUNK) {
+        const chunk = job.rows.slice(i, i + CHUNK);
+        const { error } = await supabase.rpc(job.rpc, {
+          p_baby: babyId,
+          p_records: chunk,
+        });
+        if (error) {
+          setErr(`${job.label}: ${error.message}`);
+          setStage('preview');
+          return;
+        }
+        total += chunk.length;
+        setImportedCount(total);
       }
-      totalImported += chunk.length;
-      setImportedCount(totalImported);
     }
     setStage('done');
     router.refresh();
@@ -170,7 +203,13 @@ export function AppleHealthImporter({ babyId }: { babyId: string }) {
 
       {/* Preview */}
       {stage === 'preview' && parsed && (
-        <PreviewCard parsed={parsed} onCommit={commit} onCancel={() => { setStage('idle'); setParsed(null); }} />
+        <PreviewCard
+          parsed={parsed}
+          selected={selected}
+          onToggle={(k, v) => setSelected(s => ({ ...s, [k]: v }))}
+          onCommit={commit}
+          onCancel={() => { setStage('idle'); setParsed(null); }}
+        />
       )}
 
       {/* Importing */}
@@ -244,50 +283,130 @@ function DropZone({ onFile }: { onFile: (f: File) => void }) {
 // Preview — show what was detected, let user confirm or cancel.
 // ─────────────────────────────────────────────────────────────────────────────
 function PreviewCard({
-  parsed, onCommit, onCancel,
+  parsed, selected, onToggle, onCommit, onCancel,
 }: {
   parsed: ParseResult;
+  selected: { cycles: boolean; weights: boolean; bbts: boolean; sleeps: boolean };
+  onToggle: (k: 'cycles' | 'weights' | 'bbts' | 'sleeps', v: boolean) => void;
   onCommit: () => void;
   onCancel: () => void;
 }) {
-  const cycleCount = parsed.cycles.length;
+  // Total selected count for the button label.
+  const total =
+    (selected.cycles  ? parsed.cycles.length  : 0) +
+    (selected.weights ? parsed.weights.length : 0) +
+    (selected.bbts    ? parsed.bbts.length    : 0) +
+    (selected.sleeps  ? parsed.sleeps.length  : 0);
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-card overflow-hidden">
       <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-coral-50 to-lavender-50">
         <h3 className="text-lg font-bold text-ink-strong">We found this in your export</h3>
-        <p className="text-sm text-ink-muted mt-0.5">Review and confirm before anything is imported.</p>
+        <p className="text-sm text-ink-muted mt-0.5">Tick what you want to import — anything left unticked stays out.</p>
       </div>
-      <div className="p-5 space-y-4">
-        {/* Cycle data — the only thing we import in v1. */}
-        <Row icon={Calendar} tint="coral" label="Period entries"
-          value={`${cycleCount} day${cycleCount === 1 ? '' : 's'}`}
-          status="ready" note={cycleCount === 0 ? 'Nothing to import.' : 'Will upsert into your cycle log — re-importing later is safe.'} />
+      <div className="p-5 space-y-2">
+        {/* Importable categories with toggles. */}
+        <ToggleRow
+          icon={Calendar} tint="coral" label="Period entries"
+          value={`${parsed.cycles.length} day${parsed.cycles.length === 1 ? '' : 's'}`}
+          checked={selected.cycles} disabled={parsed.cycles.length === 0}
+          onChange={v => onToggle('cycles', v)}
+          note="Upserts into your cycle log. Idempotent — re-importing is a no-op." />
+        <ToggleRow
+          icon={Heart} tint="peach" label="Body weight"
+          value={`${parsed.weights.length} entr${parsed.weights.length === 1 ? 'y' : 'ies'}`}
+          checked={selected.weights} disabled={parsed.weights.length === 0}
+          onChange={v => onToggle('weights', v)}
+          note="Lands in measurements (kg). Useful for postpartum + cycle weight tracking." />
+        <ToggleRow
+          icon={Activity} tint="brand" label="BBT (basal body temp)"
+          value={`${parsed.bbts.length} reading${parsed.bbts.length === 1 ? '' : 's'}`}
+          checked={selected.bbts} disabled={parsed.bbts.length === 0}
+          onChange={v => onToggle('bbts', v)}
+          note="Stored alongside your measurements. Auto-converted F → C when needed." />
+        <ToggleRow
+          icon={Moon} tint="lavender" label="Sleep nights"
+          value={`${parsed.sleeps.length} segment${parsed.sleeps.length === 1 ? '' : 's'}`}
+          checked={selected.sleeps} disabled={parsed.sleeps.length === 0}
+          onChange={v => onToggle('sleeps', v)}
+          note='Each "asleep" segment from Apple becomes one sleep_log row. In-bed-only segments are skipped to avoid double-counting.' />
 
-        {/* Detected but deferred — be honest about what's coming. */}
-        <Row icon={Moon}     tint="lavender" label="Sleep nights"
-          value={`${parsed.detected.sleep_nights}`}
-          status="coming-soon" note="Detected — sleep import lands next wave." />
-        <Row icon={Activity} tint="brand" label="BBT readings"
-          value={`${parsed.detected.bbt_entries}`}
-          status="coming-soon" note="Detected — fertility-awareness import next." />
-        <Row icon={Heart}    tint="peach" label="Blood pressure entries"
-          value={`${parsed.detected.bp_entries}`}
-          status="coming-soon" note="Detected — vitals import after sleep." />
-        <Row icon={Droplet}  tint="coral" label="Blood glucose entries"
-          value={`${parsed.detected.glucose_entries}`}
-          status="coming-soon" note="Detected — glucose import after vitals." />
+        {/* Still-deferred categories — show counts so users know they were
+            detected, but no import option yet. */}
+        {(parsed.detected.bp_entries > 0 || parsed.detected.glucose_entries > 0) && (
+          <div className="pt-3 mt-3 border-t border-slate-100 space-y-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Coming next wave</div>
+            {parsed.detected.bp_entries > 0 && (
+              <ToggleRow icon={Heart} tint="coral" label="Blood pressure entries"
+                value={`${parsed.detected.bp_entries}`}
+                checked={false} disabled note="Detected — needs source_uuid on vitals first." />
+            )}
+            {parsed.detected.glucose_entries > 0 && (
+              <ToggleRow icon={Droplet} tint="coral" label="Blood glucose entries"
+                value={`${parsed.detected.glucose_entries}`}
+                checked={false} disabled note="Detected — needs source_uuid on blood_sugar first." />
+            )}
+          </div>
+        )}
       </div>
       <div className="p-5 border-t border-slate-100 bg-slate-50/40 flex items-center justify-end gap-2">
         <button type="button" onClick={onCancel}
           className="text-sm text-ink-muted hover:text-ink-strong px-3 py-2">
           Cancel
         </button>
-        <button type="button" onClick={onCommit} disabled={cycleCount === 0}
+        <button type="button" onClick={onCommit} disabled={total === 0}
           className="inline-flex items-center gap-2 rounded-full bg-coral-500 hover:bg-coral-600 text-white font-semibold px-5 py-2 disabled:opacity-50 disabled:cursor-not-allowed">
-          Import {cycleCount} period {cycleCount === 1 ? 'entry' : 'entries'}
+          Import {total} {total === 1 ? 'entry' : 'entries'}
         </button>
       </div>
     </div>
+  );
+}
+
+/** Per-category toggle row in the preview. Disabled when count is 0 or
+ *  when the category is still deferred (BP / glucose). */
+function ToggleRow({
+  icon: Icon, tint, label, value, note, checked, disabled, onChange,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  tint: 'coral' | 'lavender' | 'brand' | 'peach' | 'mint';
+  label: string;
+  value: string;
+  note: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange?: (v: boolean) => void;
+}) {
+  const tintCls = {
+    coral:    'bg-coral-100 text-coral-700',
+    lavender: 'bg-lavender-100 text-lavender-700',
+    brand:    'bg-brand-100 text-brand-700',
+    peach:    'bg-peach-100 text-peach-700',
+    mint:     'bg-mint-100 text-mint-700',
+  }[tint];
+  return (
+    <label className={`flex items-start gap-3 rounded-xl border p-3 transition ${
+      disabled
+        ? 'border-slate-100 bg-slate-50/40 opacity-60 cursor-not-allowed'
+        : checked
+          ? 'border-coral-300 bg-coral-50/40'
+          : 'border-slate-200 hover:bg-slate-50 cursor-pointer'
+    }`}>
+      <input type="checkbox" checked={checked} disabled={disabled}
+        onChange={e => onChange?.(e.target.checked)}
+        className="mt-1 h-4 w-4 rounded border-slate-300 text-coral-500 focus:ring-coral-500 shrink-0" />
+      <span className={`h-9 w-9 rounded-xl grid place-items-center shrink-0 ${tintCls}`}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-ink-strong text-sm">{label}</span>
+          <span className="text-xs text-ink-muted">·</span>
+          <span className="text-sm font-bold text-ink-strong">{value}</span>
+        </div>
+        <p className="text-[11px] text-ink-muted mt-0.5">{note}</p>
+      </div>
+    </label>
   );
 }
 
@@ -340,55 +459,122 @@ interface AppleRecord {
   HKMetadataKeyHealthKitUUID?: string;
 }
 
-/** Bucket Apple Health <Record> rows by category. Builds a compact import
- *  list for the categories we ingest, plus counts for the categories we
- *  detect but defer to a future wave. */
+/** Bucket Apple Health <Record> rows by category. Wave 20: now extracts
+ *  weight + BBT + sleep records (not just counts). BP + glucose remain
+ *  count-only — those drop in a follow-up wave once we extend the vitals
+ *  / blood_sugar tables with source_uuid columns. */
 function bucketRecords(records: AppleRecord[]): ParseResult {
-  const cycles: CycleRecord[] = [];
-  let sleep = 0, weight = 0, bp = 0, glucose = 0, bbt = 0;
+  const cycles:  CycleRecord[]  = [];
+  const weights: WeightRecord[] = [];
+  const bbts:    BbtRecord[]    = [];
+  const sleeps:  SleepRecord[]  = [];
+  let bp = 0, glucose = 0;
+
+  // Apple BodyMass values can be in kg or lb depending on the source.
+  // We normalise to kg for our schema. Almost all sources export in
+  // kg/g; the unit attribute tells us when it's not.
+  function kgFromAppleWeight(value: number, unit?: string): number {
+    if (!unit) return value;
+    const u = unit.toLowerCase();
+    if (u.includes('lb') || u === 'lbs') return value * 0.45359237;
+    if (u === 'g' || u === 'gram')        return value / 1000;
+    return value; // kg
+  }
+  // Apple BBT in Celsius or Fahrenheit. Schema requires C.
+  function celsiusFromAppleTemp(value: number, unit?: string): number {
+    if (!unit) return value;
+    const u = unit.toLowerCase();
+    if (u.includes('degf') || u === 'f' || u === '°f') return (value - 32) * 5 / 9;
+    return value;
+  }
+
+  function uuidOr(r: AppleRecord, fallback: string): string {
+    return r.HKMetadataKeyHealthKitUUID ?? fallback;
+  }
 
   for (const r of records) {
     switch (r.type) {
       case 'HKCategoryTypeIdentifierMenstrualFlow': {
-        // Use a ternary instead of `&&` — `&&` returns `""` when r.value is
-        // an empty string, polluting the resulting union type. The ternary
-        // gives us a clean `flow_intensity | null`.
         const flow: CycleRecord['flow_intensity'] =
           r.value ? (APPLE_FLOW_TO_OUR[r.value] ?? null) : null;
-        // Apple stores dates as 'YYYY-MM-DD HH:MM:SS +ZZZZ'; we only need
-        // the calendar date in the user's locale at the time it was
-        // recorded, so trim to the first 10 chars.
         const dateOnly = r.startDate.slice(0, 10);
-        const uuid = r.HKMetadataKeyHealthKitUUID
-          // Fall back to a synthetic key derived from date+type so re-imports
-          // still de-dupe even when Apple omits the UUID.
-          ?? `derived:menstrual:${dateOnly}`;
         cycles.push({
           period_start: dateOnly,
           period_end: null,
           flow_intensity: flow,
-          source_uuid: uuid,
+          source_uuid: uuidOr(r, `derived:menstrual:${dateOnly}`),
         });
         break;
       }
-      case 'HKCategoryTypeIdentifierSleepAnalysis':              sleep++;   break;
-      case 'HKQuantityTypeIdentifierBodyMass':                   weight++;  break;
+      case 'HKQuantityTypeIdentifierBodyMass': {
+        const v = r.value ? Number(r.value) : NaN;
+        if (!Number.isFinite(v) || v <= 0) break;
+        const kg = kgFromAppleWeight(v, r.unit);
+        // Apple's startDate format is 'YYYY-MM-DD HH:MM:SS +ZZZZ' — turn
+        // it into an ISO string Postgres timestamptz can parse.
+        const isoAt = appleDateToIso(r.startDate);
+        weights.push({
+          measured_at: isoAt,
+          weight_kg: Math.round(kg * 1000) / 1000,
+          source_uuid: uuidOr(r, `derived:weight:${r.startDate}`),
+        });
+        break;
+      }
+      case 'HKQuantityTypeIdentifierBasalBodyTemperature': {
+        const v = r.value ? Number(r.value) : NaN;
+        if (!Number.isFinite(v)) break;
+        const c = celsiusFromAppleTemp(v, r.unit);
+        // Schema check is 35.0–39.0 — drop anything wildly out of range.
+        if (c < 34 || c > 41) break;
+        bbts.push({
+          measured_at: appleDateToIso(r.startDate),
+          celsius:    Math.round(c * 100) / 100,
+          source_uuid: uuidOr(r, `derived:bbt:${r.startDate}`),
+        });
+        break;
+      }
+      case 'HKCategoryTypeIdentifierSleepAnalysis': {
+        // Apple emits multiple sleep segments per night. We import each
+        // segment as its own row so the existing analytics aggregate.
+        // Skip "in-bed" records that are NOT actual asleep states
+        // (HKCategoryValueSleepAnalysisInBed) since those overlap and
+        // would double-count the time. Keep all "asleep" variants.
+        const v = r.value ?? '';
+        const isAsleep = v.includes('Asleep') || v.includes('SleepAnalysisAsleep');
+        if (!isAsleep) break;
+        sleeps.push({
+          start_at:    appleDateToIso(r.startDate),
+          end_at:      appleDateToIso(r.endDate ?? r.startDate),
+          source_uuid: uuidOr(r, `derived:sleep:${r.startDate}`),
+        });
+        break;
+      }
       case 'HKQuantityTypeIdentifierBloodPressureSystolic':
-      case 'HKQuantityTypeIdentifierBloodPressureDiastolic':     bp++;      break;
-      case 'HKQuantityTypeIdentifierBloodGlucose':               glucose++; break;
-      case 'HKQuantityTypeIdentifierBasalBodyTemperature':       bbt++;     break;
+      case 'HKQuantityTypeIdentifierBloodPressureDiastolic': bp++;      break;
+      case 'HKQuantityTypeIdentifierBloodGlucose':           glucose++; break;
     }
   }
 
   return {
-    cycles,
+    cycles, weights, bbts, sleeps,
     detected: {
-      cycle_days: cycles.length,
-      sleep_nights: sleep,
-      weight_entries: weight,
-      bp_entries: bp,
+      cycle_days:     cycles.length,
+      sleep_nights:   sleeps.length,
+      weight_entries: weights.length,
+      bp_entries:     bp,
       glucose_entries: glucose,
-      bbt_entries: bbt,
+      bbt_entries:    bbts.length,
     },
   };
+}
+
+/** Apple emits dates like '2024-09-01 14:23:11 +0200'. Postgres parses
+ *  ISO 8601 happily; we just need the space → T swap and a colon in the
+ *  TZ offset. */
+function appleDateToIso(s: string): string {
+  // 'YYYY-MM-DD HH:MM:SS +HHMM' → 'YYYY-MM-DDTHH:MM:SS+HH:MM'
+  const m = s.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-])(\d{2})(\d{2})$/);
+  if (m) return `${m[1]}T${m[2]}${m[3]}${m[4]}:${m[5]}`;
+  // Fallback: replace the first space with T and trust Date to parse.
+  return s.replace(' ', 'T');
 }
