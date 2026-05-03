@@ -139,7 +139,8 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
         } />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        {/* Form */}
+        {/* Form. Wave 7: Features tab is rendered inline beside Notes via
+            the featuresPanel prop, no longer a separate full-width section. */}
         <BabyProfileForm
           baby={{ ...baby, nickname: null } as BabyProfileValue}
           currentWeightKg={currentWeight as number | null}
@@ -147,6 +148,14 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
           canEditHealth={canEditHealth}
           avatarUrl={avatarUrl}
           stage={(baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null}
+          featuresPanel={
+            <ProfileFeaturesCard
+              babyId={params.babyId}
+              stage={(baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null}
+              initial={enabledFeatures}
+              canEdit={canEditHealth}
+            />
+          }
         />
 
         {/* Right rail — At a Glance / Growth / Quick Actions */}
@@ -247,17 +256,6 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
           </section>
         </aside>
       </div>
-
-      {/* Per-profile features — moved from the right rail to a full-width
-          section so the 6-group AreaPicker has room to breathe and so the
-          card has the same visual weight as the form sections above. Shown
-          for every stage (cycle / pregnancy / baby). */}
-      <ProfileFeaturesCard
-        babyId={params.babyId}
-        stage={(baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null}
-        initial={enabledFeatures}
-        canEdit={canEditHealth}
-      />
     </PageShell>
   );
 }

@@ -72,6 +72,20 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
     .order('created_at', { ascending: true });
   const rows = (rowsRaw ?? []) as Row[];
 
+  // Wave 7: doctor-record links. For each baby_user with role='doctor',
+  // look up the matching doctors row by user_id so we can show "Linked to
+  // Dr X" in the row meta. Set up via accept_invitation auto-link (sql/019)
+  // or manual linking in the doctor edit form.
+  const doctorUserIds = rows.filter(r => r.role === 'doctor').map(r => r.user_id);
+  const { data: linkedDocs } = doctorUserIds.length
+    ? await supabase.from('doctors')
+        .select('user_id,name,specialty')
+        .eq('baby_id', params.babyId)
+        .is('deleted_at', null)
+        .in('user_id', doctorUserIds)
+    : { data: [] as { user_id: string; name: string; specialty: string | null }[] };
+  const linkedDocByUser = new Map((linkedDocs ?? []).map(d => [d.user_id, d]));
+
   const ids = rows.map(r => r.user_id);
   const { data: profs } = ids.length
     ? await supabase.from('profiles').select('id,email,display_name').in('id', ids)
@@ -116,6 +130,7 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                   || (prof?.email ? prof.email.split('@')[0]! : r.user_id.slice(0, 8));
                 const meta = ROLE_META[r.role];
                 const isSelf = r.user_id === user?.id;
+                const linkedDoc = r.role === 'doctor' ? linkedDocByUser.get(r.user_id) : null;
                 return (
                   <li key={r.user_id} className="px-4 sm:px-5 py-3">
                     <div className="flex items-center gap-3">
@@ -130,6 +145,11 @@ export default async function CaregiversPage({ params }: { params: { babyId: str
                             {r.role === 'owner' && <span className="text-ink-muted font-normal">{t('caregivers.owner_suffix')}</span>}
                           </div>
                           <div className="text-xs text-ink-muted truncate">{prof?.email ?? r.user_id}</div>
+                          {linkedDoc && (
+                            <div className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold rounded-full bg-lavender-50 text-lavender-700 px-2 py-0.5 border border-lavender-200">
+                              <Stethoscope className="h-3 w-3" /> Linked to Dr {linkedDoc.name}{linkedDoc.specialty ? ` · ${linkedDoc.specialty}` : ''}
+                            </div>
+                          )}
                           {/* Mobile-only meta: role chip + joined under email */}
                           <div className="mt-1 flex items-center gap-2 sm:hidden">
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.tint}`}>

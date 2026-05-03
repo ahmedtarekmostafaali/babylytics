@@ -444,6 +444,8 @@ export function Sidebar() {
                 )}
                 <NavItem href={`/babies/${currentBabyId}/doctors`}    icon={Stethoscope} label={t('nav.doctors')}    active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false}    collapsed={collapsed} tint="lavender" />
                 <NavItem href={`/babies/${currentBabyId}/caregivers`} icon={Users}       label={t('nav.caregivers')} active={pathname?.startsWith(`/babies/${currentBabyId}/caregivers`) ?? false} collapsed={collapsed} tint="mint" />
+                {/* Wave 7: group chat for everyone with access. */}
+                <NavItem href={`/babies/${currentBabyId}/chat`}       icon={MessageCircle} label="Chat"               active={pathname?.startsWith(`/babies/${currentBabyId}/chat`) ?? false} collapsed={collapsed} tint="coral" />
                 {/* "Profile" → /edit is the BabyProfileForm (DOB, birth weight,
                     blood type…) which doesn't apply to pregnancy profiles, so
                     hide it there — "Pregnancy profile" right above is the
@@ -456,11 +458,14 @@ export function Sidebar() {
               </NavCategory>
             )}
 
-            {/* Preferences for non-parents on a baby (caregivers/doctors/etc.) —
-                they don't get the full Family category but still need their
-                own preferences. */}
+            {/* Preferences + Chat for non-parents on a baby (caregivers/
+                doctors/nurses/pharmacy). They don't get the full Family
+                category, but they should still be able to chat with the
+                rest of the team and reach their own preferences. */}
             {!isParent && (
               <NavGroup label="" collapsed={collapsed}>
+                <NavItem href={`/babies/${currentBabyId}/chat`} icon={MessageCircle} label="Chat"
+                  active={pathname?.startsWith(`/babies/${currentBabyId}/chat`) ?? false} collapsed={collapsed} tint="coral" />
                 <NavItem href="/preferences" icon={Settings} label={t('nav.preferences')}
                   active={pathname?.startsWith('/preferences') ?? false} collapsed={collapsed} tint="brand" />
               </NavGroup>

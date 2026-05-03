@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { fmtMl, fmtKg } from '@/lib/units';
 import {
   Camera, Trash2, Save, Info, Gift, Stethoscope, StickyNote,
-  Loader2,
+  Loader2, Sliders,
 } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 
@@ -37,20 +37,24 @@ export type BabyProfileValue = {
 
 // 'prefs' was removed — language / timezone / unit preferences now live on
 // the global /preferences page so we don't surface a duplicate empty tab here.
-type Tab = 'basic' | 'birth' | 'health' | 'notes';
+type Tab = 'basic' | 'birth' | 'health' | 'notes' | 'features';
 type TabMeta = { key: Tab; tkey: string; icon: React.ComponentType<{ className?: string }> };
 const ALL_TABS: TabMeta[] = [
-  { key: 'basic',  tkey: 'forms.bp_tab_basic',  icon: Info },
-  { key: 'birth',  tkey: 'forms.bp_tab_birth',  icon: Gift },
-  { key: 'health', tkey: 'forms.bp_tab_health', icon: Stethoscope },
-  { key: 'notes',  tkey: 'forms.bp_tab_notes',  icon: StickyNote },
+  { key: 'basic',    tkey: 'forms.bp_tab_basic',  icon: Info },
+  { key: 'birth',    tkey: 'forms.bp_tab_birth',  icon: Gift },
+  { key: 'health',   tkey: 'forms.bp_tab_health', icon: Stethoscope },
+  { key: 'notes',    tkey: 'forms.bp_tab_notes',  icon: StickyNote },
+  // Wave 7: Features tab — when the parent provides a featuresPanel node
+  // (the ProfileFeaturesCard from /edit/page.tsx), an extra tab appears
+  // beside Notes.
+  { key: 'features', tkey: 'Features',            icon: Sliders },
 ];
 
 const AVATAR_BUCKET = 'medical-files';
 function sanitize(name: string): string { return name.replace(/[^a-zA-Z0-9._-]+/g, '_'); }
 
 export function BabyProfileForm({
-  baby, currentWeightKg, canDelete, canEditHealth, avatarUrl, stage,
+  baby, currentWeightKg, canDelete, canEditHealth, avatarUrl, stage, featuresPanel,
 }: {
   baby: BabyProfileValue;
   currentWeightKg: number | null;
@@ -62,12 +66,20 @@ export function BabyProfileForm({
    *  on Basic. 'pregnancy' also hides Birth. Anything else (newborn/infant/
    *  toddler/child/null) shows the full baby form. */
   stage?: 'planning' | 'pregnancy' | 'newborn' | 'infant' | 'toddler' | 'child' | 'archived' | null;
+  /** Wave 7: optional Features panel (typically <ProfileFeaturesCard />)
+   *  rendered inside a Features tab beside Notes. Omitted on babies/new
+   *  where the profile doesn't exist yet. */
+  featuresPanel?: React.ReactNode;
 }) {
   // Tabs available for this stage. Cycle/pregnancy profiles never had a
   // DOB or birth weight — hide the Birth tab so the form isn't littered
-  // with blank baby-specific fields they can't fill.
+  // with blank baby-specific fields they can't fill. Features tab only
+  // appears when a panel was passed in.
   const isCycleOrPreg = stage === 'planning' || stage === 'pregnancy';
-  const TABS: TabMeta[] = ALL_TABS.filter(t => !(isCycleOrPreg && t.key === 'birth'));
+  const TABS: TabMeta[] = ALL_TABS.filter(t =>
+    !(isCycleOrPreg && t.key === 'birth')
+    && !(t.key === 'features' && !featuresPanel),
+  );
   const router = useRouter();
   const t = useT();
   const [tab, setTab] = useState<Tab>('basic');
@@ -399,6 +411,14 @@ export function BabyProfileForm({
           <Textarea rows={6} value={notes ?? ''} onChange={e => setNotes(e.target.value)}
             placeholder={t('forms.bp_notes_ph')} />
         </SectionCard>
+      )}
+
+      {/* Features tab — renders the panel passed in by the parent. The
+          panel owns its own state + Save button (writes to babies.enabled_features
+          via set_baby_features RPC), so users can save it independently
+          of the rest of the form. */}
+      {tab === 'features' && featuresPanel && (
+        <div>{featuresPanel}</div>
       )}
 
       {err && <p className="text-sm text-coral-600 font-medium">{err}</p>}
