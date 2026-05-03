@@ -24,16 +24,26 @@ export const ALL_AREAS = [
 export type Area = typeof ALL_AREAS[number];
 
 /** Stage → which areas are even relevant. Used by the per-stage feature
- *  picker so we don't show baby-only options to a planning user. */
+ *  picker so we don't show baby-only options to a planning user.
+ *
+ *  Wave 22: pruned irrelevant entries that the picker was surfacing —
+ *  - 'maternal_vitals' is a prenatal-specific page (weight + BP via
+ *    prenatal visits). Cycle/planning profiles shouldn't see it at all.
+ *  - 'doctors' was listed everywhere but the sidebar Doctors entry lives
+ *    in the Family category (always-on for parents, alongside Caregivers
+ *    + Chat). Ticking/unticking it in the picker did nothing — confusing
+ *    UX. Removed from every stage. The Care category's Appointments link
+ *    still points to /doctors for the day-to-day workflow.
+ */
 export const STAGE_AREAS: Record<'planning'|'pregnancy'|'baby', readonly Area[]> = {
   planning: [
-    'planner', 'medications', 'medication_stock', 'labs', 'doctors',
+    'planner', 'medications', 'medication_stock', 'labs',
     'appointments', 'files', 'medical_profile', 'shopping',
-    'maternal_vitals', 'symptoms', 'vitals', 'blood_sugar',
+    'symptoms', 'vitals', 'blood_sugar',
   ],
   pregnancy: [
     'prenatal_visits', 'ultrasounds', 'kicks', 'maternal_vitals', 'symptoms',
-    'medications', 'medication_stock', 'labs', 'doctors', 'appointments',
+    'medications', 'medication_stock', 'labs', 'appointments',
     'files', 'medical_profile', 'reports', 'shopping',
     'vitals', 'blood_sugar',
   ],
@@ -41,7 +51,7 @@ export const STAGE_AREAS: Record<'planning'|'pregnancy'|'baby', readonly Area[]>
     'feedings', 'stool', 'sleep', 'temperature', 'measurements',
     'vomiting', 'vitals', 'blood_sugar',
     'medications', 'medication_stock', 'vaccinations', 'labs',
-    'doctors', 'appointments',
+    'appointments',
     'activities', 'teething', 'speaking', 'screen_time',
     'files', 'medical_profile', 'reports', 'shopping',
   ],

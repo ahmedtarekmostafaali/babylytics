@@ -15,6 +15,7 @@ import { loadUserPrefs } from '@/lib/user-prefs';
 import { tFor, type TFunc } from '@/lib/i18n';
 import { ProfileFeaturesCard } from '@/components/ProfileFeaturesCard';
 import type { LifecycleStage } from '@/lib/lifecycle';
+import { stageBucket } from '@/lib/areas';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Baby profile' };
@@ -126,6 +127,16 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
   const heightSpark = ((heightRows ?? []) as { height_cm: number | null }[]).filter(r => r.height_cm != null).map(r => Number(r.height_cm));
   const currentHeight = heightSpark.length ? heightSpark[heightSpark.length - 1] : null;
 
+  // Wave 22: gate right-rail baby-only KPIs by stage. Cycle (planning)
+  // profiles still reach this page via the Family > Profile sidebar link
+  // (since the page handles the profile name, avatar, blood type, and
+  // features picker for them too) — but Age, Next milestone, Zodiac, and
+  // Growth Summary are all baby-mode concepts that read as nonsense on a
+  // cycle profile (Age: 0 days, Next milestone: 1 month, height/weight
+  // sparklines empty). Show only Blood type for non-baby stages.
+  const stage = (baby as { lifecycle_stage?: LifecycleStage | null }).lifecycle_stage ?? null;
+  const isBabyStage = stageBucket(stage) === 'baby';
+
   return (
     <PageShell max="5xl">
       <PageHeader backHref={`/babies/${params.babyId}`} backLabel={baby.name}
@@ -170,24 +181,28 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
             </div>
 
             <ul className="space-y-3 text-sm">
-              <li className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 text-ink-muted"><Cake className="h-4 w-4" /> {t('edit_baby.age')}</span>
-                <span className="font-semibold text-ink-strong text-right">{ageFromDays(ageDays, t)}</span>
-              </li>
-              <li>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-ink-muted"><Flag className="h-4 w-4" /> {t('edit_baby.next_milestone')}</span>
-                  <span className="font-semibold text-ink-strong">{ms.label}</span>
-                </div>
-                <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-coral-400 to-coral-600" style={{ width: `${Math.max(5, Math.min(100, ms.pct))}%` }} />
-                </div>
-                <div className="mt-0.5 text-[10px] text-ink-muted text-right">{Math.max(0, Math.min(100, ms.pct))}%</div>
-              </li>
-              <li className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 text-ink-muted"><Star className="h-4 w-4" /> {t('edit_baby.zodiac')}</span>
-                <span className="font-semibold text-ink-strong">{zod}</span>
-              </li>
+              {isBabyStage && (
+                <>
+                  <li className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-2 text-ink-muted"><Cake className="h-4 w-4" /> {t('edit_baby.age')}</span>
+                    <span className="font-semibold text-ink-strong text-right">{ageFromDays(ageDays, t)}</span>
+                  </li>
+                  <li>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-2 text-ink-muted"><Flag className="h-4 w-4" /> {t('edit_baby.next_milestone')}</span>
+                      <span className="font-semibold text-ink-strong">{ms.label}</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-coral-400 to-coral-600" style={{ width: `${Math.max(5, Math.min(100, ms.pct))}%` }} />
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-ink-muted text-right">{Math.max(0, Math.min(100, ms.pct))}%</div>
+                  </li>
+                  <li className="flex items-center justify-between gap-3">
+                    <span className="flex items-center gap-2 text-ink-muted"><Star className="h-4 w-4" /> {t('edit_baby.zodiac')}</span>
+                    <span className="font-semibold text-ink-strong">{zod}</span>
+                  </li>
+                </>
+              )}
               <li className="flex items-center justify-between gap-3">
                 <span className="flex items-center gap-2 text-ink-muted"><Droplet className="h-4 w-4" /> {t('edit_baby.blood_type')}</span>
                 <span className="font-semibold text-ink-strong">{baby.blood_type && baby.blood_type !== 'unknown' ? baby.blood_type : t('edit_baby.not_set')}</span>
@@ -212,37 +227,41 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
             </Link>
           )}
 
-          {/* Growth summary */}
-          <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="h-9 w-9 rounded-xl bg-lavender-100 text-lavender-600 grid place-items-center">
-                <TrendingUp className="h-4 w-4" />
-              </span>
-              <h3 className="text-sm font-bold text-ink-strong">{t('edit_baby.growth_summary')}</h3>
-            </div>
+          {/* Growth summary — baby stage only. Wave 22: hidden on cycle
+              and pregnancy profiles where weight/height sparklines refer
+              to the baby's growth (which doesn't exist yet). */}
+          {isBabyStage && (
+            <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="h-9 w-9 rounded-xl bg-lavender-100 text-lavender-600 grid place-items-center">
+                  <TrendingUp className="h-4 w-4" />
+                </span>
+                <h3 className="text-sm font-bold text-ink-strong">{t('edit_baby.growth_summary')}</h3>
+              </div>
 
-            <div className="space-y-4">
-              <GrowthRow
-                label={t('edit_baby.growth_weight')}
-                value={fmtKg(currentWeight as number | null)}
-                spark={weightSpark}
-                color="#B9A7D8"
-                pctLabel={t('edit_baby.growth_pct')}
-              />
-              <GrowthRow
-                label={t('edit_baby.growth_height')}
-                value={currentHeight != null ? fmtCm(currentHeight) : '—'}
-                spark={heightSpark}
-                color="#7FC8A9"
-                pctLabel={t('edit_baby.growth_pct')}
-              />
-            </div>
+              <div className="space-y-4">
+                <GrowthRow
+                  label={t('edit_baby.growth_weight')}
+                  value={fmtKg(currentWeight as number | null)}
+                  spark={weightSpark}
+                  color="#B9A7D8"
+                  pctLabel={t('edit_baby.growth_pct')}
+                />
+                <GrowthRow
+                  label={t('edit_baby.growth_height')}
+                  value={currentHeight != null ? fmtCm(currentHeight) : '—'}
+                  spark={heightSpark}
+                  color="#7FC8A9"
+                  pctLabel={t('edit_baby.growth_pct')}
+                />
+              </div>
 
-            <Link href={`/babies/${params.babyId}/measurements`}
-              className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline">
-              {t('edit_baby.view_growth_chart')} <ExternalLink className="h-3 w-3" />
-            </Link>
-          </section>
+              <Link href={`/babies/${params.babyId}/measurements`}
+                className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline">
+                {t('edit_baby.view_growth_chart')} <ExternalLink className="h-3 w-3" />
+              </Link>
+            </section>
+          )}
 
           {/* Quick actions */}
           <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">

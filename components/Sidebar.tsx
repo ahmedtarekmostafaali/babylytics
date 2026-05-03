@@ -342,12 +342,15 @@ export function Sidebar() {
                 ticked in the Features tab actually surface in the nav. */}
             {isPlanning && canViewLogs && (
               <>
-                {(canSee('vitals') || canSee('blood_sugar') || canSee('maternal_vitals') || canSee('symptoms')) && (
+                {/* Wave 22: Maternal vitals dropped from the cycle vital
+                    signs group — it's a prenatal-only page (weight + BP
+                    captured via prenatal visits). Cycle profiles still
+                    get BP & oxygen, blood sugar, and symptoms. */}
+                {(canSee('vitals') || canSee('blood_sugar') || canSee('symptoms')) && (
                   <NavCategory id="plan_vital" label={t('nav.cat_vital_signs')} icon={Heart} collapsed={collapsed}
                     open={isCatOpen('plan_vital')} onToggle={() => toggleCat('plan_vital')}>
                     {canSee('vitals')          && <NavItem href={`/babies/${currentBabyId}/vitals`}                   icon={Activity}   label={t('nav.vitals')}      active={pathname?.startsWith(`/babies/${currentBabyId}/vitals`) ?? false}      collapsed={collapsed} tint="coral" />}
                     {canSee('blood_sugar')     && <NavItem href={`/babies/${currentBabyId}/blood-sugar`}              icon={Droplet}    label={t('nav.blood_sugar')} active={pathname?.startsWith(`/babies/${currentBabyId}/blood-sugar`) ?? false} collapsed={collapsed} tint="coral" />}
-                    {canSee('maternal_vitals') && <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}      label="Maternal vitals"      active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />}
                     {canSee('symptoms')        && <NavItem href={`/babies/${currentBabyId}/prenatal/symptoms`}        icon={HeartPulse} label={t('nav.symptoms')}    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/symptoms`) ?? false}        collapsed={collapsed} tint="lavender" />}
                   </NavCategory>
                 )}
