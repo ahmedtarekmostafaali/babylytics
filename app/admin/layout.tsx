@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { assertAdmin } from '@/lib/admin-guard';
-import { LayoutDashboard, Users, Activity, MessageSquare, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Activity, MessageSquare, ShieldCheck, Flag } from 'lucide-react';
 
 // Server-rendered admin shell. Forwards every /admin/* page through the
 // platform-admin guard (404s for everyone else) and renders a small sub-nav
@@ -29,6 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <SubNavLink href="/admin/users"     icon={Users}           label="Users" />
         <SubNavLink href="/admin/engagement" icon={Activity}       label="Engagement" />
         <SubNavLink href="/admin/feedback"  icon={MessageSquare}   label="Feedback" />
+        <SubNavLink href="/admin/forum-reports" icon={Flag}        label="Forum reports" />
       </nav>
 
       {children}

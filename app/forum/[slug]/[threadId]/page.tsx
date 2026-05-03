@@ -5,6 +5,7 @@ import { loadUserPrefs } from '@/lib/user-prefs';
 import { fmtRelative, fmtDateTime } from '@/lib/dates';
 import { EyeOff } from 'lucide-react';
 import { ForumReplyCompose } from '@/components/ForumReplyCompose';
+import { ForumReportButton } from '@/components/ForumReportButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,13 @@ export default async function ForumThreadPage({
         <p className="mt-3 text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">
           {thread.body}
         </p>
+        {/* Report button hidden when you're the author — you can't report
+            yourself; deleting your own thread happens elsewhere. */}
+        {thread.author_id !== user.id && (
+          <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end">
+            <ForumReportButton targetType="thread" targetId={thread.id} lang={userPrefs.language} />
+          </div>
+        )}
       </article>
 
       {/* Replies */}
@@ -84,6 +92,11 @@ export default async function ForumThreadPage({
               <p className="mt-2 text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">
                 {r.body}
               </p>
+              {r.author_id !== user.id && (
+                <div className="mt-2 flex justify-end">
+                  <ForumReportButton targetType="reply" targetId={r.id} lang={userPrefs.language} />
+                </div>
+              )}
             </article>
           ))
         )}
