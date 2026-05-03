@@ -52,6 +52,11 @@ export interface Suggestion {
   // every mode. Used to surface PCOS-/postpartum-/athlete-specific tips
   // only to those users.
   modes?: CycleMode[];
+  // Wave 17: cultural / seasonal context. When set, the picker prefers
+  // these suggestions during the matching context.
+  //   - 'ramadan': only relevant during the holy month
+  //   - undefined: always-eligible
+  context?: 'ramadan';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -537,6 +542,55 @@ const CYCLE: Suggestion[] = [
     title_ar: 'أجّلي القرارات الكبيرة',
     body_ar: 'إستروجين أيام ١-٢ منخفض. الدماغ مشوّش والمزاج متقلب. ناميها — الأسبوع الجاي رؤيتك ستكون أوضح.' },
 
+  // ── Wave 17 — Ramadan-specific tips. Picked preferentially during
+  // the holy month via the `context` filter in pickToday.
+  // ────────────────────────────────────────────────────────────────────
+  { id: 'c_ram_iftar_dates', stage: 'cycle', category: 'nutrition', icon: 'apple', tint: 'peach', duration_min: 5, context: 'ramadan',
+    title_en: 'Iftar: 3 dates + water first',
+    body_en: 'Sunnah-aligned and physiologically smart — gentle glucose lift, gives the stomach 10 min to wake up before the main meal. Skip the sugary drinks.',
+    title_ar: 'الإفطار: ٣ تمرات وماء أولًا',
+    body_ar: 'سنّة + ذكاء فسيولوجي — رفع لطيف للجلوكوز، تعطي معدتك ١٠ دقائق تصحى قبل الوجبة الأساسية. تجنبي العصائر السكرية.' },
+  { id: 'c_ram_suhoor_protein', stage: 'cycle', category: 'nutrition', icon: 'utensils', tint: 'mint', duration_min: 10, context: 'ramadan',
+    title_en: 'Suhoor: protein + complex carbs',
+    body_en: 'Foul, eggs, oats, full-fat yogurt + a banana. This combo keeps glucose steady till maghrib — much better than just a cup of tea + bread.',
+    title_ar: 'السحور: بروتين + كربوهيدرات معقدة',
+    body_ar: 'فول، بيض، شوفان، زبادي كامل الدسم + موزة. هذا التركيب يثبت السكر حتى المغرب — أفضل بكتير من شاي وخبز فقط.' },
+  { id: 'c_ram_hydration', stage: 'cycle', category: 'nutrition', icon: 'droplet', tint: 'brand', duration_min: 1, context: 'ramadan',
+    title_en: '2 cups water at iftar, 2 at suhoor, 4 between',
+    body_en: 'Total ~2 L. Spread it out — chugging at iftar mostly comes back out. Add a pinch of salt and a squeeze of lemon for electrolytes.',
+    title_ar: '٢ كوب عند الفطار، ٢ عند السحور، ٤ بينهما',
+    body_ar: 'حوالي ٢ لتر. وزّعيها — شرب كبير دفعة واحدة في الفطار يخرج كله. ضيفي رشة ملح وعصير ليمون للأملاح.' },
+  { id: 'c_ram_no_fasting_period', stage: 'cycle', category: 'mental', icon: 'heart', tint: 'coral', duration_min: 1, context: 'ramadan',
+    title_en: 'On your period? You don\'t have to fast',
+    body_en: 'Islamic ruling: women on their period don\'t fast and don\'t pray. You make up the missed fast days later (qada). Rest is part of worship in this state.',
+    title_ar: 'في دورتك؟ لا يجب عليك الصوم',
+    body_ar: 'الحكم الشرعي: المرأة في دورتها لا تصوم ولا تصلي. تقضين أيام الصيام لاحقًا (قضاء). الراحة جزء من العبادة في هذه الحالة.' },
+  { id: 'c_ram_qada_track', stage: 'cycle', category: 'general', icon: 'sparkles', tint: 'lavender', duration_min: 1, context: 'ramadan',
+    title_en: 'Track your qada count',
+    body_en: 'Note how many days you missed during your period this Ramadan. Easier to make them up over the year if you actually counted.',
+    title_ar: 'احسبي قضاءك',
+    body_ar: 'دوّني عدد أيام الإفطار في دورتك هذا الرمضان. أسهل تقضيها على مدار السنة لو فعلًا عددتيها.' },
+  { id: 'c_ram_movement', stage: 'cycle', category: 'movement', icon: 'sun', tint: 'mint', duration_min: 20, context: 'ramadan',
+    title_en: 'Gentle walk after taraweeh',
+    body_en: 'Best fasting-friendly movement window is post-iftar / post-taraweeh — fed, hydrated, no sun. 20 min outside helps digestion + sleep.',
+    title_ar: 'مشية خفيفة بعد التراويح',
+    body_ar: 'أفضل وقت للحركة في رمضان هو بعد الفطار/التراويح — مفطرة ومرطبة وبدون شمس. ٢٠ دقيقة برّه تساعد الهضم والنوم.' },
+  { id: 'c_ram_caffeine', stage: 'cycle', category: 'nutrition', icon: 'flame', tint: 'peach', duration_min: 1, context: 'ramadan',
+    title_en: 'Cut caffeine the week before',
+    body_en: 'A pre-Ramadan taper avoids the brutal headache day 1–3. Drop one cup every 2 days starting now.',
+    title_ar: 'قلّلي الكافيين في الأسبوع السابق',
+    body_ar: 'تقليل الكافيين قبل رمضان يمنع صداع أيام ١-٣ القاسي. قللي كوبًا كل يومين من الآن.' },
+  { id: 'c_ram_iron_iftar', stage: 'cycle', category: 'nutrition', icon: 'leaf', tint: 'coral', duration_min: 5, context: 'ramadan', phase: 'menstrual',
+    title_en: 'Iron-rich iftar (for after your period)',
+    body_en: 'When you start fasting again post-period, focus iftar on red meat, lentils, dark leafy greens + lemon. Replenish what the period took before resuming the fasting deficit.',
+    title_ar: 'إفطار غني بالحديد (بعد الدورة)',
+    body_ar: 'لما ترجعي تصومي بعد الدورة، ركّزي الفطار على لحم أحمر وعدس وخضروات ورقية مع ليمون. عوّضي ما فقدتيه قبل العودة لعجز الصيام.' },
+  { id: 'c_ram_sleep', stage: 'cycle', category: 'sleep', icon: 'moon', tint: 'lavender', duration_min: 1, context: 'ramadan',
+    title_en: 'Plan a midday nap',
+    body_en: 'Ramadan sleep gets fragmented by suhoor. A 20-min nap between dhuhr and asr restores cognition without hitting deep sleep — wake feeling clearer.',
+    title_ar: 'خطّطي قيلولة وقت الظهر',
+    body_ar: 'النوم في رمضان مقطوع بالسحور. قيلولة ٢٠ دقيقة بين الظهر والعصر تعيد التركيز بدون نوم عميق — تصحي أوضح.' },
+
   // ── Mental health (cross-phase)
   { id: 'c_mh_2min_breath', stage: 'cycle', category: 'mental', icon: 'wind', tint: 'lavender', duration_min: 2,
     title_en: 'Box breathing, 2 min',
@@ -602,6 +656,11 @@ export interface PickContext {
    *  filter out mode-specific items so standard users don't see PCOS
    *  copy etc. */
   mode?: CycleMode | null;
+  /** Wave 17: cultural / seasonal context. Pass 'ramadan' to make
+   *  Ramadan-tagged items eligible AND prefer them in the day's pick
+   *  (at least one of the three trios will be Ramadan-relevant if any
+   *  match the phase). */
+  context?: 'ramadan';
 }
 
 /** Filter suggestions to those that match the profile's stage + marker. */
@@ -636,23 +695,49 @@ function eligible(ctx: PickContext): Suggestion[] {
   } else {
     filtered = filtered.filter(s => !s.modes || s.modes.length === 0 || s.modes.includes(mode));
   }
+  // Wave 17: context filter. Outside Ramadan we drop ramadan-tagged items
+  // so the user doesn't see suhoor advice in November. Inside Ramadan we
+  // keep BOTH untagged items (the always-relevant tips) AND ramadan-
+  // tagged items, but bias the picker toward ramadan-tagged ones by
+  // re-weighting in pickToday.
+  if (ctx.context !== 'ramadan') {
+    filtered = filtered.filter(s => s.context !== 'ramadan');
+  }
   return filtered;
 }
 
-/** Deterministic 3-pick for today. Same trio all day; rotates at midnight. */
+/** Deterministic 3-pick for today. Same trio all day; rotates at midnight.
+ *  Wave 17: when ctx.context='ramadan' AND any ramadan-tagged items match,
+ *  guarantee at least one ramadan tip in the trio so the holy month is
+ *  visible immediately. Other picks remain seeded-random from the full
+ *  eligible pool. */
 export function pickToday(ctx: PickContext, n = 3): Suggestion[] {
   const pool = eligible(ctx);
   if (pool.length === 0) return [];
-  const seed = hashStr(`${todayKey()}::${ctx.babyId}::${ctx.stage}`);
-  // Shuffle the eligible pool with a seeded Fisher-Yates, then take n.
-  const arr = [...pool];
-  let s = seed || 1;
-  for (let i = arr.length - 1; i > 0; i--) {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    const j = s % (i + 1);
-    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+
+  function shuffle<T>(arr: T[], seed: number): T[] {
+    const a = [...arr];
+    let s = seed || 1;
+    for (let i = a.length - 1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      const j = s % (i + 1);
+      [a[i], a[j]] = [a[j]!, a[i]!];
+    }
+    return a;
   }
-  return arr.slice(0, Math.min(n, arr.length));
+
+  const seed = hashStr(`${todayKey()}::${ctx.babyId}::${ctx.stage}`);
+  const ramadanItems = pool.filter(s => s.context === 'ramadan');
+  const otherItems   = pool.filter(s => s.context !== 'ramadan');
+
+  if (ctx.context === 'ramadan' && ramadanItems.length > 0) {
+    // Guarantee 1 ramadan tip + (n-1) other tips, all seeded.
+    const rPick = shuffle(ramadanItems, seed)[0]!;
+    const oPicks = shuffle(otherItems, seed ^ 0x55555555).slice(0, Math.max(0, n - 1));
+    return [rPick, ...oPicks];
+  }
+
+  return shuffle(pool, seed).slice(0, Math.min(n, pool.length));
 }
 
 /** Today's localStorage key for completion tracking. */

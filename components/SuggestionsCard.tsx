@@ -31,7 +31,7 @@ const TINT: Record<Suggestion['tint'], { bg: string; iconBg: string; iconFg: str
 };
 
 export function SuggestionsCard({
-  babyId, stage, marker, phase, mode, lang = 'en', heading,
+  babyId, stage, marker, phase, mode, context, lang = 'en', heading,
 }: {
   babyId: string;
   stage: SuggestionStage;
@@ -43,6 +43,9 @@ export function SuggestionsCard({
   /** Wave 12: cycle mode for tagged suggestion filtering. Passed only
    *  when stage='cycle'. */
   mode?: CycleMode | null;
+  /** Wave 17: cultural context. 'ramadan' biases the picker toward
+   *  Ramadan-tagged tips. */
+  context?: 'ramadan';
   lang?: 'en' | 'ar';
   /** Override the section heading. Defaults to a stage-appropriate one. */
   heading?: string;
@@ -51,8 +54,8 @@ export function SuggestionsCard({
   // given day + profile. (pickToday hashes today's date key internally so a
   // page reload after midnight rotates the picks.)
   const todays = useMemo(
-    () => pickToday({ babyId, stage, marker, phase, mode }),
-    [babyId, stage, marker, phase, mode],
+    () => pickToday({ babyId, stage, marker, phase, mode, context }),
+    [babyId, stage, marker, phase, mode, context],
   );
 
   // Per-id done state. Hydrated from localStorage on mount; updates persist

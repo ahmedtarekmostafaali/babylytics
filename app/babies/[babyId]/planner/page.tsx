@@ -15,6 +15,8 @@ import { CycleRedFlagsCard, type CycleRedFlag } from '@/components/CycleRedFlags
 import { CycleEnergyForecast } from '@/components/CycleEnergyForecast';
 import { CycleBaselineCard, type CycleBaseline } from '@/components/CycleBaselineCard';
 import { type DoctorQuestion } from '@/components/SendToDoctorButton';
+import { RamadanCard } from '@/components/RamadanCard';
+import { dayOfRamadan } from '@/lib/ramadan';
 import { Download } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -173,6 +175,15 @@ export default async function PlannerPage({
         }
       />
 
+      {/* Wave 17: Ramadan-aware banner — only renders during the holy
+          month. Sets the tone for the day's suggestions card below. */}
+      {(() => {
+        const day = dayOfRamadan();
+        return day != null
+          ? <RamadanCard dayOfRamadan={day} lang={userPrefs.language} />
+          : null;
+      })()}
+
       {/* Wave 12: cycle mode picker + red flags. Mode picker is always
           visible (small, tap-to-edit). Red flags only render when there's
           something detected from the user's own historical patterns.
@@ -271,6 +282,11 @@ export default async function PlannerPage({
         marker={cycleMarker}
         phase={cyclePhase}
         mode={cycleMode}
+        // Wave 17: only set 'ramadan' during the holy month so the
+        // picker prefers iftar/suhoor/qada tips. Outside Ramadan the
+        // context is undefined and Ramadan-tagged items are filtered
+        // out entirely.
+        context={dayOfRamadan() != null ? 'ramadan' : undefined}
         lang={userPrefs.language}
       />
 
