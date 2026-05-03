@@ -95,7 +95,9 @@ export function eddDistanceDays(edd: string | null | undefined): number | null {
 /** Pretty stage label for UI badges. */
 export function prettyStage(stage: LifecycleStage): string {
   switch (stage) {
-    case 'planning':  return 'Planning';
+    // 'planning' is the DB value; 'My cycle' is the user-facing name (more
+    // generic — also covers postpartum / between-pregnancies / personal).
+    case 'planning':  return 'My cycle';
     case 'pregnancy': return 'Expecting';
     case 'newborn':   return 'Newborn';
     case 'infant':    return 'Infant';

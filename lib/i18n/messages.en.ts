@@ -11,7 +11,7 @@ export const en = {
   nav: {
     my_babies: 'My babies',
     overview: 'Overview',
-    add_baby: 'Add baby',
+    add_baby: 'Add profile',
     sign_out: 'Sign out',
 
     // Categories
@@ -2168,11 +2168,11 @@ export const en = {
     g_evening:             'Good evening',
     g_night:               'Good night',
     hi_name:               'Hi {name} 👋',
-    sub_none:              'Ready to start? Add your first baby to track feedings, stool, medications and growth.',
-    sub_one:               'You have 1 baby. Pick one below.',
-    sub_n:                 'You have {n} babies. Pick one below.',
-    add_baby:              'Add baby',
-    your_babies:           'Your babies',
+    sub_none:              'Ready to start? Add your first profile — track a pregnancy, a baby, or just your own cycle.',
+    sub_one:               'You have 1 profile. Pick one below.',
+    sub_n:                 'You have {n} profiles. Pick one below.',
+    add_baby:              'Add profile',
+    your_babies:           'Your profiles',
     days_old:              '{n} days',
     birth_short:           'birth {weight}',
     stat_current:          'Current',

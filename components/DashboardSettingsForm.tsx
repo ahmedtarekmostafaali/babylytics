@@ -55,6 +55,13 @@ export function DashboardSettingsForm({
     setHidden(h => ({ ...h, [scopeId]: new Set() }));
   }
 
+  /** Hide every widget in the active scope. Mirror of showAll for the
+   *  Wave-1 add of the "Hide all" button. */
+  function hideAll(scopeId: WidgetScope) {
+    const allIds = new Set(SCOPES.find(s => s.id === scopeId)?.widgets.map(w => w.id) ?? []);
+    setHidden(h => ({ ...h, [scopeId]: allIds }));
+  }
+
   async function save() {
     setErr(null); setMsg(null); setSaving(true);
     const supabase = createClient();
@@ -106,12 +113,18 @@ export function DashboardSettingsForm({
         })}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-ink-muted">
+      <div className="flex items-center justify-between text-xs text-ink-muted gap-3 flex-wrap">
         <span>{totalWidgets - totalHidden} of {totalWidgets} widgets visible</span>
-        <button type="button" onClick={() => showAll(activeScope)}
-          className="text-brand-600 hover:text-brand-700 font-semibold inline-flex items-center gap-1">
-          <Eye className="h-3.5 w-3.5" /> Show all
-        </button>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => showAll(activeScope)}
+            className="text-brand-600 hover:text-brand-700 font-semibold inline-flex items-center gap-1">
+            <Eye className="h-3.5 w-3.5" /> Show all
+          </button>
+          <button type="button" onClick={() => hideAll(activeScope)}
+            className="text-coral-600 hover:text-coral-700 font-semibold inline-flex items-center gap-1">
+            <EyeOff className="h-3.5 w-3.5" /> Hide all
+          </button>
+        </div>
       </div>
 
       <div className="space-y-5">

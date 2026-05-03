@@ -237,7 +237,7 @@ export function Sidebar() {
               <Link href="/babies/new"
                 className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-coral-50 text-coral-600 text-sm font-medium">
                 <span className="h-8 w-8 rounded-lg bg-coral-100 grid place-items-center"><Plus className="h-4 w-4" /></span>
-                Add baby
+                {t('nav.add_baby')}
               </Link>
             </div>
           )}
@@ -283,14 +283,14 @@ export function Sidebar() {
         {currentBabyId && !isPharmacy && (
           <>
             {/* Always-visible Overview link */}
-            <NavGroup label={isPlanning ? 'PLANNING' : isPregnancy ? 'PREGNANCY' : 'TRACK'} collapsed={collapsed}>
+            <NavGroup label={isPlanning ? 'MY CYCLE' : isPregnancy ? 'PREGNANCY' : 'TRACK'} collapsed={collapsed}>
               <NavItem href={`/babies/${currentBabyId}`} icon={isPregnancy ? HeartPulse : Clock}
                 label={t('nav.overview')} active={pathname === `/babies/${currentBabyId}`}
                 collapsed={collapsed} tint={isPregnancy ? 'lavender' : 'brand'} />
-              {/* Planning-only: planner sits next to the overview link. */}
+              {/* Cycle-mode shortcut to the calendar. */}
               {isPlanning && (
                 <NavItem href={`/babies/${currentBabyId}/planner`} icon={Heart}
-                  label="Planner" active={pathname?.startsWith(`/babies/${currentBabyId}/planner`) ?? false}
+                  label="Cycle calendar" active={pathname?.startsWith(`/babies/${currentBabyId}/planner`) ?? false}
                   collapsed={collapsed} tint="coral" />
               )}
             </NavGroup>

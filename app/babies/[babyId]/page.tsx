@@ -7,6 +7,7 @@ import { SummaryDonut } from '@/components/SummaryDonut';
 import { Sparkline } from '@/components/Sparkline';
 import { Comments } from '@/components/Comments';
 import { PregnancyDashboard } from '@/components/PregnancyDashboard';
+import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { VoiceCommander } from '@/components/VoiceCommander';
 import { GrowthInsights } from '@/components/GrowthInsights';
@@ -105,22 +106,27 @@ export default async function BabyOverview({
     const pp = pregProf as { pre_pregnancy_weight_kg: number | null; pre_pregnancy_height_cm: number | null } | null;
     const symptoms = (recentSymptoms ?? []) as { id: string; logged_at: string; kind: string; severity: number }[];
     return (
-      <PregnancyDashboard
-        babyId={babyId}
-        babyName={baby.name}
-        avatarUrl={avatarUrl}
-        edd={baby.edd}
-        lmp={baby.lmp}
-        summary={(summaryRow ?? {}) as Parameters<typeof PregnancyDashboard>[0]['summary']}
-        latestUltrasound={us ? { id: us.id, scanned_at: us.scanned_at, gestational_week: us.gestational_week, summary: us.summary, efw_g: us.efw_g } : null}
-        nextAppointment={appt ? { scheduled_at: appt.scheduled_at, doctor_name: appt.doctor_name, purpose: appt.purpose } : null}
-        canEdit={isParent}
-        prePregnancyWeightKg={pp?.pre_pregnancy_weight_kg ?? null}
-        prePregnancyHeightCm={pp?.pre_pregnancy_height_cm ?? null}
-        hiddenWidgets={Array.from(hiddenPregnancy)}
-        lang={userPrefs.language}
-        recentSymptoms={symptoms}
-      />
+      <>
+        <PregnancyDashboard
+          babyId={babyId}
+          babyName={baby.name}
+          avatarUrl={avatarUrl}
+          edd={baby.edd}
+          lmp={baby.lmp}
+          summary={(summaryRow ?? {}) as Parameters<typeof PregnancyDashboard>[0]['summary']}
+          latestUltrasound={us ? { id: us.id, scanned_at: us.scanned_at, gestational_week: us.gestational_week, summary: us.summary, efw_g: us.efw_g } : null}
+          nextAppointment={appt ? { scheduled_at: appt.scheduled_at, doctor_name: appt.doctor_name, purpose: appt.purpose } : null}
+          canEdit={isParent}
+          prePregnancyWeightKg={pp?.pre_pregnancy_weight_kg ?? null}
+          prePregnancyHeightCm={pp?.pre_pregnancy_height_cm ?? null}
+          hiddenWidgets={Array.from(hiddenPregnancy)}
+          lang={userPrefs.language}
+          recentSymptoms={symptoms}
+        />
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
+          <ConsultationComingSoon stage="pregnancy" />
+        </div>
+      </>
     );
   }
 
@@ -1030,6 +1036,11 @@ export default async function BabyOverview({
           </Link>
         </div>
       </section>
+
+      {/* Doctor consultation upsell — same component as cycle + pregnancy
+          modes. Positioned just before the sticky quick-add bar so it stays
+          discoverable but doesn't dominate the dashboard. */}
+      <ConsultationComingSoon stage="baby" />
 
       {/* ═══ QUICK ADD BAR ═══ */}
       <div className="hidden md:block sticky bottom-4 z-30">

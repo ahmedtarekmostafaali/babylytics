@@ -5,9 +5,11 @@ import { PageShell, PageHeader } from '@/components/PageHeader';
 import { assertRole } from '@/lib/role-guard';
 import { fmtDate } from '@/lib/dates';
 import { Calendar, Heart, Plus, Sparkles, Edit3 } from 'lucide-react';
+import { MarkAsPregnantDialog } from '@/components/MarkAsPregnantDialog';
+import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Pregnancy planner' };
+export const metadata = { title: 'My cycle' };
 
 type CalRow = {
   d: string;        // YYYY-MM-DD
@@ -108,15 +110,21 @@ export default async function PlannerPage({
       <PageHeader
         backHref={`/babies/${params.babyId}`}
         backLabel={baby.name}
-        eyebrow="Plan"
+        eyebrow="Track"
         eyebrowTint="coral"
-        title="Pregnancy planner"
-        subtitle="Track your cycle, see your fertile window, plan your conception."
+        title="My cycle"
+        subtitle="Period, ovulation, fertile window, symptoms — for planning, postpartum, or just personal."
         right={
-          <Link href={`/babies/${params.babyId}/planner/cycles/new`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-coral-500 to-coral-600 text-white text-sm font-semibold px-4 py-1.5 shadow-sm">
-            <Plus className="h-4 w-4" /> Log period
-          </Link>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Link href={`/babies/${params.babyId}/planner/cycles/new`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-coral-500 to-coral-600 text-white text-sm font-semibold px-4 py-2 shadow-sm">
+              <Plus className="h-4 w-4" /> Log period
+            </Link>
+            {/* "I'm pregnant!" → transitions stage to 'pregnancy', preserving
+                cycle history. Only meaningful when the profile is still in
+                planning mode, which is the only place this page is reachable. */}
+            <MarkAsPregnantDialog babyId={params.babyId} />
+          </div>
         }
       />
 
@@ -194,6 +202,10 @@ export default async function PlannerPage({
           </div>
         </div>
       </section>
+
+      {/* Doctor consultation upsell — placeholder for now. Same component
+          shown across pregnancy + baby overviews so users see the roadmap. */}
+      <ConsultationComingSoon stage="cycle" />
 
       {/* Recent cycle log */}
       <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden">

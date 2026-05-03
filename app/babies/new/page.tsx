@@ -41,12 +41,12 @@ export default function NewBabyPage() {
   );
 }
 
-// PlanningForm — minimal create flow: just a placeholder name (so the
-// sidebar / dashboard have something to show). Cycle data gets logged on
-// the planner page once the row exists.
+// PlanningForm — creates a profile in 'planning' DB stage (now labelled
+// "My cycle" everywhere in the UI). Useful pre-conception, between
+// pregnancies, postpartum, or just personal cycle / wellness tracking.
 function PlanningForm({ onBack, router }: { onBack: () => void; router: ReturnType<typeof useRouter> }) {
   const t = useT();
-  const [name, setName] = useState('Future baby');
+  const [name, setName] = useState('My cycle');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -55,7 +55,7 @@ function PlanningForm({ onBack, router }: { onBack: () => void; router: ReturnTy
     setErr(null); setLoading(true);
     const supabase = createClient();
     const { data, error } = await supabase.rpc('create_planning_baby_with_owner', {
-      p_name: name.trim() || 'Planning',
+      p_name: name.trim() || 'My cycle',
     });
     setLoading(false);
     if (error) { setErr(error.message); return; }
@@ -67,18 +67,18 @@ function PlanningForm({ onBack, router }: { onBack: () => void; router: ReturnTy
       <CardContent className="py-6">
         <form className="space-y-4" onSubmit={submit}>
           <p className="text-sm text-ink-muted">
-            We'll set up your fertility planner. Pick a name (you can change it any time) — the calendar opens once we save.
+            We'll set up your cycle calendar — period, ovulation, fertile window, symptoms. You can transition to a pregnancy later without losing any history.
           </p>
           <div>
-            <Label>Placeholder name</Label>
+            <Label>Profile name</Label>
             <Input value={name} onChange={e => setName(e.target.value)}
-              placeholder="e.g. Future baby, Baby #2" />
+              placeholder="e.g. My cycle, Trying to conceive, Postpartum" />
           </div>
           {err && <p className="text-sm text-coral-600">{err}</p>}
           <div className="flex items-center gap-2 pt-2">
             <Button type="submit" disabled={loading}
               className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-coral-500 to-peach-500">
-              <Calendar className="h-4 w-4" /> {loading ? 'Creating…' : 'Open my planner'}
+              <Calendar className="h-4 w-4" /> {loading ? 'Creating…' : 'Open my cycle'}
             </Button>
             <button type="button" onClick={onBack}
               className="text-sm text-ink-muted hover:text-ink-strong">{t('forms.nb_back')}</button>
@@ -96,7 +96,8 @@ function StagePicker({ onPick }: { onPick: (s: Stage) => void }) {
       <CardContent className="py-6">
         <p className="text-sm text-ink-muted mb-4">{t('forms.nb_pick_question')}</p>
         <div className="grid gap-3 sm:grid-cols-3">
-          {/* Planning is new in the 044 batch — pre-pregnancy fertility planner. */}
+          {/* "My cycle" — generic women's wellness profile. Pre-conception,
+              postpartum, between pregnancies, or just personal tracking. */}
           <button
             onClick={() => onPick('planning')}
             className="rounded-2xl border-2 border-peach-200 bg-gradient-to-br from-peach-50 to-coral-50 p-5 text-left hover:border-peach-400 hover:shadow-card transition">
@@ -104,9 +105,9 @@ function StagePicker({ onPick }: { onPick: (s: Stage) => void }) {
               <span className="h-10 w-10 rounded-xl bg-peach-500 text-white grid place-items-center">
                 <Calendar className="h-5 w-5" />
               </span>
-              <div className="font-bold text-ink-strong">Planning</div>
+              <div className="font-bold text-ink-strong">My cycle</div>
             </div>
-            <p className="text-xs text-ink-muted mt-3">Trying to conceive — track your cycle, ovulation, fertile window.</p>
+            <p className="text-xs text-ink-muted mt-3">Cycle, ovulation, fertile window, symptoms. Use it before pregnancy, between pregnancies, postpartum, or just for yourself.</p>
           </button>
           <button
             onClick={() => onPick('pregnancy')}
