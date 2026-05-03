@@ -215,6 +215,37 @@ html.dark .bg-slate-100\/40,
 html.dark .bg-slate-100\/60,
 html.dark .bg-slate-100\/70   { background-color: #2A3344 !important; }
 
+/* Wave 25 dark-mode polish — covers pastel borders (`border-coral-200`,
+   `border-mint-200`, etc.) and `border-slate-300` that the forum
+   reaction chips, Apple-Health importer dropzone, partner cycle hero
+   card, and ForumUnreadBanner all rely on. Without these mappings the
+   borders render with their light-mode pastel hex on dark canvas and
+   look like neon outlines. We tune each to a desaturated cousin that
+   reads as "soft accent" against the dark slate. */
+html.dark .border-coral-100,
+html.dark .border-coral-200,
+html.dark .border-coral-300    { border-color: rgba(244, 166, 166, 0.30) !important; }
+html.dark .border-coral-500    { border-color: rgba(244, 166, 166, 0.55) !important; }
+html.dark .border-mint-100,
+html.dark .border-mint-200,
+html.dark .border-mint-300     { border-color: rgba(127, 200, 169, 0.30) !important; }
+html.dark .border-lavender-100,
+html.dark .border-lavender-200,
+html.dark .border-lavender-300 { border-color: rgba(185, 167, 216, 0.30) !important; }
+html.dark .border-peach-100,
+html.dark .border-peach-200,
+html.dark .border-peach-300    { border-color: rgba(246, 193, 119, 0.30) !important; }
+html.dark .border-brand-100,
+html.dark .border-brand-200,
+html.dark .border-brand-300    { border-color: rgba(123, 174, 220, 0.30) !important; }
+html.dark .border-slate-300    { border-color: #2A3344 !important; }
+
+/* The reaction chip's active ring (`ring-1 ring-coral-300`) needs the
+   same desaturation as the border treatment above so it doesn't glow.
+   Keep it slightly punchier than the border so the active state still
+   reads. */
+html.dark .ring-coral-300 { --tw-ring-color: rgba(244, 166, 166, 0.45) !important; }
+
 /* Native form controls (inputs without an explicit bg-X) — make their
    field surface match the surrounding dark cards. The earlier
    `color-scheme: dark` declaration on html.dark also flips the user-agent
