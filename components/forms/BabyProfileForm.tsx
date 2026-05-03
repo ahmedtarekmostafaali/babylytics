@@ -203,11 +203,11 @@ export function BabyProfileForm({
       blood_type: parsedData.blood_type ?? 'unknown',
     };
     if (canEditHealth) {
-      payload.doctor_name  = parsed.data.doctor_name  ?? null;
-      payload.doctor_phone = parsed.data.doctor_phone ?? null;
-      payload.doctor_clinic = parsed.data.doctor_clinic ?? null;
-      payload.next_appointment_at    = parsed.data.next_appointment_at ?? null;
-      payload.next_appointment_notes = parsed.data.next_appointment_notes ?? null;
+      payload.doctor_name  = parsedData.doctor_name  ?? null;
+      payload.doctor_phone = parsedData.doctor_phone ?? null;
+      payload.doctor_clinic = parsedData.doctor_clinic ?? null;
+      payload.next_appointment_at    = parsedData.next_appointment_at ?? null;
+      payload.next_appointment_notes = parsedData.next_appointment_notes ?? null;
     }
     const { error } = await supabase.from('babies').update(payload).eq('id', baby.id);
     setSaving(false);
