@@ -12,6 +12,7 @@ import { AiRiskBanner } from '@/components/AiRiskBanner';
 import { AiCompanion } from '@/components/AiCompanion';
 import { NutritionCard } from '@/components/NutritionCard';
 import { BabyTonightCard } from '@/components/BabyTonightCard';
+import { MentalHealthSlot } from '@/components/MentalHealthSlot';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { ChatBell } from '@/components/ChatBell';
 import { VoiceCommander } from '@/components/VoiceCommander';
@@ -176,6 +177,13 @@ export default async function BabyOverview({
             threshold signals from BP / glucose / weight / kicks. Empty
             when there's nothing to flag. */}
         <AiRiskBanner babyId={babyId} stage="pregnancy" lang={userPrefs.language} />
+
+        {/* Wave 41: mental health check-in prompt. Surfaces only at
+            standard windows (1st tri, 3rd tri at ~32w, postpartum
+            2w/6w/3mo/6mo). Cools down 21 days after any submission. */}
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
+          <MentalHealthSlot babyId={babyId} lang={userPrefs.language} />
+        </div>
 
         {/* Wave 37: smart nutrition card — Egyptian-cuisine-aware,
             trimester-aware, Ramadan-aware. */}
@@ -1144,6 +1152,9 @@ export default async function BabyOverview({
           urgent), high fever, persistent fever, vomiting frequency,
           red-flag vomiting (projectile/bilious/blood). */}
       <AiRiskBanner babyId={babyId} stage="baby" lang={userPrefs.language} />
+
+      {/* Wave 41: postpartum mental health check-in (EPDS) at 2w/6w/3mo/6mo. */}
+      <MentalHealthSlot babyId={babyId} lang={userPrefs.language} />
 
       {/* Wave 37: smart nutrition card — age-banded baby food guidance
           (avocado/banana/sweet potato → soft koshary at 9-12mo →
