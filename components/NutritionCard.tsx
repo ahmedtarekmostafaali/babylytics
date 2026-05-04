@@ -113,8 +113,8 @@ export async function NutritionCard({
           </h3>
           <p className="text-xs text-ink-muted">
             {isAr
-              ? 'اقتراحات تناسب مرحلتك من المطبخ المصري'
-              : 'Egyptian-cuisine picks tuned to your stage'}
+              ? 'اقتراحات تناسب مرحلتك بنكهات إقليمية وعالمية'
+              : 'Stage-tuned picks from MENA and international cuisines'}
           </p>
         </div>
         {hasRamadanPick && (

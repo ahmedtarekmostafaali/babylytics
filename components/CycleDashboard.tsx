@@ -9,7 +9,7 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { PageShell, PageHeader } from '@/components/PageHeader';
-import { Plus, Download, Calendar, Heart, Sparkles } from 'lucide-react';
+import { Plus, Download, Calendar, Heart, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { fmtDate } from '@/lib/dates';
 import type { Lang } from '@/lib/i18n';
 import { tFor } from '@/lib/i18n';
@@ -98,6 +98,15 @@ export async function CycleDashboard({
             <Link href={`/babies/${babyId}/import/apple-health`}
               className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-ink text-sm font-semibold px-4 py-2 shadow-sm">
               <Download className="h-4 w-4" /> Apple Health
+            </Link>
+            {/* Wave 44C: customize entry point for the cycle dashboard.
+                The Cycle scope was added to dashboard_preferences in
+                Wave 40B but the page had no link from cycle overviews. */}
+            <Link href={`/babies/${babyId}/dashboard-settings`}
+              title="Customize this overview"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-ink text-sm font-semibold px-3 py-2 shadow-sm"
+              aria-label="Customize">
+              <SlidersHorizontal className="h-4 w-4" />
             </Link>
             <MarkAsPregnantDialog babyId={babyId} />
           </div>

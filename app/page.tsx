@@ -668,8 +668,8 @@ const FREE_LIST_EN = [
   'Pregnancy dashboard + kick counter + maternal vitals',
   'Multi-caregiver sync (parent / partner / doctor / nurse / pharmacy)',
   'Bulk imports (Apple Health, CSV, multi-file uploads)',
-  'Community forum with reactions, search, follow, daily digest',
-  'Reports + Smart Scan (manual review)',
+  'Community forum with reactions, search, follow',
+  'Standard reports + manual file upload',
   'Mental health self-screening (EPDS + PHQ-2)',
 ];
 const FREE_LIST_AR = [
@@ -678,25 +678,27 @@ const FREE_LIST_AR = [
   'لوحة الحمل + عداد الحركات + المؤشرات الحيوية',
   'مزامنة متعددة الرعاة (والد / شريك / طبيب / ممرضة / صيدلية)',
   'الاستيراد بالجملة (Apple Health، CSV، رفع ملفات)',
-  'منتدى مجتمعي مع تفاعلات وبحث ومتابعة وملخص يومي',
-  'التقارير + Smart Scan (مراجعة يدوية)',
+  'منتدى مجتمعي مع تفاعلات وبحث ومتابعة',
+  'التقارير الأساسية + رفع ملفات يدوي',
   'فحص الصحة النفسية الذاتي (EPDS + PHQ-2)',
 ];
 const SMART_LIST_EN = [
   'Claude AI companion (explain readings, draft doctor questions) — across all stages',
   'Risk-pattern detection (ACOG / ADA / AAP thresholds for pregnancy + baby)',
-  'Smart nutrition engine — Egyptian-cuisine, Ramadan-aware, lab-deficiency-aware',
+  'Smart nutrition engine — MENA + international cuisines, Ramadan-aware, lab-deficiency-aware',
   'Baby co-pilot — predicted next wake, optimal nap window, sleep regression detection',
-  'OCR Smart Scan auto-extraction (ultrasound biometry, lab values, prescription parsing)',
+  'Smart Scan — manual review tools + OCR auto-extraction (ultrasound biometry, lab values, prescriptions)',
+  'In-house doctor consultations — message a vetted OB-GYN or pediatrician inside the app',
   'Personal pattern engine for cycles + doctor-ready questions',
   'Forum daily digest mode',
 ];
 const SMART_LIST_AR = [
   'مساعد Claude الذكي (شرح القراءات، صياغة أسئلة الطبيب) — في كل المراحل',
   'كشف أنماط المخاطر (حدود ACOG / ADA / AAP للحمل والطفل)',
-  'محرك التغذية الذكي — مطبخ مصري، يراعي رمضان، يراعي نقص التحاليل',
+  'محرك التغذية الذكي — مطابخ إقليمية وعالمية، يراعي رمضان، يراعي نقص التحاليل',
   'مساعد الطفل — توقع الاستيقاظ + أنسب قيلولة + كشف تراجع النوم',
-  'استخراج Smart Scan تلقائياً (قياسات السونار، قيم التحاليل، الروشتات)',
+  'Smart Scan — أدوات المراجعة اليدوية + استخراج OCR تلقائي (السونار، التحاليل، الروشتات)',
+  'استشارات طبيب داخل التطبيق — راسلي طبيبة نساء أو طبيب أطفال موثق من داخل التطبيق',
   'محرك الأنماط الشخصي للدورة + أسئلة جاهزة للطبيب',
   'وضع الملخص اليومي للمنتدى',
 ];
