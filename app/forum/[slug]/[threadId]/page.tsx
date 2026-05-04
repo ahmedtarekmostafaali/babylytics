@@ -8,6 +8,8 @@ import { ForumReplyCompose } from '@/components/ForumReplyCompose';
 import { ForumReportButton } from '@/components/ForumReportButton';
 import { ForumReactions, type ReactionKind } from '@/components/ForumReactions';
 import { ForumSubscribeButton } from '@/components/ForumSubscribeButton';
+import { ArchiveThreadButton } from '@/components/ArchiveThreadButton';
+import { Lock } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +29,7 @@ export default async function ForumThreadPage({
     supabase.from('forum_categories').select('id,slug,title_en,title_ar')
       .eq('slug', params.slug).maybeSingle(),
     supabase.from('forum_thread_with_meta')
-      .select('id,title,body,author_display,anonymous,created_at,edited_at,reply_count,author_id,reaction_counts,my_reactions,i_subscribe')
+      .select('id,title,body,author_display,anonymous,created_at,edited_at,reply_count,author_id,reaction_counts,my_reactions,i_subscribe,archived_at')
       .eq('id', params.threadId).maybeSingle(),
     supabase.from('forum_reply_with_meta')
       .select('id,body,author_display,anonymous,created_at,author_id,reaction_counts,my_reactions')
@@ -78,12 +80,21 @@ export default async function ForumThreadPage({
             initialMine={(thread.my_reactions ?? []) as ReactionKind[]}
             lang={userPrefs.language}
           />
-          <div className="ms-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-2 flex-wrap">
             <ForumSubscribeButton
               threadId={thread.id}
               initialSubscribed={Boolean((thread as { i_subscribe?: boolean }).i_subscribe)}
               lang={userPrefs.language}
             />
+            {/* Wave 31c: Archive toggle — author only. Admins also have
+                a separate path via /admin/forum-reports. */}
+            {thread.author_id === user.id && (
+              <ArchiveThreadButton
+                threadId={thread.id}
+                isArchived={Boolean((thread as { archived_at?: string | null }).archived_at)}
+                lang={userPrefs.language}
+              />
+            )}
             {/* Report button hidden when you're the author — you can't
                 report yourself; deleting your own thread happens elsewhere. */}
             {thread.author_id !== user.id && (
@@ -136,8 +147,26 @@ export default async function ForumThreadPage({
         )}
       </div>
 
-      {/* Compose */}
-      <ForumReplyCompose threadId={thread.id} lang={userPrefs.language} />
+      {/* Compose — Wave 31c: replaced by a locked banner when archived. */}
+      {(thread as { archived_at?: string | null }).archived_at ? (
+        <div className="rounded-2xl border border-peach-200 bg-peach-50/60 p-4 flex items-start gap-3 text-sm text-ink">
+          <span className="h-9 w-9 rounded-xl bg-peach-100 text-peach-700 grid place-items-center shrink-0">
+            <Lock className="h-4 w-4" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-ink-strong">
+              {isAr ? 'هذا الموضوع مؤرشف' : 'This thread is archived'}
+            </div>
+            <p className="text-xs text-ink-muted mt-0.5">
+              {isAr
+                ? 'لا يمكن إضافة ردود جديدة. التفاعلات والبحث لا يزالان يعملان.'
+                : 'No new replies can be posted. Reactions and search still work.'}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <ForumReplyCompose threadId={thread.id} lang={userPrefs.language} />
+      )}
     </PageShell>
   );
 }

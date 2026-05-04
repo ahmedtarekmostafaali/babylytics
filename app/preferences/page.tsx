@@ -4,6 +4,7 @@ import { loadUserPrefs } from '@/lib/user-prefs';
 import { tFor } from '@/lib/i18n';
 import { PreferencesForm } from '@/components/forms/PreferencesForm';
 import { PageShell, PageHeader } from '@/components/PageHeader';
+import { ForumNotificationModeCard } from '@/components/ForumNotificationModeCard';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Preferences' };
@@ -26,6 +27,9 @@ export default async function PreferencesPage() {
         title={t('prefs.title')}
         subtitle={t('prefs.subtitle')} />
       <PreferencesForm initial={prefs} />
+
+      {/* Wave 31b: forum notification mode (instant / digest / off). */}
+      <ForumNotificationModeCard lang={prefs.language} />
     </PageShell>
   );
 }
