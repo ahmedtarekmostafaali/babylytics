@@ -10,6 +10,7 @@ import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
 import { AiRiskBanner } from '@/components/AiRiskBanner';
 import { AiCompanion } from '@/components/AiCompanion';
+import { NutritionCard } from '@/components/NutritionCard';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { ChatBell } from '@/components/ChatBell';
 import { VoiceCommander } from '@/components/VoiceCommander';
@@ -103,11 +104,13 @@ export default async function BabyOverview({
     return (
       <>
         <CycleDashboard babyId={babyId} babyName={baby.name} lang={userPrefs.language} />
-        {/* Wave 35: cycle risk banner — oligomenorrhea, persistent
-            severe pain, persistent heavy flow. */}
+        {/* Wave 35: cycle risk banner. */}
         <AiRiskBanner babyId={babyId} stage="planning" lang={userPrefs.language} />
-        {/* Wave 34: AI companion on cycle profiles. Reads last 3 cycles
-            + BBT + vital signs via ai_companion_context. */}
+        {/* Wave 37: smart nutrition card — Egyptian-cuisine tips. */}
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
+          <NutritionCard babyId={babyId} lang={userPrefs.language} />
+        </div>
+        {/* Wave 34: AI companion on cycle profiles. */}
         <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
           <AiCompanion babyId={babyId} stage="planning" lang={userPrefs.language} />
         </div>
@@ -172,6 +175,12 @@ export default async function BabyOverview({
             threshold signals from BP / glucose / weight / kicks. Empty
             when there's nothing to flag. */}
         <AiRiskBanner babyId={babyId} stage="pregnancy" lang={userPrefs.language} />
+
+        {/* Wave 37: smart nutrition card — Egyptian-cuisine-aware,
+            trimester-aware, Ramadan-aware. */}
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
+          <NutritionCard babyId={babyId} lang={userPrefs.language} />
+        </div>
 
         {/* Wave 33B/34: AI companion — explain a reading or draft a
             doctor question. Strict no-medical-advice prompt;
@@ -1129,6 +1138,11 @@ export default async function BabyOverview({
           urgent), high fever, persistent fever, vomiting frequency,
           red-flag vomiting (projectile/bilious/blood). */}
       <AiRiskBanner babyId={babyId} stage="baby" lang={userPrefs.language} />
+
+      {/* Wave 37: smart nutrition card — age-banded baby food guidance
+          (avocado/banana/sweet potato → soft koshary at 9-12mo →
+          toddler protein), plus safety reminders (no honey under 12mo). */}
+      <NutritionCard babyId={babyId} lang={userPrefs.language} />
 
       {/* Wave 34: AI companion on baby profiles. Reads recent feedings,
           stool, sleep, temperature, measurements via ai_companion_context. */}
