@@ -15,7 +15,7 @@ import {
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
   Stethoscope, CalendarClock, HeartPulse, ScanLine, Activity, Heart, Tv, FlaskConical,
   Smile, MessageCircle, ChevronDown, Settings, ShoppingCart, Megaphone, MessageSquare,
-  ShieldCheck, Upload,
+  ShieldCheck, Upload, Camera,
 } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 
@@ -390,6 +390,8 @@ export function Sidebar() {
                 <NavCategory id="preg_vital" label={t('nav.cat_vital_signs')} icon={Heart} collapsed={collapsed}
                   open={isCatOpen('preg_vital')} onToggle={() => toggleCat('preg_vital')}>
                   <NavItem href={`/babies/${currentBabyId}/prenatal/kicks`}        icon={Activity}    label="Kick counter"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/kicks`) ?? false} collapsed={collapsed} tint="coral" />
+                  {/* Wave 38B: bump journal — pregnancy-only photo journal. */}
+                  <NavItem href={`/babies/${currentBabyId}/prenatal/bump`}         icon={Camera}      label="Bump journal"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/bump`) ?? false} collapsed={collapsed} tint="coral" />
                   <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}    label="Maternal vitals" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />
                   <NavItem href={`/babies/${currentBabyId}/prenatal/symptoms`}     icon={HeartPulse}  label={t('nav.symptoms')} active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/symptoms`) ?? false} collapsed={collapsed} tint="lavender" />
                   <NavItem href={`/babies/${currentBabyId}/vitals`}                icon={Activity}    label={t('nav.vitals')}      active={pathname?.startsWith(`/babies/${currentBabyId}/vitals`) ?? false} collapsed={collapsed} tint="coral" />

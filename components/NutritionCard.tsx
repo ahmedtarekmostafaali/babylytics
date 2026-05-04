@@ -7,7 +7,7 @@
 // hasn't been applied yet).
 
 import { createClient } from '@/lib/supabase/server';
-import { Apple, Sparkles } from 'lucide-react';
+import { Apple, Sparkles, FlaskConical } from 'lucide-react';
 
 interface Tip {
   id:              string;
@@ -18,6 +18,10 @@ interface Tip {
   food_type:       'meal' | 'snack' | 'drink' | 'sweet' | 'side' | 'staple' | 'tip';
   addresses_tags:  string[];
   is_ramadan_pick: boolean;
+  /** Wave 38A: non-null when this tip was up-ranked because the user's
+   *  recent labs flagged a low value matching one of its addresses_tags.
+   *  Format: "low iron, b12 from labs". */
+  boosted_for:     string | null;
 }
 
 const FOOD_EMOJI: Record<Tip['food_type'], string> = {
@@ -103,6 +107,13 @@ export async function NutritionCard({
                     {t.is_ramadan_pick && (
                       <span className="text-[9px] uppercase tracking-wider bg-peach-100 text-peach-700 rounded-full px-1.5 py-0.5 font-bold">
                         {isAr ? 'رمضان' : 'Ramadan'}
+                      </span>
+                    )}
+                    {t.boosted_for && (
+                      <span title={t.boosted_for}
+                        className="inline-flex items-center gap-0.5 text-[9px] uppercase tracking-wider bg-coral-100 text-coral-700 rounded-full px-1.5 py-0.5 font-bold">
+                        <FlaskConical className="h-2.5 w-2.5" />
+                        {isAr ? 'لتحاليلك' : 'For your labs'}
                       </span>
                     )}
                   </div>
