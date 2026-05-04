@@ -9,7 +9,7 @@ import { Comments } from '@/components/Comments';
 import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
 import { PregnancyRiskBanner } from '@/components/PregnancyRiskBanner';
-import { PregnancyCompanion } from '@/components/PregnancyCompanion';
+import { AiCompanion } from '@/components/AiCompanion';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { ChatBell } from '@/components/ChatBell';
 import { VoiceCommander } from '@/components/VoiceCommander';
@@ -100,7 +100,16 @@ export default async function BabyOverview({
       return <PartnerCycleView babyId={babyId} babyName={baby.name} lang={userPrefs.language} />;
     }
     const { CycleDashboard } = await import('@/components/CycleDashboard');
-    return <CycleDashboard babyId={babyId} babyName={baby.name} lang={userPrefs.language} />;
+    return (
+      <>
+        <CycleDashboard babyId={babyId} babyName={baby.name} lang={userPrefs.language} />
+        {/* Wave 34: AI companion on cycle profiles. Reads last 3 cycles
+            + BBT + vital signs via ai_companion_context. */}
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
+          <AiCompanion babyId={babyId} stage="planning" lang={userPrefs.language} />
+        </div>
+      </>
+    );
   }
   if (stage === 'pregnancy') {
     const [{ data: m }, { data: summaryRow }, { data: lastUs }, { data: nextAppt }, { data: pregProf }, hiddenPregnancy, { data: recentSymptoms }] = await Promise.all([
@@ -150,11 +159,11 @@ export default async function BabyOverview({
             Returns nothing when there's nothing to flag. */}
         <PregnancyRiskBanner babyId={babyId} lang={userPrefs.language} />
 
-        {/* Wave 33B: AI companion — explain a reading or draft a doctor
-            question. Strict no-medical-advice prompt; rate-limited to 5
-            calls/day per user. */}
+        {/* Wave 33B/34: AI companion — explain a reading or draft a
+            doctor question. Strict no-medical-advice prompt;
+            rate-limited to 5 calls/day per user across all stages. */}
         <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
-          <PregnancyCompanion babyId={babyId} lang={userPrefs.language} />
+          <AiCompanion babyId={babyId} stage="pregnancy" lang={userPrefs.language} />
         </div>
 
         <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
@@ -1101,6 +1110,10 @@ export default async function BabyOverview({
           </div>
         </div>
       </div>
+
+      {/* Wave 34: AI companion on baby profiles. Reads recent feedings,
+          stool, sleep, temperature, measurements via ai_companion_context. */}
+      <AiCompanion babyId={babyId} stage="baby" lang={userPrefs.language} />
 
       {/* ═══ MOBILE FAB ═══ */}
       <Link href={`/babies/${babyId}/feedings/new`}
