@@ -12,7 +12,7 @@ import {
   Ruler, ScanLine, FileText, BarChart3, Shield, BookOpen,
   CalendarDays, AlertTriangle, MessageCircle, Tv, Smile, FlaskConical,
   Languages, Bell, ClipboardList, ShieldCheck, Megaphone, Droplet,
-  HeartPulse, MessagesSquare, ChevronRight, Mic,
+  HeartPulse, MessagesSquare, ChevronRight, Mic, Upload, Search, Users,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -41,7 +41,7 @@ export default async function Landing() {
       <header className="sticky top-0 z-30 backdrop-blur bg-white/75 border-b border-slate-200/60">
         <div className="max-w-6xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/"><Wordmark size="md" /></Link>
-          <nav className="hidden md:flex items-center gap-7 text-sm text-ink">
+          <nav className="hidden md:flex items-center gap-4 lg:gap-7 text-sm text-ink">
             <a href="#features"   className="hover:text-ink-strong">{t('landing.nav_features')}</a>
             <a href="#pregnancy"  className="hover:text-ink-strong">{t('landing.nav_pregnancy')}</a>
             <a href="#family"     className="hover:text-ink-strong">{t('landing.nav_family')}</a>
@@ -68,7 +68,7 @@ export default async function Landing() {
       </header>
 
       {/* ======= Hero ======= */}
-      <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-12 lg:pt-16 pb-10 grid lg:grid-cols-2 gap-10 items-center">
+      <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-10 sm:pt-12 lg:pt-16 pb-10 grid md:grid-cols-2 gap-6 md:gap-8 lg:gap-10 items-center">
         <div>
           <div className="inline-flex items-center gap-1.5 rounded-full bg-mint-100 text-mint-700 text-[11px] font-bold uppercase tracking-wider px-3 py-1">
             <Sparkles className="h-3 w-3" /> {t('landing.hero_eyebrow')}
@@ -125,7 +125,7 @@ export default async function Landing() {
           <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">{t('landing.feat_h2')}</h2>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
           <CategoryCard tint="coral" title={t('landing.cat_vital_t')} Icon={HeartPulse}>
             <FeatureChip Icon={Milk}        title={t('landing.feat_feed_t')}  sub={t('landing.feat_feed_x')} />
             <FeatureChip Icon={Droplet}     title={t('landing.feat_stool_t')} sub={t('landing.feat_stool_x')} />
@@ -143,6 +143,57 @@ export default async function Landing() {
             <FeatureChip Icon={FlaskConical}  title={t('landing.feat_labs_t')} sub={t('landing.feat_labs_x')} />
             <FeatureChip Icon={Stethoscope}   title={t('landing.feat_docs_t')} sub={t('landing.feat_docs_x')} />
             <FeatureChip Icon={CalendarDays}  title={t('landing.feat_appt_t')} sub={t('landing.feat_appt_x')} />
+          </CategoryCard>
+
+          {/* Wave 32: My Cycle category — covers Waves 12-23 (cycle modes,
+              energy forecast, BBT + fertility, partner mode, pattern engine,
+              Ramadan-aware suggestions). */}
+          <CategoryCard tint="coral"
+            title={lang === 'ar' ? 'دورتي' : 'My cycle'}
+            Icon={Heart}>
+            <FeatureChip Icon={CalendarDays}
+              title={lang === 'ar' ? 'تقويم الدورة + التنبؤ' : 'Cycle calendar + prediction'}
+              sub={lang === 'ar' ? 'تتبعي الدورة، النافذة الخصبة، والتبويض المتوقع.' : 'Period log, fertile window, predicted ovulation.'} />
+            <FeatureChip Icon={Sparkles}
+              title={lang === 'ar' ? 'توقع الطاقة + الأفكار اليومية' : 'Energy forecast + daily ideas'}
+              sub={lang === 'ar' ? 'مزاج وتركيز اليوم + ٢٥+ اقتراح يناسب مرحلتك.' : '25+ MENA-tuned suggestions per phase + today\'s read.'} />
+            <FeatureChip Icon={Thermometer}
+              title={lang === 'ar' ? 'BBT + ضغط الدم' : 'BBT + vital signs'}
+              sub={lang === 'ar' ? 'حرارة الجسم القاعدية، الضغط، السكر — لتتبع الإخصاب.' : 'Basal body temp, BP, glucose — fertility-aware tracking.'} />
+            <FeatureChip Icon={Brain}
+              title={lang === 'ar' ? 'محرك الأنماط الشخصي' : 'Personal pattern engine'}
+              sub={lang === 'ar' ? 'يكتشف الإشارات في دورتك ويقترح أسئلة لطبيبك.' : 'Spots signals in your data + drafts doctor-ready questions.'} />
+            <FeatureChip Icon={Users}
+              title={lang === 'ar' ? 'وضع الشريك' : 'Partner mode'}
+              sub={lang === 'ar' ? 'ملخص لطيف للشريك بدون مشاركة السجلات الكاملة.' : 'A curated summary for your partner — no raw symptom logs.'} />
+            <FeatureChip Icon={Moon}
+              title={lang === 'ar' ? 'رمضان + سياق ثقافي' : 'Ramadan + cultural context'}
+              sub={lang === 'ar' ? 'اقتراحات تحترم الصيام والسياق المحلي.' : 'Suggestions that respect fasting + local context.'} />
+          </CategoryCard>
+
+          {/* Wave 32: Community + Data — covers Waves 19-30 (forum,
+              importer, bulk file upload). */}
+          <CategoryCard tint="brand"
+            title={lang === 'ar' ? 'المجتمع + البيانات' : 'Community + data'}
+            Icon={MessagesSquare}>
+            <FeatureChip Icon={MessagesSquare}
+              title={lang === 'ar' ? 'منتدى مجتمعي خاص' : 'Private community forum'}
+              sub={lang === 'ar' ? 'تحدثي مع نساء في نفس مرحلتك — باسمك أو باسم مستعار.' : 'Talk to women in the same stage — by name or anonymously.'} />
+            <FeatureChip Icon={Bell}
+              title={lang === 'ar' ? 'تفاعلات + متابعة + ملخص يومي' : 'Reactions + follow + daily digest'}
+              sub={lang === 'ar' ? '❤️ 🤗 ✋ 🙏، تابعي المواضيع، إشعار فوري أو ملخص يومي.' : 'Heart / hug / me-too / thanks, follow threads, instant or daily digest.'} />
+            <FeatureChip Icon={Search}
+              title={lang === 'ar' ? 'بحث في المنتدى' : 'Forum search'}
+              sub={lang === 'ar' ? 'بحث كامل النص — يدعم العربي والإنجليزي.' : 'Full-text search — works for English + Arabic queries.'} />
+            <FeatureChip Icon={Apple}
+              title={lang === 'ar' ? 'استيراد Apple Health' : 'Apple Health import'}
+              sub={lang === 'ar' ? '٧ فئات: الدورة، الوزن، BBT، النوم، الضغط، السكر، النبض.' : '7 categories: cycle, weight, BBT, sleep, BP, glucose, HR/SpO₂.'} />
+            <FeatureChip Icon={FileText}
+              title={lang === 'ar' ? 'استيراد جماعي بصيغة CSV' : 'Bulk CSV import'}
+              sub={lang === 'ar' ? 'الصقي تاريخك من أي مصدر — معاينة قبل الحفظ.' : 'Paste history from any source — preview before commit.'} />
+            <FeatureChip Icon={Upload}
+              title={lang === 'ar' ? 'رفع ملفات بالجملة' : 'Bulk file upload'}
+              sub={lang === 'ar' ? 'اسحبي ٥٠ ملف سونار / تحاليل / روشتات دفعة واحدة.' : 'Drop up to 50 ultrasound / lab / prescription files at once.'} />
           </CategoryCard>
 
           <CategoryCard tint="mint" title={t('landing.cat_preg_t')} Icon={Heart}>
@@ -202,7 +253,7 @@ export default async function Landing() {
               <div className="text-[10px] text-ink-muted">{t('landing.mock_gain_iom')}</div>
             </div>
             <div className="mt-2 text-2xl font-bold text-ink-strong">+5.2 kg</div>
-            <div className="relative h-2 rounded-full bg-slate-100 mt-2">
+            <div className="relative h-2 rounded-full bg-slate-100 mt-2 overflow-hidden">
               <div className="absolute inset-y-0 bg-mint-200" style={{ left: '20%', width: '50%' }} />
               <div className="absolute inset-y-0 bg-mint-400" style={{ left: '28%', width: '14%' }} />
               <div className="absolute -top-0.5 h-3 w-1 rounded-full bg-coral-600 shadow-sm" style={{ left: '34%' }} />

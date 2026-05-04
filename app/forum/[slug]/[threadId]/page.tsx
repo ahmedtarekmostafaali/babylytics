@@ -71,8 +71,10 @@ export default async function ForumThreadPage({
 
         {/* Wave 24: reactions row. Wave 30: + Follow toggle on the
             right. Authors are auto-subscribed by trigger but can still
-            mute their own thread by tapping "Following". */}
-        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-3 flex-wrap">
+            mute their own thread by tapping "Following".
+            Wave 32: stack reactions over actions on mobile so neither
+            row gets crushed. */}
+        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3 sm:flex-wrap">
           <ForumReactions
             targetType="thread"
             targetId={thread.id}
@@ -80,7 +82,7 @@ export default async function ForumThreadPage({
             initialMine={(thread.my_reactions ?? []) as ReactionKind[]}
             lang={userPrefs.language}
           />
-          <div className="ms-auto flex items-center gap-2 flex-wrap">
+          <div className="sm:ms-auto flex items-center gap-2 flex-wrap">
             <ForumSubscribeButton
               threadId={thread.id}
               initialSubscribed={Boolean((thread as { i_subscribe?: boolean }).i_subscribe)}

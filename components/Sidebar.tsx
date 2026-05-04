@@ -15,7 +15,7 @@ import {
   LogOut, Menu, X, ChevronLeft, Plus, Sparkles, ChevronsUpDown, Thermometer, Syringe, Moon,
   Stethoscope, CalendarClock, HeartPulse, ScanLine, Activity, Heart, Tv, FlaskConical,
   Smile, MessageCircle, ChevronDown, Settings, ShoppingCart, Megaphone, MessageSquare,
-  ShieldCheck,
+  ShieldCheck, Upload,
 } from 'lucide-react';
 import { useT } from '@/lib/i18n/client';
 
@@ -227,7 +227,7 @@ export function Sidebar() {
           )}
         </Link>
         <button
-          className="ml-auto lg:hidden h-8 w-8 grid place-items-center rounded-md hover:bg-slate-100"
+          className="ms-auto lg:hidden h-8 w-8 grid place-items-center rounded-md hover:bg-slate-100"
           onClick={() => setMobileOpen(false)}
           aria-label="Close menu"
         >
@@ -368,6 +368,8 @@ export function Sidebar() {
                   {canSee('files')            && <NavItem href={`/babies/${currentBabyId}/ocr`}             icon={FileText}   label={t('nav.files')} active={(pathname?.startsWith(`/babies/${currentBabyId}/ocr`) || pathname?.startsWith(`/babies/${currentBabyId}/files`) || pathname?.startsWith(`/babies/${currentBabyId}/upload`)) ?? false} collapsed={collapsed} tint="coral" />}
                   {canSee('medical_profile')  && <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label={t('nav.medical_profile')} active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />}
                   {canSee('shopping')         && <NavItem href={`/babies/${currentBabyId}/shopping`}        icon={ShoppingCart} label={t('nav.shopping')} active={pathname?.startsWith(`/babies/${currentBabyId}/shopping`) ?? false} collapsed={collapsed} tint="mint" />}
+                  {/* Wave 32: Bulk import was an orphan feature — surface in records. */}
+                  {isParent && <NavItem href={`/babies/${currentBabyId}/import/csv`} icon={Upload} label="Bulk import" active={pathname?.startsWith(`/babies/${currentBabyId}/import`) ?? false} collapsed={collapsed} tint="peach" />}
                 </NavCategory>
               </>
             )}
@@ -400,6 +402,8 @@ export function Sidebar() {
                   <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label={t('nav.medical_profile')} active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />
                   {canExport && <NavItem href={`/babies/${currentBabyId}/reports`} icon={BarChart3} label={t('nav.reports')} active={pathname?.startsWith(`/babies/${currentBabyId}/reports`) ?? false} collapsed={collapsed} tint="peach" />}
                   <NavItem href={`/babies/${currentBabyId}/shopping`}        icon={ShoppingCart} label={t('nav.shopping')} active={pathname?.startsWith(`/babies/${currentBabyId}/shopping`) ?? false} collapsed={collapsed} tint="mint" />
+                  {/* Wave 32: Bulk import. */}
+                  {isParent && <NavItem href={`/babies/${currentBabyId}/import/csv`} icon={Upload} label="Bulk import" active={pathname?.startsWith(`/babies/${currentBabyId}/import`) ?? false} collapsed={collapsed} tint="peach" />}
                 </NavCategory>
               </>
             )}
@@ -446,6 +450,8 @@ export function Sidebar() {
                   <NavItem href={`/babies/${currentBabyId}/medical-profile`} icon={HeartPulse} label={t('nav.medical_profile')} active={pathname?.startsWith(`/babies/${currentBabyId}/medical-profile`) ?? false} collapsed={collapsed} tint="lavender" />
                   {canExport && <NavItem href={`/babies/${currentBabyId}/reports`} icon={BarChart3} label={t('nav.reports')} active={pathname?.startsWith(`/babies/${currentBabyId}/reports`) ?? false} collapsed={collapsed} tint="peach" />}
                   <NavItem href={`/babies/${currentBabyId}/shopping`}        icon={ShoppingCart} label={t('nav.shopping')} active={pathname?.startsWith(`/babies/${currentBabyId}/shopping`) ?? false} collapsed={collapsed} tint="mint" />
+                  {/* Wave 32: Bulk import. */}
+                  {isParent && <NavItem href={`/babies/${currentBabyId}/import/csv`} icon={Upload} label="Bulk import" active={pathname?.startsWith(`/babies/${currentBabyId}/import`) ?? false} collapsed={collapsed} tint="peach" />}
                 </NavCategory>
               </>
             )}

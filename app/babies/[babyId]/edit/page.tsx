@@ -187,7 +187,7 @@ export default async function EditBaby({ params }: { params: { babyId: string } 
           </Link>
         } />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Form. Wave 7: Features tab is rendered inline beside Notes via
             the featuresPanel prop, no longer a separate full-width section. */}
         <BabyProfileForm

@@ -283,7 +283,7 @@ export function CsvBulkImporter({
         <h3 className="text-sm font-bold uppercase tracking-wider text-ink-muted mb-3">
           {isAr ? '١. اختاري الفئة' : '1. Pick a category'}
         </h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
           {CATEGORIES.map(c => {
             const active = c.key === catKey;
             const Icon = c.icon;

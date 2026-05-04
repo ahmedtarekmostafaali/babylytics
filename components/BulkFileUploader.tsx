@@ -301,7 +301,7 @@ export function BulkFileUploader({
                 </div>
                 <select value={f.kind} onChange={e => setKind(f.id, e.target.value as FileKind)}
                   disabled={f.status !== 'pending' || running}
-                  className="text-xs rounded-md border border-slate-200 bg-white px-2 py-1 max-w-[120px] disabled:opacity-50">
+                  className="text-xs rounded-md border border-slate-200 bg-white px-2 py-1 max-w-[100px] sm:max-w-[140px] shrink-0 disabled:opacity-50">
                   {(Object.keys(KIND_LABEL) as FileKind[]).map(k => (
                     <option key={k} value={k}>{isAr ? KIND_LABEL[k].ar : KIND_LABEL[k].en}</option>
                   ))}
