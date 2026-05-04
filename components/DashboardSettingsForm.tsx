@@ -7,30 +7,42 @@ import { Button } from '@/components/ui/Button';
 import { Check, Save, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  OVERVIEW_WIDGETS, PREGNANCY_DASHBOARD_WIDGETS, DAILY_REPORT_WIDGETS, FULL_REPORT_WIDGETS,
+  OVERVIEW_WIDGETS, PREGNANCY_DASHBOARD_WIDGETS, CYCLE_DASHBOARD_WIDGETS,
+  DAILY_REPORT_WIDGETS, FULL_REPORT_WIDGETS,
   type WidgetDef, type WidgetScope,
 } from '@/lib/dashboard-prefs';
 
-const SCOPES: { id: WidgetScope; label: string; widgets: WidgetDef[] }[] = [
-  { id: 'overview',            label: 'Overview',     widgets: OVERVIEW_WIDGETS },
-  { id: 'pregnancy_dashboard', label: 'Pregnancy',    widgets: PREGNANCY_DASHBOARD_WIDGETS },
-  { id: 'daily_report',        label: 'Daily report', widgets: DAILY_REPORT_WIDGETS },
-  { id: 'full_report',         label: 'Full report',  widgets: FULL_REPORT_WIDGETS },
+type ProfileStage = 'planning' | 'pregnancy' | 'baby';
+
+const ALL_SCOPES: { id: WidgetScope; label: string; widgets: WidgetDef[]; stages: ProfileStage[] }[] = [
+  { id: 'overview',            label: 'Overview',          widgets: OVERVIEW_WIDGETS,            stages: ['baby'] },
+  { id: 'pregnancy_dashboard', label: 'Pregnancy',         widgets: PREGNANCY_DASHBOARD_WIDGETS, stages: ['pregnancy'] },
+  { id: 'cycle_dashboard',     label: 'Cycle',             widgets: CYCLE_DASHBOARD_WIDGETS,     stages: ['planning'] },
+  { id: 'daily_report',        label: 'Daily report',      widgets: DAILY_REPORT_WIDGETS,        stages: ['planning','pregnancy','baby'] },
+  { id: 'full_report',         label: 'Full report',       widgets: FULL_REPORT_WIDGETS,         stages: ['planning','pregnancy','baby'] },
 ];
 
 export function DashboardSettingsForm({
-  babyId, initialHidden,
+  babyId, initialHidden, profileStage = 'baby',
 }: {
   babyId: string;
   initialHidden: Record<WidgetScope, string[]>;
+  /** Wave 40B: which lifecycle stage this profile is in. Tabs are
+   *  filtered against this so a baby profile doesn't show a
+   *  Pregnancy / Cycle tab and vice versa. */
+  profileStage?: ProfileStage;
 }) {
   const router = useRouter();
-  const [activeScope, setActiveScope] = useState<WidgetScope>('overview');
+  // Wave 40B: scope tabs filtered to the active profile's stage.
+  const SCOPES = ALL_SCOPES.filter(s => s.stages.includes(profileStage));
+  const defaultScope: WidgetScope = SCOPES[0]?.id ?? 'overview';
+  const [activeScope, setActiveScope] = useState<WidgetScope>(defaultScope);
   const [hidden, setHidden] = useState<Record<WidgetScope, Set<string>>>(() => ({
-    overview:            new Set(initialHidden.overview),
-    pregnancy_dashboard: new Set(initialHidden.pregnancy_dashboard),
-    daily_report:        new Set(initialHidden.daily_report),
-    full_report:         new Set(initialHidden.full_report),
+    overview:            new Set(initialHidden.overview ?? []),
+    pregnancy_dashboard: new Set(initialHidden.pregnancy_dashboard ?? []),
+    cycle_dashboard:     new Set(initialHidden.cycle_dashboard ?? []),
+    daily_report:        new Set(initialHidden.daily_report ?? []),
+    full_report:         new Set(initialHidden.full_report ?? []),
   }));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg]       = useState<string | null>(null);

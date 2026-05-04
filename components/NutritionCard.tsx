@@ -62,9 +62,42 @@ export async function NutritionCard({
 }) {
   const isAr = lang === 'ar';
   const supabase = createClient();
-  const { data } = await supabase.rpc('nutrition_suggestions', { p_baby: babyId, p_limit: 3 });
+  const { data, error } = await supabase.rpc('nutrition_suggestions', { p_baby: babyId, p_limit: 3 });
   const tips = (data ?? []) as Tip[];
-  if (tips.length === 0) return null;
+
+  // Wave 40C: visible empty state when the tips table is empty or the
+  // RPC errored. Previously rendered nothing, which made the card look
+  // missing — users couldn't tell whether the migration had been
+  // applied. Now there's a card placeholder pointing at the missing
+  // step, so the path forward is obvious.
+  if (tips.length === 0) {
+    return (
+      <section className="rounded-2xl border border-mint-200 bg-gradient-to-br from-mint-50 via-white to-peach-50 p-5 shadow-card">
+        <header className="flex items-center gap-3 mb-2">
+          <span className="h-10 w-10 rounded-xl bg-mint-100 text-mint-700 grid place-items-center shrink-0">
+            <Apple className="h-5 w-5" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-ink-strong">
+              {isAr ? 'تغذية ذكية اليوم' : 'Smart nutrition today'}
+            </h3>
+            <p className="text-xs text-ink-muted">
+              {isAr
+                ? 'اقتراحات تناسب مرحلتك من المطبخ المصري'
+                : 'Egyptian-cuisine picks tuned to your stage'}
+            </p>
+          </div>
+        </header>
+        <div className="rounded-xl border border-dashed border-mint-300 bg-white/60 p-4 text-xs text-ink-muted leading-relaxed">
+          {isAr
+            ? 'لا توجد اقتراحات حالياً. إذا كنتِ المسؤول، طبّقي migration رقم 080 على Supabase لتفعيل قاعدة بيانات النصائح.'
+            : (error?.message
+                ? `Couldn't load suggestions (${error.message}). If you're the admin, make sure sql/080_wave37_nutrition_engine.sql has been applied in Supabase.`
+                : 'No suggestions to show yet. If you\'re the admin, apply sql/080_wave37_nutrition_engine.sql in Supabase to seed the tip catalogue.')}
+        </div>
+      </section>
+    );
+  }
 
   const hasRamadanPick = tips.some(t => t.is_ramadan_pick);
 

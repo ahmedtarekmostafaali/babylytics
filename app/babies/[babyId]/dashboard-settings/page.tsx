@@ -15,15 +15,25 @@ export default async function DashboardSettings({ params }: { params: { babyId: 
   const { data: { user } } = await supabase.auth.getUser();
   const userId = user?.id ?? '';
 
+  // Wave 40B: load the baby's stage so we can filter the prefs tabs.
+  const { data: babyRow } = await supabase.from('babies')
+    .select('lifecycle_stage')
+    .eq('id', params.babyId).maybeSingle();
+  const stageRaw = (babyRow as { lifecycle_stage?: string | null } | null)?.lifecycle_stage ?? null;
+  const profileStage: 'planning' | 'pregnancy' | 'baby' =
+    stageRaw === 'planning'  ? 'planning'  :
+    stageRaw === 'pregnancy' ? 'pregnancy' :
+                               'baby';
+
   const { data: rows } = await supabase.from('dashboard_preferences')
     .select('scope,hidden_widgets')
     .eq('user_id', userId)
     .eq('baby_id', params.babyId);
 
-  const initialHidden: Record<'overview'|'pregnancy_dashboard'|'daily_report'|'full_report', string[]> = {
-    overview: [], pregnancy_dashboard: [], daily_report: [], full_report: [],
+  const initialHidden: Record<'overview'|'pregnancy_dashboard'|'cycle_dashboard'|'daily_report'|'full_report', string[]> = {
+    overview: [], pregnancy_dashboard: [], cycle_dashboard: [], daily_report: [], full_report: [],
   };
-  for (const r of (rows ?? []) as { scope: 'overview'|'pregnancy_dashboard'|'daily_report'|'full_report'; hidden_widgets: string[] }[]) {
+  for (const r of (rows ?? []) as { scope: 'overview'|'pregnancy_dashboard'|'cycle_dashboard'|'daily_report'|'full_report'; hidden_widgets: string[] }[]) {
     initialHidden[r.scope] = r.hidden_widgets;
   }
 
@@ -46,7 +56,11 @@ export default async function DashboardSettings({ params }: { params: { babyId: 
       </div>
 
       <Card><CardContent className="py-6">
-        <DashboardSettingsForm babyId={params.babyId} initialHidden={initialHidden} />
+        <DashboardSettingsForm
+          babyId={params.babyId}
+          initialHidden={initialHidden}
+          profileStage={profileStage}
+        />
       </CardContent></Card>
     </PageShell>
   );

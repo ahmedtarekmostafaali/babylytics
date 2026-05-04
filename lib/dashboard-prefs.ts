@@ -4,7 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export type WidgetScope = 'overview' | 'pregnancy_dashboard' | 'daily_report' | 'full_report';
+export type WidgetScope = 'overview' | 'pregnancy_dashboard' | 'cycle_dashboard' | 'daily_report' | 'full_report';
 
 export type WidgetDef = {
   id: string;
@@ -73,6 +73,22 @@ export const PREGNANCY_DASHBOARD_WIDGETS: WidgetDef[] = [
   { id: 'quick_actions',     label: 'Quick actions',        description: 'Chips for log visit / scan / vitals / meds / profile.',                     group: 'Actions' },
 ];
 
+// Wave 40B: cycle profile widgets — mirrors what CycleDashboard +
+// the new wave-37/38 cards render on a planning-stage profile.
+export const CYCLE_DASHBOARD_WIDGETS: WidgetDef[] = [
+  { id: 'cycle_baseline',     label: 'Cycle baseline',        description: 'Median cycle length + period length + regularity score.',          group: 'Header' },
+  { id: 'phase_today',        label: 'Today\'s phase',        description: 'Where you are in your current cycle (period / follicular / fertile / luteal).', group: 'KPIs' },
+  { id: 'next_period',        label: 'Next period estimate',  description: 'Predicted next-period date + days countdown.',                      group: 'KPIs' },
+  { id: 'energy_forecast',    label: 'Energy forecast',       description: 'Today\'s energy / focus / mood read for your phase.',              group: 'KPIs' },
+  { id: 'red_flags',          label: 'Red-flag patterns',     description: 'Pattern engine signals (long cycles, persistent severe pain, heavy flow).', group: 'Insights' },
+  { id: 'doctor_questions',   label: 'Doctor-ready questions', description: 'Auto-drafted questions to bring to your OB-GYN visit.',           group: 'Insights' },
+  { id: 'daily_ideas',        label: 'Ideas for today',       description: 'Phase + mode tuned suggestions (lifestyle).',                     group: 'Suggestions' },
+  { id: 'nutrition_card',     label: 'Smart nutrition',       description: 'Egyptian-cuisine tips tuned to your stage + Ramadan + labs.',     group: 'Suggestions' },
+  { id: 'ai_companion',       label: 'AI companion',          description: 'Explain your data or draft an OB-GYN question.',                  group: 'Suggestions' },
+  { id: 'ramadan_card',       label: 'Ramadan card',          description: 'Cultural-context guidance during the holy month.',                group: 'Cultural' },
+  { id: 'consultation_cta',   label: 'Consultation upsell',   description: 'Book a session with a connected practitioner.',                   group: 'Care' },
+];
+
 export const DAILY_REPORT_WIDGETS: WidgetDef[] = [
   { id: 'kpi_feeds',          label: 'Feeds total + count',   description: 'Total ml fed + count + average.',            group: 'KPIs' },
   { id: 'kpi_target',         label: 'Daily target',          description: 'Recommended ml/day based on weight.',        group: 'KPIs' },
@@ -121,6 +137,7 @@ export const FULL_REPORT_WIDGETS: WidgetDef[] = [
 export function widgetCatalog(scope: WidgetScope): WidgetDef[] {
   if (scope === 'overview')            return OVERVIEW_WIDGETS;
   if (scope === 'pregnancy_dashboard') return PREGNANCY_DASHBOARD_WIDGETS;
+  if (scope === 'cycle_dashboard')     return CYCLE_DASHBOARD_WIDGETS;
   if (scope === 'daily_report')        return DAILY_REPORT_WIDGETS;
   return FULL_REPORT_WIDGETS;
 }

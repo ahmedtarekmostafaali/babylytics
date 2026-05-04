@@ -390,8 +390,6 @@ export function Sidebar() {
                 <NavCategory id="preg_vital" label={t('nav.cat_vital_signs')} icon={Heart} collapsed={collapsed}
                   open={isCatOpen('preg_vital')} onToggle={() => toggleCat('preg_vital')}>
                   <NavItem href={`/babies/${currentBabyId}/prenatal/kicks`}        icon={Activity}    label="Kick counter"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/kicks`) ?? false} collapsed={collapsed} tint="coral" />
-                  {/* Wave 38B: bump journal — pregnancy-only photo journal. */}
-                  <NavItem href={`/babies/${currentBabyId}/prenatal/bump`}         icon={Camera}      label="Bump journal"    active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/bump`) ?? false} collapsed={collapsed} tint="coral" />
                   <NavItem href={`/babies/${currentBabyId}/prenatal/maternal-vitals`} icon={Heart}    label="Maternal vitals" active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/maternal-vitals`) ?? false} collapsed={collapsed} tint="peach" />
                   <NavItem href={`/babies/${currentBabyId}/prenatal/symptoms`}     icon={HeartPulse}  label={t('nav.symptoms')} active={pathname?.startsWith(`/babies/${currentBabyId}/prenatal/symptoms`) ?? false} collapsed={collapsed} tint="lavender" />
                   <NavItem href={`/babies/${currentBabyId}/vitals`}                icon={Activity}    label={t('nav.vitals')}      active={pathname?.startsWith(`/babies/${currentBabyId}/vitals`) ?? false} collapsed={collapsed} tint="coral" />
@@ -435,6 +433,8 @@ export function Sidebar() {
                   <NavItem href={`/babies/${currentBabyId}/medications/stock`} icon={Pill}    label="Medication stock"   active={pathname?.startsWith(`/babies/${currentBabyId}/medications/stock`) ?? false} collapsed={collapsed} tint="mint" />
                   <NavItem href={`/babies/${currentBabyId}/vaccinations`}  icon={Syringe}     label={t('nav.vaccinations')} active={pathname?.startsWith(`/babies/${currentBabyId}/vaccinations`) ?? false} collapsed={collapsed} tint="lavender" />
                   <NavItem href={`/babies/${currentBabyId}/labs`}          icon={FlaskConical} label={t('nav.labs_scans')}  active={pathname?.startsWith(`/babies/${currentBabyId}/labs`) ?? false} collapsed={collapsed} tint="peach" />
+                  {/* Wave 40A: pumping log — postpartum mom milk pumping. */}
+                  <NavItem href={`/babies/${currentBabyId}/pumping`}       icon={Droplet}     label="Pumping log"           active={pathname?.startsWith(`/babies/${currentBabyId}/pumping`) ?? false} collapsed={collapsed} tint="coral" />
                   {isParent && <NavItem href={`/babies/${currentBabyId}/doctors`} icon={CalendarClock} label={t('nav.appointments')} active={pathname?.startsWith(`/babies/${currentBabyId}/doctors`) ?? false} collapsed={collapsed} tint="brand" />}
                 </NavCategory>
 
