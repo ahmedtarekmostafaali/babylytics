@@ -11,6 +11,7 @@ import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
 import { AiRiskBanner } from '@/components/AiRiskBanner';
 import { AiCompanion } from '@/components/AiCompanion';
 import { NutritionCard } from '@/components/NutritionCard';
+import { BabyTonightCard } from '@/components/BabyTonightCard';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { ChatBell } from '@/components/ChatBell';
 import { VoiceCommander } from '@/components/VoiceCommander';
@@ -1133,6 +1134,11 @@ export default async function BabyOverview({
           </div>
         </div>
       </div>
+
+      {/* Wave 39: baby co-pilot — predicted next wake / nap window,
+          sleep regression detection, overtired + growth spurt patterns.
+          Shifts the page from logbook to co-pilot. */}
+      <BabyTonightCard babyId={babyId} lang={userPrefs.language} />
 
       {/* Wave 35: baby risk banner — fever rules tuned to age (under-3mo
           urgent), high fever, persistent fever, vomiting frequency,
