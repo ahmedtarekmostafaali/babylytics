@@ -49,6 +49,11 @@ export default async function DashboardPage() {
   const userPrefs = await loadUserPrefs(supabase);
   const t = tFor(userPrefs.language);
 
+  // Wave 36B: bump activity stamp for admin analytics. Throttled
+  // server-side to ≥1 minute between writes; promotes to a session
+  // start when the previous bump was >30 minutes ago. Fire-and-forget.
+  if (user) void supabase.rpc('bump_user_activity');
+
   const [{ data: babies }, { data: unread }, { data: profile }] = await Promise.all([
     supabase.from('babies')
       .select('id,name,dob,gender,birth_weight_kg,avatar_path')

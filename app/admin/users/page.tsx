@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { fmtDate, fmtRelative } from '@/lib/dates';
-import { Search, Baby, ShieldCheck, HeartPulse, Activity } from 'lucide-react';
+import { Search, Baby, ShieldCheck, HeartPulse, Activity, LogIn, Clock, Sparkles } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +25,11 @@ type Row = {
   babies: BabySummary[];
   last_activity: string | null;
   recent_log_count: number;
+  /** Wave 36B */
+  last_login_at:  string | null;
+  last_seen_at:   string | null;
+  ai_calls_today: number;
+  ai_calls_total: number;
   is_admin: boolean;
   total_count: number;
 };
@@ -152,6 +157,25 @@ export default async function AdminUsers({
                       <Activity className="h-3.5 w-3.5 text-mint-500" /> {r.recent_log_count.toLocaleString()}
                     </span>
                   } />
+                  {/* Wave 36B: session + AI tracking. */}
+                  <Stat label="Last login" value={
+                    <span className="inline-flex items-center gap-1 justify-end">
+                      <LogIn className="h-3.5 w-3.5 text-brand-500" />
+                      {r.last_login_at ? fmtRelative(r.last_login_at) : '—'}
+                    </span>
+                  } sub={r.last_login_at ? fmtDate(r.last_login_at) : 'never'} />
+                  <Stat label="Last seen" value={
+                    <span className="inline-flex items-center gap-1 justify-end">
+                      <Clock className="h-3.5 w-3.5 text-lavender-500" />
+                      {r.last_seen_at ? fmtRelative(r.last_seen_at) : '—'}
+                    </span>
+                  } />
+                  <Stat label="AI calls" value={
+                    <span className="inline-flex items-center gap-1 justify-end">
+                      <Sparkles className="h-3.5 w-3.5 text-coral-500" />
+                      {r.ai_calls_today}/{r.ai_calls_total}
+                    </span>
+                  } sub="today / total" />
                 </div>
               </div>
             </li>

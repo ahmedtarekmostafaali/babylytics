@@ -115,6 +115,17 @@ export default async function BabyOverview({
     );
   }
   if (stage === 'pregnancy') {
+    // Wave 36C: partner caregivers get a curated PartnerPregnancyView
+    // — friendly summary, no raw logs. Mirrors the Wave 16 cycle path.
+    {
+      const { data: { user: u2 } } = await supabase.auth.getUser();
+      const { data: roleRow2 } = await supabase.from('baby_users')
+        .select('role').eq('baby_id', babyId).eq('user_id', u2?.id ?? '').maybeSingle();
+      if (roleRow2?.role === 'partner') {
+        const { PartnerPregnancyView } = await import('@/components/PartnerPregnancyView');
+        return <PartnerPregnancyView babyId={babyId} lang={userPrefs.language} />;
+      }
+    }
     const [{ data: m }, { data: summaryRow }, { data: lastUs }, { data: nextAppt }, { data: pregProf }, hiddenPregnancy, { data: recentSymptoms }] = await Promise.all([
       supabase.from('baby_users').select('role').eq('baby_id', babyId).eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '').maybeSingle(),
       supabase.rpc('prenatal_summary', { p_baby: babyId }).single(),

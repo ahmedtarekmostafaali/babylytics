@@ -23,8 +23,15 @@ export default async function CsvImportPage({ params }: { params: { babyId: stri
   }
 
   const { data: baby } = await supabase.from('babies')
-    .select('id,name').eq('id', params.babyId).single();
+    .select('id,name,lifecycle_stage').eq('id', params.babyId).single();
   if (!baby) notFound();
+  // Wave 36A: bucket the lifecycle stage into the three CSV-relevant
+  // groups (newborn/infant/toddler/child all collapse to 'baby').
+  const stageRaw = (baby as { lifecycle_stage?: string | null }).lifecycle_stage ?? null;
+  const profileStage: 'planning' | 'pregnancy' | 'baby' =
+    stageRaw === 'planning'  ? 'planning'  :
+    stageRaw === 'pregnancy' ? 'pregnancy' :
+                                'baby';
 
   const userPrefs = await loadUserPrefs(supabase);
   const isAr = userPrefs.language === 'ar';
@@ -41,7 +48,7 @@ export default async function CsvImportPage({ params }: { params: { babyId: stri
           ? 'الصقي تاريخ الدورة، الوزن، الضغط، السكر، أو أي مؤشر حيوي. أعيدي الاستيراد بأمان — التكرارات لن تحدث.'
           : 'Backfill cycle history, weight, BP, glucose, or any vital signs. Safe to re-run — duplicates are detected and skipped.'} />
 
-      <CsvBulkImporter babyId={params.babyId} lang={userPrefs.language} />
+      <CsvBulkImporter babyId={params.babyId} lang={userPrefs.language} profileStage={profileStage} />
 
       {/* Wave 28: cross-link to bulk file upload for non-tabular data
           (PDFs, ultrasound images, lab reports). */}

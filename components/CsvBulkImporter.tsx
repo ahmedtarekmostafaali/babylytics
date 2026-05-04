@@ -195,21 +195,42 @@ const CATEGORIES: CategoryDef[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
+/** Wave 36A: per-stage category whitelist. The full CATEGORIES array
+ *  is shared, but each profile sees only the rows that make sense for
+ *  its lifecycle stage — a baby profile shouldn't be offered "cycle
+ *  history", a cycle profile usually doesn't track full vitals
+ *  (BP+HR+SpO2 belongs more to pregnancy/baby contexts), etc. */
+const CATEGORIES_BY_STAGE: Record<'planning' | 'pregnancy' | 'baby', CatKey[]> = {
+  planning:  ['cycles', 'bbt', 'weight', 'sleep', 'bp', 'glucose'],
+  pregnancy: ['weight', 'bbt', 'sleep', 'bp', 'glucose', 'vitals'],
+  baby:      ['weight', 'sleep', 'bp', 'glucose', 'vitals'],
+};
+
 export function CsvBulkImporter({
-  babyId, lang = 'en',
+  babyId, lang = 'en', profileStage = 'planning',
 }: {
   babyId: string;
   lang?: 'en' | 'ar';
+  /** Which lifecycle stage the profile is in — controls which import
+   *  categories are visible. Defaults to 'planning' for back-compat
+   *  with any callers that haven't been updated yet. */
+  profileStage?: 'planning' | 'pregnancy' | 'baby';
 }) {
   const router = useRouter();
   const isAr = lang === 'ar';
-  const [catKey, setCatKey] = useState<CatKey>('cycles');
+  // Pre-filter the catalogue to just the stage-relevant categories.
+  const visibleCategories = CATEGORIES.filter(c =>
+    CATEGORIES_BY_STAGE[profileStage].includes(c.key)
+  );
+  const defaultCatKey = visibleCategories[0]?.key ?? 'weight';
+  const [catKey, setCatKey] = useState<CatKey>(defaultCatKey);
   const [csv, setCsv]       = useState('');
   const [stage, setStage]   = useState<'idle' | 'importing' | 'done'>('idle');
   const [err, setErr]       = useState<string | null>(null);
   const [imported, setImported] = useState(0);
 
-  const cat = CATEGORIES.find(c => c.key === catKey)!;
+  const cat = visibleCategories.find(c => c.key === catKey)
+    ?? CATEGORIES.find(c => c.key === catKey)!;
 
   // Parse + validate live so the preview reflects the textarea.
   const parsed = useMemo(() => parseAndBuild(csv, cat), [csv, cat]);
@@ -284,7 +305,7 @@ export function CsvBulkImporter({
           {isAr ? '١. اختاري الفئة' : '1. Pick a category'}
         </h3>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-          {CATEGORIES.map(c => {
+          {visibleCategories.map(c => {
             const active = c.key === catKey;
             const Icon = c.icon;
             return (
