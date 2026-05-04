@@ -8,6 +8,8 @@ import { Sparkline } from '@/components/Sparkline';
 import { Comments } from '@/components/Comments';
 import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
+import { PregnancyRiskBanner } from '@/components/PregnancyRiskBanner';
+import { PregnancyCompanion } from '@/components/PregnancyCompanion';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { ChatBell } from '@/components/ChatBell';
 import { VoiceCommander } from '@/components/VoiceCommander';
@@ -143,6 +145,18 @@ export default async function BabyOverview({
           lang={userPrefs.language}
           recentSymptoms={symptoms}
         />
+        {/* Wave 33A: pregnancy risk-pattern banner. Server-renders any
+            ACOG/ADA-threshold signals from BP / glucose / weight / kicks.
+            Returns nothing when there's nothing to flag. */}
+        <PregnancyRiskBanner babyId={babyId} lang={userPrefs.language} />
+
+        {/* Wave 33B: AI companion — explain a reading or draft a doctor
+            question. Strict no-medical-advice prompt; rate-limited to 5
+            calls/day per user. */}
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
+          <PregnancyCompanion babyId={babyId} lang={userPrefs.language} />
+        </div>
+
         <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
           <ConsultationComingSoon stage="pregnancy" />
         </div>
