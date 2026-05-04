@@ -1165,12 +1165,10 @@ export default async function BabyOverview({
           stool, sleep, temperature, measurements via ai_companion_context. */}
       <AiCompanion babyId={babyId} stage="baby" lang={userPrefs.language} />
 
-      {/* ═══ MOBILE FAB ═══ */}
-      <Link href={`/babies/${babyId}/feedings/new`}
-        className="md:hidden fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-gradient-to-br from-coral-400 to-coral-600 text-white grid place-items-center shadow-panel hover:scale-105 transition"
-        aria-label="Log a feeding">
-        <Plus className="h-6 w-6" />
-      </Link>
+      {/* Wave 43: removed the bottom-right "Log feeding" FAB — its job
+          is now done by the centered Quick Log button in the new
+          MobileBottomNav, which is always visible across the app. The
+          old FAB collided with the bottom bar anyway. */}
 
       {/* ═══ CAREGIVER NOTES ═══ */}
       <Comments babyId={babyId} target="babies" targetId={babyId}
