@@ -6,6 +6,7 @@ import { loadUserPrefs } from '@/lib/user-prefs';
 import { fmtRelative } from '@/lib/dates';
 import { MessageSquare, EyeOff } from 'lucide-react';
 import { ForumThreadCompose } from '@/components/ForumThreadCompose';
+import { ForumSearchBar } from '@/components/ForumSearchBar';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,9 @@ export default async function CategoryThreads({ params }: { params: { slug: stri
         title={isAr ? cat.title_ar : cat.title_en}
         subtitle={(isAr ? cat.description_ar : cat.description_en) ?? undefined}
       />
+
+      {/* Wave 29: search bar scoped to this category. */}
+      <ForumSearchBar categorySlug={cat.slug} lang={userPrefs.language} />
 
       <ForumThreadCompose categorySlug={cat.slug} lang={userPrefs.language} />
 

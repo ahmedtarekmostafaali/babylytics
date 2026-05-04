@@ -5,6 +5,7 @@ import { PageShell, PageHeader } from '@/components/PageHeader';
 import { loadUserPrefs } from '@/lib/user-prefs';
 import { Heart, Baby as BabyIcon, MessageCircle, Sparkles } from 'lucide-react';
 import { ForumUnreadBanner, type UnreadForumReply } from '@/components/ForumUnreadBanner';
+import { ForumSearchBar } from '@/components/ForumSearchBar';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Forum' };
@@ -109,6 +110,9 @@ export default async function ForumIndex() {
           ? 'تحدثي مع غيرك من النساء في نفس مرحلتك. كل منشور لكِ تختارين هل يظهر باسمك أم باسم مستعار.'
           : 'Talk to other women going through the same stage. Every post is yours to share with your name or a pseudonym.'}
       />
+
+      {/* Wave 29: global search bar. */}
+      <ForumSearchBar lang={userPrefs.language} />
 
       {/* Wave 19c: unread reply notifications. Hidden when caught up. */}
       <ForumUnreadBanner items={unreadItems} lang={userPrefs.language} />
