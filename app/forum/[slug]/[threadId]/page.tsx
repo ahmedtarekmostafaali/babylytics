@@ -7,6 +7,7 @@ import { EyeOff } from 'lucide-react';
 import { ForumReplyCompose } from '@/components/ForumReplyCompose';
 import { ForumReportButton } from '@/components/ForumReportButton';
 import { ForumReactions, type ReactionKind } from '@/components/ForumReactions';
+import { ForumSubscribeButton } from '@/components/ForumSubscribeButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ export default async function ForumThreadPage({
     supabase.from('forum_categories').select('id,slug,title_en,title_ar')
       .eq('slug', params.slug).maybeSingle(),
     supabase.from('forum_thread_with_meta')
-      .select('id,title,body,author_display,anonymous,created_at,edited_at,reply_count,author_id,reaction_counts,my_reactions')
+      .select('id,title,body,author_display,anonymous,created_at,edited_at,reply_count,author_id,reaction_counts,my_reactions,i_subscribe')
       .eq('id', params.threadId).maybeSingle(),
     supabase.from('forum_reply_with_meta')
       .select('id,body,author_display,anonymous,created_at,author_id,reaction_counts,my_reactions')
@@ -66,9 +67,9 @@ export default async function ForumThreadPage({
           {thread.body}
         </p>
 
-        {/* Wave 24: reactions row. Always shown — even the author can
-            see who's reacting (counts) but obviously can't react to
-            themselves… well, actually they can; harmless self-hug. */}
+        {/* Wave 24: reactions row. Wave 30: + Follow toggle on the
+            right. Authors are auto-subscribed by trigger but can still
+            mute their own thread by tapping "Following". */}
         <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-3 flex-wrap">
           <ForumReactions
             targetType="thread"
@@ -77,13 +78,18 @@ export default async function ForumThreadPage({
             initialMine={(thread.my_reactions ?? []) as ReactionKind[]}
             lang={userPrefs.language}
           />
-          {/* Report button hidden when you're the author — you can't
-              report yourself; deleting your own thread happens elsewhere. */}
-          {thread.author_id !== user.id && (
-            <div className="ms-auto">
+          <div className="ms-auto flex items-center gap-2">
+            <ForumSubscribeButton
+              threadId={thread.id}
+              initialSubscribed={Boolean((thread as { i_subscribe?: boolean }).i_subscribe)}
+              lang={userPrefs.language}
+            />
+            {/* Report button hidden when you're the author — you can't
+                report yourself; deleting your own thread happens elsewhere. */}
+            {thread.author_id !== user.id && (
               <ForumReportButton targetType="thread" targetId={thread.id} lang={userPrefs.language} />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </article>
 
