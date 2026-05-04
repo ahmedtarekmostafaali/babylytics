@@ -13,6 +13,7 @@ import {
   CalendarDays, AlertTriangle, MessageCircle, Tv, Smile, FlaskConical,
   Languages, Bell, ClipboardList, ShieldCheck, Megaphone, Droplet,
   HeartPulse, MessagesSquare, ChevronRight, Mic, Upload, Search, Users,
+  Crown, Lock,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -44,8 +45,10 @@ export default async function Landing() {
           <nav className="hidden md:flex items-center gap-4 lg:gap-7 text-sm text-ink">
             <a href="#features"   className="hover:text-ink-strong">{t('landing.nav_features')}</a>
             <a href="#pregnancy"  className="hover:text-ink-strong">{t('landing.nav_pregnancy')}</a>
-            <a href="#family"     className="hover:text-ink-strong">{t('landing.nav_family')}</a>
-            <a href="#smart-scan" className="hover:text-ink-strong">{t('landing.nav_smart_scan')}</a>
+            <a href="#plan"       className="hover:text-ink-strong">{lang === 'ar' ? 'الخطة' : 'Plan'}</a>
+            <Link href="/guide"   className="hover:text-ink-strong inline-flex items-center gap-1">
+              <BookOpen className="h-3.5 w-3.5 text-brand-500" /> {lang === 'ar' ? 'دليل' : 'Guide'}
+            </Link>
             <Link href="/updates" className="hover:text-ink-strong inline-flex items-center gap-1">
               <Megaphone className="h-3.5 w-3.5 text-mint-600" /> {t('landing.nav_whats_new')}
             </Link>
@@ -213,7 +216,145 @@ export default async function Landing() {
             <FeatureChip Icon={BarChart3}     title={t('landing.feat_growth_t')} sub={t('landing.feat_growth_x')} />
             <FeatureChip Icon={ClipboardList} title={t('landing.feat_miles_t')}  sub={t('landing.feat_miles_x')} />
           </CategoryCard>
+
+          {/* Wave 42D: AI co-pilot category — covers Waves 33-35 + 39. */}
+          <CategoryCard tint="lavender"
+            title={lang === 'ar' ? 'مساعد ذكي' : 'AI co-pilot'}
+            Icon={Sparkles}>
+            <FeatureChip Icon={AlertTriangle}
+              title={lang === 'ar' ? 'كشف أنماط المخاطر' : 'Risk-pattern detection'}
+              sub={lang === 'ar' ? 'تنبيهات ACOG / ADA / AAP عند ملاحظة نمط — فحص لا تشخيص.' : 'ACOG / ADA / AAP-threshold alerts when a pattern shows — screening, not diagnosis.'} />
+            <FeatureChip Icon={Sparkles}
+              title={lang === 'ar' ? 'مساعد بـ Claude' : 'Claude AI companion'}
+              sub={lang === 'ar' ? 'اشرحي قراءة، أو صيغي سؤالاً للطبيب. لا نصيحة علاجية أبداً.' : 'Explain a reading, or draft a doctor question. Never gives medical advice.'} />
+            <FeatureChip Icon={Moon}
+              title={lang === 'ar' ? 'توقعات نوم الطفل' : 'Baby sleep predictions'}
+              sub={lang === 'ar' ? 'وقت الاستيقاظ التالي + أنسب قيلولة + كشف تراجع النوم.' : 'Next-wake time + optimal nap window + sleep regression detection.'} />
+            <FeatureChip Icon={Brain}
+              title={lang === 'ar' ? 'تفسير سلوك الطفل' : 'Explain the baby'}
+              sub={lang === 'ar' ? 'نمط الإجهاد الزائد، طفرة النمو، إشارات الجوع — مع توصيات مناسبة.' : 'Overtired pattern, growth spurt, hunger cues — explained with the right next step.'} />
+          </CategoryCard>
+
+          {/* Wave 42D: Mental Health & Well-being — covers Wave 41. */}
+          <CategoryCard tint="coral"
+            title={lang === 'ar' ? 'الصحة النفسية والعافية' : 'Mental health & well-being'}
+            Icon={Heart}>
+            <FeatureChip Icon={Heart}
+              title={lang === 'ar' ? 'فحص EPDS لاكتئاب ما حول الولادة' : 'EPDS perinatal depression check'}
+              sub={lang === 'ar' ? 'فحص ذاتي في الأوقات الموصى بها (٢ أسبوع، ٦ أسابيع، ٣ شهور، ٦ شهور بعد الولادة).' : 'Self-screen at the recommended windows (2w / 6w / 3mo / 6mo postpartum).'} />
+            <FeatureChip Icon={Bell}
+              title={lang === 'ar' ? 'فحص PHQ-2 السريع' : 'PHQ-2 quick check-in'}
+              sub={lang === 'ar' ? 'سؤالان، أقل من دقيقة. للثلث الأول من الحمل.' : '2 questions, under a minute. For first-trimester baseline.'} />
+            <FeatureChip Icon={ShieldCheck}
+              title={lang === 'ar' ? 'خصوصية مطلقة' : 'Strictly private'}
+              sub={lang === 'ar' ? 'النتائج خاصة بكِ فقط — الشركاء والرعاة الآخرون لا يرونها أبداً.' : 'Results private to you — partners and other caregivers never see them.'} />
+            <FeatureChip Icon={Stethoscope}
+              title={lang === 'ar' ? 'مسار أزمات واضح' : 'Clear crisis path'}
+              sub={lang === 'ar' ? 'إذا كانت النتيجة عاجلة، نعرض موارد مصرية + نوصي بالتواصل اليوم.' : 'If your score is urgent, Egypt-specific resources + same-day-doctor recommendation appear.'} />
+          </CategoryCard>
         </div>
+      </section>
+
+      {/* ======= Plan / pricing teaser ======= */}
+      <section id="plan" className="max-w-6xl mx-auto px-4 lg:px-8 py-16">
+        <div className="text-center mb-10">
+          <div className="text-xs font-semibold tracking-wider text-coral-500 uppercase">
+            {lang === 'ar' ? 'الخطة' : 'Plan'}
+          </div>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-ink-strong">
+            {lang === 'ar' ? 'مجاناً خلال البيتا. اشتراك للذكاء لاحقاً.' : 'Free during the beta. Subscription for AI later.'}
+          </h2>
+          <p className="mt-3 text-sm text-ink-muted max-w-2xl mx-auto">
+            {lang === 'ar'
+              ? 'كل التتبع الأساسي، السجلات، الرعاة، المنتدى — مجاناً للأبد. ميزات الذكاء (AI، OCR، الاقتراحات الذكية) ستصبح اشتراكاً عند الإطلاق الكامل.'
+              : 'All core tracking, logs, caregivers, forum — free forever. AI features (Claude companion, OCR Smart Scan, smart suggestions) will move to subscription at full launch.'}
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+          {/* Free plan */}
+          <div className="rounded-3xl border border-mint-200 bg-gradient-to-br from-mint-50 via-white to-brand-50 p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="h-9 w-9 rounded-xl bg-mint-100 text-mint-700 grid place-items-center">
+                <Heart className="h-4 w-4" />
+              </span>
+              <h3 className="text-lg font-bold text-ink-strong">
+                {lang === 'ar' ? 'المجاني — للأبد' : 'Free — forever'}
+              </h3>
+            </div>
+            <p className="text-sm text-ink mb-4">
+              {lang === 'ar'
+                ? 'كل التتبع الأساسي. لا حدود على عدد الملفات أو السجلات.'
+                : 'All core tracking. No limits on profiles or log entries.'}
+            </p>
+            <ul className="space-y-2 text-sm text-ink">
+              {(lang === 'ar' ? FREE_LIST_AR : FREE_LIST_EN).map((line, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <Check className="h-4 w-4 text-mint-600 shrink-0 mt-0.5" />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Smart plan */}
+          <div className="rounded-3xl border border-lavender-300 bg-gradient-to-br from-lavender-50 via-white to-coral-50 p-6 relative">
+            <div className="absolute -top-3 right-4 inline-flex items-center gap-1 rounded-full bg-coral-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
+              <Crown className="h-3 w-3" />
+              {lang === 'ar' ? 'قادم — مجاناً في البيتا' : 'Coming — free in beta'}
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="h-9 w-9 rounded-xl bg-lavender-100 text-lavender-700 grid place-items-center">
+                <Sparkles className="h-4 w-4" />
+              </span>
+              <h3 className="text-lg font-bold text-ink-strong">
+                {lang === 'ar' ? 'الذكي — اشتراك مستقبلاً' : 'Smart — future subscription'}
+              </h3>
+            </div>
+            <p className="text-sm text-ink mb-4">
+              {lang === 'ar'
+                ? 'كل ما في المجاني، بالإضافة إلى الميزات المدعومة بالذكاء الاصطناعي.'
+                : 'Everything in Free, plus the AI-powered features.'}
+            </p>
+            <ul className="space-y-2 text-sm text-ink">
+              {(lang === 'ar' ? SMART_LIST_AR : SMART_LIST_EN).map((line, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <Sparkles className="h-4 w-4 text-coral-600 shrink-0 mt-0.5" />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-[11px] text-ink-muted leading-relaxed">
+              {lang === 'ar'
+                ? 'خلال فترة البيتا، كل الميزات الذكية مفعّلة بدون تكلفة. سنبلغك قبل بدء الاشتراك بفترة كافية.'
+                : 'During the beta, all smart features are enabled at no cost. We\'ll give plenty of notice before any subscription starts.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Big register CTA */}
+        {!isAuthed && (
+          <div className="mt-10 rounded-3xl border border-coral-200 bg-gradient-to-br from-coral-50 via-white to-peach-50 p-8 text-center">
+            <h3 className="text-2xl sm:text-3xl font-bold text-ink-strong">
+              {lang === 'ar' ? 'سجلي الآن — مجاناً خلال البيتا' : 'Register now — free during the beta'}
+            </h3>
+            <p className="mt-2 text-sm text-ink-muted max-w-xl mx-auto">
+              {lang === 'ar'
+                ? 'كل الميزات مفتوحة. لا بطاقة ائتمان مطلوبة. وقت الإعداد أقل من دقيقة.'
+                : 'All features unlocked. No credit card. Setup takes under a minute.'}
+            </p>
+            <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
+              <Link href="/register"
+                className="inline-flex items-center gap-2 rounded-full bg-coral-500 hover:bg-coral-600 text-white font-bold px-6 py-3 shadow-card">
+                {lang === 'ar' ? 'سجلي الآن' : 'Register now'} <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/login"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 hover:bg-slate-50 text-ink font-semibold px-6 py-3">
+                {lang === 'ar' ? 'لديكِ حساب؟ دخول' : 'Have an account? Sign in'}
+              </Link>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ======= Pregnancy spotlight ======= */}
@@ -518,6 +659,47 @@ function StageCard({ tint, Icon, eyebrow, title, text }: {
     </div>
   );
 }
+
+// Wave 42E: pricing-teaser bullet copy. Hand-written per-language so
+// the marketing tone stays right.
+const FREE_LIST_EN = [
+  'All daily logs (feedings, stool, sleep, temperature, vaccinations, medications, measurements)',
+  'Cycle calendar + period prediction + BBT',
+  'Pregnancy dashboard + kick counter + maternal vitals',
+  'Multi-caregiver sync (parent / partner / doctor / nurse / pharmacy)',
+  'Bulk imports (Apple Health, CSV, multi-file uploads)',
+  'Community forum with reactions, search, follow, daily digest',
+  'Reports + Smart Scan (manual review)',
+  'Mental health self-screening (EPDS + PHQ-2)',
+];
+const FREE_LIST_AR = [
+  'كل السجلات اليومية (الرضعات، البراز، النوم، الحرارة، التطعيمات، الأدوية، القياسات)',
+  'تقويم الدورة + التنبؤ + BBT',
+  'لوحة الحمل + عداد الحركات + المؤشرات الحيوية',
+  'مزامنة متعددة الرعاة (والد / شريك / طبيب / ممرضة / صيدلية)',
+  'الاستيراد بالجملة (Apple Health، CSV، رفع ملفات)',
+  'منتدى مجتمعي مع تفاعلات وبحث ومتابعة وملخص يومي',
+  'التقارير + Smart Scan (مراجعة يدوية)',
+  'فحص الصحة النفسية الذاتي (EPDS + PHQ-2)',
+];
+const SMART_LIST_EN = [
+  'Claude AI companion (explain readings, draft doctor questions) — across all stages',
+  'Risk-pattern detection (ACOG / ADA / AAP thresholds for pregnancy + baby)',
+  'Smart nutrition engine — Egyptian-cuisine, Ramadan-aware, lab-deficiency-aware',
+  'Baby co-pilot — predicted next wake, optimal nap window, sleep regression detection',
+  'OCR Smart Scan auto-extraction (ultrasound biometry, lab values, prescription parsing)',
+  'Personal pattern engine for cycles + doctor-ready questions',
+  'Forum daily digest mode',
+];
+const SMART_LIST_AR = [
+  'مساعد Claude الذكي (شرح القراءات، صياغة أسئلة الطبيب) — في كل المراحل',
+  'كشف أنماط المخاطر (حدود ACOG / ADA / AAP للحمل والطفل)',
+  'محرك التغذية الذكي — مطبخ مصري، يراعي رمضان، يراعي نقص التحاليل',
+  'مساعد الطفل — توقع الاستيقاظ + أنسب قيلولة + كشف تراجع النوم',
+  'استخراج Smart Scan تلقائياً (قياسات السونار، قيم التحاليل، الروشتات)',
+  'محرك الأنماط الشخصي للدورة + أسئلة جاهزة للطبيب',
+  'وضع الملخص اليومي للمنتدى',
+];
 
 function CategoryCard({ tint, title, Icon, children }: {
   tint: Tint;

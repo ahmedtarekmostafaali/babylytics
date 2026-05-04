@@ -2,17 +2,27 @@ import { createClient } from '@/lib/supabase/server';
 import { Sparkline } from '@/components/Sparkline';
 import {
   Users, Baby, HeartPulse, UserPlus, Activity, MessageSquare, Languages,
-  TrendingUp, Inbox,
+  TrendingUp, Inbox, Sparkles, Heart, Droplet, Bell, Flag, LogIn, Eye,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 type Kpis = {
   total_users: number; total_babies: number; total_pregnancies: number;
+  total_planning?: number; total_baby_stage?: number;
   signups_24h: number; signups_7d: number; signups_30d: number;
   active_7d: number; active_30d: number;
   lang_ar: number; lang_en: number;
   feedback_total: number; feedback_open: number;
+  // Wave 42B additions
+  last_seen_today?: number; login_today?: number;
+  forum_threads?: number; forum_replies?: number;
+  forum_threads_7d?: number; forum_replies_7d?: number;
+  forum_reactions?: number; forum_subscriptions?: number;
+  ai_calls_today?: number; ai_calls_7d?: number; ai_calls_30d?: number;
+  mh_screenings_total?: number; mh_screenings_7d?: number; mh_severe_flag_count?: number;
+  pumping_logs_total?: number; pumping_logs_7d?: number;
+  forum_reports_open?: number;
   as_of: string;
 };
 
@@ -52,6 +62,48 @@ export default async function AdminOverview() {
         <Tile icon={TrendingUp} tint="mint"     label="Signup conv."    value={k.total_users ? `${Math.round(((k.total_babies ?? 0) / k.total_users) * 100)}%` : '—'}
           sub={`${k.total_babies ?? 0} babies / ${k.total_users ?? 0} parents`} />
       </div>
+
+      {/* Wave 42B: today's session activity (from bump_user_activity). */}
+      <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <h2 className="text-sm font-bold text-ink-strong">Today's session activity</h2>
+            <p className="text-xs text-ink-muted">Read from <code>profiles.last_seen_at</code> + <code>last_login_at</code> (Wave 42B fix: bumped from layout, not just /dashboard).</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Tile icon={Eye}   tint="brand" label="Active today (any page)" value={k.last_seen_today ?? 0} />
+          <Tile icon={LogIn} tint="mint"  label="Sessions started today" value={k.login_today ?? 0}
+            sub="≥ 30-min gap from previous activity" />
+        </div>
+      </section>
+
+      {/* Wave 42B: feature usage from recent waves. */}
+      <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
+        <h2 className="text-sm font-bold text-ink-strong mb-3">Feature usage · recent waves</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Tile icon={MessageSquare} tint="brand" label="Forum threads" value={k.forum_threads ?? 0}
+            sub={`${k.forum_threads_7d ?? 0} new this week`} />
+          <Tile icon={MessageSquare} tint="lavender" label="Forum replies" value={k.forum_replies ?? 0}
+            sub={`${k.forum_replies_7d ?? 0} new this week`} />
+          <Tile icon={Heart}         tint="coral" label="Forum reactions" value={k.forum_reactions ?? 0}
+            sub={`${k.forum_subscriptions ?? 0} subscriptions`} />
+          <Tile icon={Flag}          tint="peach" label="Open reports" value={k.forum_reports_open ?? 0}
+            sub="forum moderation queue" />
+
+          <Tile icon={Sparkles}      tint="lavender" label="AI calls today" value={k.ai_calls_today ?? 0}
+            sub={`${k.ai_calls_7d ?? 0} · 7d / ${k.ai_calls_30d ?? 0} · 30d`} />
+          <Tile icon={Heart}         tint="coral" label="Mental health screenings" value={k.mh_screenings_total ?? 0}
+            sub={`${k.mh_screenings_7d ?? 0} new this week`} />
+          <Tile icon={Bell}          tint="coral" label="MH severity flag" value={k.mh_severe_flag_count ?? 0}
+            sub="high or urgent (counts only, never per-user)" />
+          <Tile icon={Droplet}       tint="mint"  label="Pumping logs" value={k.pumping_logs_total ?? 0}
+            sub={`${k.pumping_logs_7d ?? 0} this week`} />
+
+          <Tile icon={Baby}          tint="coral"    label="Babies (post-birth)" value={k.total_baby_stage ?? 0}
+            sub={`${k.total_planning ?? 0} planning · ${k.total_pregnancies ?? 0} pregnant`} />
+        </div>
+      </section>
 
       {/* Sign-ups chart */}
       <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">

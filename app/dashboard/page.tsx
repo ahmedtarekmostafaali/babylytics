@@ -49,10 +49,8 @@ export default async function DashboardPage() {
   const userPrefs = await loadUserPrefs(supabase);
   const t = tFor(userPrefs.language);
 
-  // Wave 36B: bump activity stamp for admin analytics. Throttled
-  // server-side to ≥1 minute between writes; promotes to a session
-  // start when the previous bump was >30 minutes ago. Fire-and-forget.
-  if (user) void supabase.rpc('bump_user_activity');
+  // Wave 42B: activity bumping moved to root layout so EVERY page hits
+  // it, not only /dashboard. The throttle keeps it cheap.
 
   const [{ data: babies }, { data: unread }, { data: profile }] = await Promise.all([
     supabase.from('babies')

@@ -30,6 +30,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // permanent choice.
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // Wave 42B: bump activity stamp from EVERY page (root layout). Wave 36B
+  // originally hooked this only into /dashboard, which missed users who
+  // live in baby pages and never visit the dashboard — their last_login
+  // never updated. The RPC is throttled server-side (≥1 min between
+  // writes) so layout-level firing is cheap.
+  if (user) void supabase.rpc('bump_user_activity');
   const prefs = await loadUserPrefs(supabase);
   // Signed-in: their saved pref wins. Guest: fall back to the lang cookie set
   // by the LanguageToggle on the marketing/auth pages.
