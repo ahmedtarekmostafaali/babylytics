@@ -8,7 +8,7 @@ import { Sparkline } from '@/components/Sparkline';
 import { Comments } from '@/components/Comments';
 import { PregnancyDashboard } from '@/components/PregnancyDashboard';
 import { ConsultationComingSoon } from '@/components/ConsultationComingSoon';
-import { PregnancyRiskBanner } from '@/components/PregnancyRiskBanner';
+import { AiRiskBanner } from '@/components/AiRiskBanner';
 import { AiCompanion } from '@/components/AiCompanion';
 import { NotificationsBell } from '@/components/NotificationsBell';
 import { ChatBell } from '@/components/ChatBell';
@@ -103,6 +103,9 @@ export default async function BabyOverview({
     return (
       <>
         <CycleDashboard babyId={babyId} babyName={baby.name} lang={userPrefs.language} />
+        {/* Wave 35: cycle risk banner — oligomenorrhea, persistent
+            severe pain, persistent heavy flow. */}
+        <AiRiskBanner babyId={babyId} stage="planning" lang={userPrefs.language} />
         {/* Wave 34: AI companion on cycle profiles. Reads last 3 cycles
             + BBT + vital signs via ai_companion_context. */}
         <div className="max-w-6xl mx-auto px-4 lg:px-8 mt-6">
@@ -154,10 +157,10 @@ export default async function BabyOverview({
           lang={userPrefs.language}
           recentSymptoms={symptoms}
         />
-        {/* Wave 33A: pregnancy risk-pattern banner. Server-renders any
-            ACOG/ADA-threshold signals from BP / glucose / weight / kicks.
-            Returns nothing when there's nothing to flag. */}
-        <PregnancyRiskBanner babyId={babyId} lang={userPrefs.language} />
+        {/* Wave 33A/35: pregnancy risk-pattern banner. Renders ACOG/ADA
+            threshold signals from BP / glucose / weight / kicks. Empty
+            when there's nothing to flag. */}
+        <AiRiskBanner babyId={babyId} stage="pregnancy" lang={userPrefs.language} />
 
         {/* Wave 33B/34: AI companion — explain a reading or draft a
             doctor question. Strict no-medical-advice prompt;
@@ -1110,6 +1113,11 @@ export default async function BabyOverview({
           </div>
         </div>
       </div>
+
+      {/* Wave 35: baby risk banner — fever rules tuned to age (under-3mo
+          urgent), high fever, persistent fever, vomiting frequency,
+          red-flag vomiting (projectile/bilious/blood). */}
+      <AiRiskBanner babyId={babyId} stage="baby" lang={userPrefs.language} />
 
       {/* Wave 34: AI companion on baby profiles. Reads recent feedings,
           stool, sleep, temperature, measurements via ai_companion_context. */}
