@@ -205,7 +205,9 @@ export function BabyChat({
   }
 
   return (
-    <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden flex flex-col h-[600px]">
+    // Wave 45A: viewport-aware height so the input stays above the
+    // mobile bottom nav.
+    <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden flex flex-col h-[calc(100dvh-220px)] lg:h-[600px] min-h-[420px]">
       <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100 bg-gradient-to-r from-mint-50 to-lavender-50">
         <span className="h-8 w-8 rounded-lg grid place-items-center bg-mint-100 text-mint-600 shrink-0">
           <MessageCircle className="h-4 w-4" />

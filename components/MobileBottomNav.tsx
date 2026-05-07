@@ -16,7 +16,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, MessagesSquare, Plus, Megaphone, UserCog } from 'lucide-react';
+import { LayoutDashboard, MessagesSquare, Plus, Megaphone, UserCog, MessageCircle } from 'lucide-react';
 
 /** The bar is rendered from the root layout for ALL signed-in users.
  *  We pass the optional currentBabyId so Quick Log can link into the
@@ -39,6 +39,13 @@ export function MobileBottomNav({
     ? `/babies/${currentBabyId}`
     : '/dashboard';
 
+  // Wave 45A: when on a baby page, derive the active baby ID from the
+  // pathname so we can show a Chat shortcut in slot 4 (Chat is per-
+  // baby and was buried in the sidebar's Family category before).
+  // When NOT on a baby page, slot 4 falls back to Updates.
+  const babyMatch = pathname.match(/^\/babies\/([^\/]+)/);
+  const activeBabyId = babyMatch?.[1] ?? currentBabyId ?? null;
+
   return (
     <nav
       aria-label="Primary mobile navigation"
@@ -57,9 +64,15 @@ export function MobileBottomNav({
             <Plus className="h-6 w-6" />
           </Link>
         </li>
-        <Item href="/updates" icon={Megaphone} label="Updates"
-              active={pathname.startsWith('/updates')}
-              badge={unreadCount > 0 ? Math.min(unreadCount, 99) : null} />
+        {/* Wave 45A: slot 4 — Chat when on a baby page, Updates otherwise. */}
+        {activeBabyId ? (
+          <Item href={`/babies/${activeBabyId}/chat`} icon={MessageCircle} label="Chat"
+                active={pathname.includes(`/babies/${activeBabyId}/chat`)} />
+        ) : (
+          <Item href="/updates" icon={Megaphone} label="Updates"
+                active={pathname.startsWith('/updates')}
+                badge={unreadCount > 0 ? Math.min(unreadCount, 99) : null} />
+        )}
         <Item href="/preferences" icon={UserCog} label="Account"
               active={pathname.startsWith('/preferences')} />
       </ul>

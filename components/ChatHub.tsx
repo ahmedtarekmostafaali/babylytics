@@ -387,7 +387,10 @@ function ThreadChatPanel({
   }
 
   return (
-    <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden flex flex-col h-[600px]">
+    // Wave 45A: viewport-aware height so the input stays above the
+    // mobile bottom nav (was h-[600px] fixed which placed the textarea
+    // under the nav on small screens). Desktop keeps a fixed 600px.
+    <section className="rounded-2xl bg-white border border-slate-200 shadow-card overflow-hidden flex flex-col h-[calc(100dvh-220px)] lg:h-[600px] min-h-[420px]">
       <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-100 bg-gradient-to-r from-lavender-50 to-brand-50">
         <span className={`h-9 w-9 rounded-full grid place-items-center text-xs font-bold shrink-0 ${tintFor(otherUserId)}`}>
           {initialsFor(otherUserId)}

@@ -125,18 +125,34 @@ export function AiCompanion({
       });
       const j = await resp.json();
       if (!resp.ok) {
+        // Wave 45B: surface the real error code + status so the user
+        // (and admin checking on mobile) can actually diagnose. The
+        // previous catch-all "Something went wrong" hid useful info.
         if (j?.error === 'rate_limited') {
           setErr(isAr
             ? 'وصلتِ للحد اليومي (٥ استدعاءات). جرّبي بكرة.'
             : 'You\'ve hit today\'s limit (5 calls). Try again tomorrow.');
         } else if (j?.error === 'companion_unavailable') {
           setErr(isAr
-            ? 'المساعد غير متاح حالياً. يحتاج المسؤول إلى إعداد ANTHROPIC_API_KEY.'
-            : 'Companion is not configured. Admin needs to set ANTHROPIC_API_KEY.');
-        } else {
+            ? 'المساعد غير معد. يحتاج المسؤول لإضافة ANTHROPIC_API_KEY في Vercel (لكل البيئات: Production + Preview + Development) ثم إعادة النشر.'
+            : 'Companion is not set up. Admin needs to add ANTHROPIC_API_KEY to Vercel (for ALL environments: Production + Preview + Development), then redeploy.');
+        } else if (j?.error === 'unauthenticated') {
           setErr(isAr
-            ? `حدث خطأ. ${j?.detail ?? ''}`
-            : `Something went wrong. ${j?.detail ?? ''}`);
+            ? 'الجلسة انتهت. أعيدي تسجيل الدخول.'
+            : 'Session expired. Please sign in again.');
+        } else if (j?.error === 'access denied') {
+          setErr(isAr
+            ? 'لا تملكين صلاحية الوصول لهذا الملف.'
+            : 'You don\'t have access to this profile.');
+        } else if (j?.error === 'companion_error' || j?.error === 'companion_unreachable') {
+          setErr(isAr
+            ? `لم يتم الاتصال بالذكاء الاصطناعي (${resp.status}). ${j?.detail ?? ''}`
+            : `AI request failed (${resp.status}). ${j?.detail ?? ''}`);
+        } else {
+          // Generic — show the actual error string the server returned.
+          setErr(isAr
+            ? `خطأ: ${j?.error ?? `HTTP ${resp.status}`}${j?.detail ? ' — ' + j.detail : ''}`
+            : `Error: ${j?.error ?? `HTTP ${resp.status}`}${j?.detail ? ' — ' + j.detail : ''}`);
         }
       } else {
         setReply(j.text ?? '');
@@ -144,8 +160,13 @@ export function AiCompanion({
           setCalls({ today: j.calls_today, limit: j.daily_limit ?? 5 });
         }
       }
-    } catch {
-      setErr(isAr ? 'تعذّر الاتصال.' : 'Could not reach the companion.');
+    } catch (e) {
+      // Network / parse failure — show the actual exception message
+      // instead of swallowing it.
+      const msg = e instanceof Error ? e.message : 'unknown';
+      setErr(isAr
+        ? `تعذّر الاتصال (${msg}). تحققي من شبكة الإنترنت ثم جرّبي مرة أخرى.`
+        : `Could not reach the companion (${msg}). Check your connection and try again.`);
     }
     setBusy(false);
   }
