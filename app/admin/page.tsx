@@ -29,21 +29,49 @@ type Kpis = {
 export default async function AdminOverview() {
   const supabase = createClient();
 
-  // Fire all four RPCs in parallel — every check is server-side via the
+  // Fire all RPCs in parallel — every check is server-side via the
   // SECURITY DEFINER admin gate, so no RLS dance is needed here.
-  const [{ data: kpiData }, { data: signups }, { data: dau }, { data: trackers }] = await Promise.all([
+  const [
+    { data: kpiData }, { data: signups }, { data: dau }, { data: trackers },
+    // Wave 46 additions
+    { data: funnel }, { data: aiBreak }, { data: countries },
+    { data: retention }, { data: transitions },
+  ] = await Promise.all([
     supabase.rpc('admin_kpis'),
     supabase.rpc('admin_signup_series', { p_days: 30 }),
     supabase.rpc('admin_dau_series',    { p_days: 30 }),
     supabase.rpc('admin_top_trackers'),
+    supabase.rpc('admin_funnel'),
+    supabase.rpc('admin_ai_breakdown',  { p_days: 30 }),
+    supabase.rpc('admin_country_breakdown'),
+    supabase.rpc('admin_retention'),
+    supabase.rpc('admin_stage_transitions'),
   ]);
 
   const k = (kpiData ?? {}) as Partial<Kpis>;
   const signupSeries = (signups ?? []) as { day: string; signups: number }[];
   const dauSeries    = (dau ?? []) as { day: string; dau: number }[];
   const trackerRows  = (trackers ?? []) as { tracker: string; events_7d: number; events_30d: number }[];
+
   const totalLang = (k.lang_ar ?? 0) + (k.lang_en ?? 0);
   const arPct = totalLang ? Math.round(((k.lang_ar ?? 0) / totalLang) * 100) : 0;
+
+  // Wave 46 typed reads
+  const f  = (funnel  ?? {}) as { total_signups?: number; with_profile?: number; with_log?: number; with_caregiver?: number; with_ai_call?: number };
+  const ai = (aiBreak ?? {}) as {
+    today?: number; last_7d?: number; last_30d?: number;
+    by_mode?: Record<string, number>;
+    by_stage?: Record<string, number>;
+    series?: { day: string; n: number }[];
+  };
+  const countryRows = (countries ?? []) as { country: string; n: number }[];
+  const ret = (retention ?? {}) as { cohort_size?: number; d1_retained?: number; d7_retained?: number; d30_retained?: number };
+  const trans = (transitions ?? {}) as { preg_30d?: number; preg_90d?: number; born_30d?: number; born_90d?: number };
+
+  function pct(num: number | undefined, den: number | undefined): string {
+    if (!num || !den) return '—';
+    return Math.round((num / den) * 100) + '%';
+  }
 
   return (
     <div className="space-y-6">
@@ -104,6 +132,100 @@ export default async function AdminOverview() {
             sub={`${k.total_planning ?? 0} planning · ${k.total_pregnancies ?? 0} pregnant`} />
         </div>
       </section>
+
+      {/* Wave 46A: adoption funnel. */}
+      <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
+        <div className="mb-4">
+          <h2 className="text-sm font-bold text-ink-strong">Adoption funnel</h2>
+          <p className="text-xs text-ink-muted">Conversion through the core onboarding moments. Distinct users at each step.</p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <FunnelTile label="Sign-ups"            value={f.total_signups ?? 0} />
+          <FunnelTile label="Created a profile"   value={f.with_profile ?? 0}
+            pctOfPrev={pct(f.with_profile, f.total_signups)} />
+          <FunnelTile label="Logged anything"     value={f.with_log ?? 0}
+            pctOfPrev={pct(f.with_log, f.with_profile)} />
+          <FunnelTile label="Invited a caregiver" value={f.with_caregiver ?? 0}
+            pctOfPrev={pct(f.with_caregiver, f.with_log)} />
+          <FunnelTile label="Called the AI"       value={f.with_ai_call ?? 0}
+            pctOfPrev={pct(f.with_ai_call, f.with_log)} />
+        </div>
+      </section>
+
+      {/* Wave 46B: AI usage breakdown. */}
+      <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h2 className="text-sm font-bold text-ink-strong">AI companion usage</h2>
+            <p className="text-xs text-ink-muted">Last 30 days. Each call = one Claude API request from one user.</p>
+          </div>
+          <div className="flex items-center gap-3 text-xs">
+            <span><strong className="text-ink-strong tabular-nums">{ai.today ?? 0}</strong> today</span>
+            <span className="text-ink-muted">·</span>
+            <span><strong className="text-ink-strong tabular-nums">{ai.last_7d ?? 0}</strong> · 7d</span>
+            <span className="text-ink-muted">·</span>
+            <span><strong className="text-ink-strong tabular-nums">{ai.last_30d ?? 0}</strong> · 30d</span>
+          </div>
+        </div>
+        {ai.series && ai.series.length > 0 && (
+          <Sparkline
+            data={ai.series.map(r => Number(r.n || 0))}
+            color="#B9A7D8" width={900} height={70} strokeWidth={2.5}
+          />
+        )}
+        <div className="mt-4 grid sm:grid-cols-2 gap-3">
+          <BreakdownBlock title="By mode" rows={Object.entries(ai.by_mode ?? {})} />
+          <BreakdownBlock title="By stage" rows={Object.entries(ai.by_stage ?? {})} />
+        </div>
+      </section>
+
+      {/* Wave 46D: retention + stage transitions side-by-side. */}
+      <section className="grid md:grid-cols-2 gap-3">
+        <article className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
+          <h2 className="text-sm font-bold text-ink-strong mb-1">Retention (rough)</h2>
+          <p className="text-xs text-ink-muted mb-4">
+            Single-snapshot approximation from sign-up date vs last_seen_at.
+            Cohort: users who signed up &gt; 30 days ago (n = {ret.cohort_size ?? 0}).
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <RetTile label="Day 1"  num={ret.d1_retained ?? 0}  den={ret.cohort_size ?? 0} />
+            <RetTile label="Day 7"  num={ret.d7_retained ?? 0}  den={ret.cohort_size ?? 0} />
+            <RetTile label="Day 30" num={ret.d30_retained ?? 0} den={ret.cohort_size ?? 0} />
+          </div>
+        </article>
+        <article className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
+          <h2 className="text-sm font-bold text-ink-strong mb-1">Stage transitions</h2>
+          <p className="text-xs text-ink-muted mb-4">Active pregnancies + recent births in the last 30/90 days.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Tile icon={HeartPulse} tint="lavender" label="Active pregnancies (30d updated)" value={trans.preg_30d ?? 0}
+              sub={`${trans.preg_90d ?? 0} in last 90 days`} />
+            <Tile icon={Baby}       tint="coral"    label="Babies born (last 30d)"          value={trans.born_30d ?? 0}
+              sub={`${trans.born_90d ?? 0} in last 90 days`} />
+          </div>
+        </article>
+      </section>
+
+      {/* Wave 46D: country breakdown. */}
+      {countryRows.length > 0 && (
+        <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
+          <h2 className="text-sm font-bold text-ink-strong mb-3">Where users come from</h2>
+          <ul className="space-y-1.5">
+            {countryRows.slice(0, 12).map(c => {
+              const total = countryRows.reduce((a, r) => a + Number(r.n || 0), 0);
+              const cPct = total ? Math.round((Number(c.n || 0) / total) * 100) : 0;
+              return (
+                <li key={c.country} className="flex items-center gap-3 text-sm">
+                  <span className="w-12 font-mono text-xs text-ink-muted shrink-0">{c.country}</span>
+                  <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full bg-brand-400" style={{ width: `${Math.max(2, cPct)}%` }} />
+                  </div>
+                  <span className="w-16 text-end tabular-nums text-ink-muted text-xs">{c.n} · {cPct}%</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {/* Sign-ups chart */}
       <section className="rounded-2xl bg-white border border-slate-200 shadow-card p-5">
@@ -192,6 +314,67 @@ function EmptyChart({ message }: { message: string }) {
   return (
     <div className="h-20 rounded-xl border border-dashed border-slate-200 bg-slate-50/40 grid place-items-center text-xs text-ink-muted">
       {message}
+    </div>
+  );
+}
+
+/** Wave 46A: funnel step tile. Number + optional "% of previous step". */
+function FunnelTile({ label, value, pctOfPrev }: {
+  label: string;
+  value: number;
+  pctOfPrev?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3">
+      <div className="text-[10px] uppercase tracking-wider font-bold text-ink-muted">{label}</div>
+      <div className="mt-1 text-2xl font-bold text-ink-strong tabular-nums">{value.toLocaleString()}</div>
+      {pctOfPrev && (
+        <div className="mt-0.5 text-[10px] text-mint-700 font-semibold">{pctOfPrev} of previous step</div>
+      )}
+    </div>
+  );
+}
+
+/** Wave 46B: small key-value list for "by mode" / "by stage". */
+function BreakdownBlock({ title, rows }: { title: string; rows: [string, number][] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-3">
+        <div className="text-[10px] uppercase tracking-wider font-bold text-ink-muted mb-2">{title}</div>
+        <div className="text-xs text-ink-muted">no data</div>
+      </div>
+    );
+  }
+  const total = rows.reduce((a, r) => a + Number(r[1] || 0), 0);
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-3">
+      <div className="text-[10px] uppercase tracking-wider font-bold text-ink-muted mb-2">{title}</div>
+      <ul className="space-y-1.5">
+        {rows.map(([key, n]) => {
+          const p = total ? Math.round((Number(n || 0) / total) * 100) : 0;
+          return (
+            <li key={key} className="flex items-center gap-2 text-xs">
+              <span className="w-20 capitalize text-ink-strong shrink-0">{key.replace(/_/g, ' ')}</span>
+              <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                <div className="h-full bg-lavender-400" style={{ width: `${Math.max(2, p)}%` }} />
+              </div>
+              <span className="w-12 text-end tabular-nums text-ink-muted">{n} · {p}%</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/** Wave 46D: retention day tile with percentage + count. */
+function RetTile({ label, num, den }: { label: string; num: number; den: number }) {
+  const p = den ? Math.round((num / den) * 100) : 0;
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-3 text-center">
+      <div className="text-[10px] uppercase tracking-wider font-bold text-ink-muted">{label}</div>
+      <div className="mt-1 text-2xl font-bold text-ink-strong tabular-nums">{p}%</div>
+      <div className="text-[10px] text-ink-muted">{num} / {den}</div>
     </div>
   );
 }

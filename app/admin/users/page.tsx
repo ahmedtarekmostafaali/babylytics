@@ -98,14 +98,18 @@ export default async function AdminUsers({
           )}
           {rows.map(r => (
             <li key={r.user_id} className="px-5 py-4 hover:bg-slate-50/40 transition">
-              <div className="flex items-start gap-3 flex-wrap">
+              {/* Wave 46C: clickable row → user detail page. The whole
+                  visible header is the link, sub-detail tiles below
+                  stay separate so the click target is clear. */}
+              <Link href={`/admin/users/${r.user_id}`}
+                className="flex items-start gap-3 flex-wrap group">
                 <span className="h-10 w-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center text-sm font-bold shrink-0">
                   {(r.display_name || r.email).charAt(0).toUpperCase()}
                 </span>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold text-ink-strong truncate">
+                    <span className="font-bold text-ink-strong truncate group-hover:text-coral-700 transition">
                       {r.display_name || r.email.split('@')[0]}
                     </span>
                     {r.is_admin && (
@@ -177,7 +181,7 @@ export default async function AdminUsers({
                     </span>
                   } sub="today / total" />
                 </div>
-              </div>
+              </Link>
             </li>
           ))}
         </ul>
